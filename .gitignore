@@ -1,0 +1,24 @@
+# зависимости и сборка
+node_modules/
+dist/
+build/
+out/
+release/
+*.tsbuildinfo
+
+# локальные данные приложения
+*.sqlite
+*.sqlite-journal
+*.db
+.agentmeter/
+
+# метаданные инструментов
+.serena/
+.air/
+.idea/
+.vscode/
+.DS_Store
+
+# логи
+*.log
+npm-debug.log*
