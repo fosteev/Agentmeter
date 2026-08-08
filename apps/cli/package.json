@@ -1,0 +1,16 @@
+{
+  "name": "@agentmeter/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "agentmeter today|tasks|breakdown|limits|doctor|verify — цифры в терминале, без GUI",
+  "bin": {
+    "agentmeter": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@agentmeter/core": "*"
+  }
+}

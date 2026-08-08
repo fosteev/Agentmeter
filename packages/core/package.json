@@ -1,0 +1,19 @@
+{
+  "name": "@agentmeter/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Разбор логов кодинг-агентов, атрибуция расхода, индекс. Ничего не знает про Electron.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run --project core"
+  }
+}

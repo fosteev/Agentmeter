@@ -22,3 +22,6 @@ release/
 # логи
 *.log
 npm-debug.log*
+
+# сборка TypeScript
+*.tsbuildinfo
