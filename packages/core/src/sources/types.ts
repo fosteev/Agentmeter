@@ -50,8 +50,16 @@ export interface Session {
   startedAt: number
   endedAt: number
 
-  /** Сессия — сайдчейн сабагента, запущенного отсюда. */
+  /**
+   * Для транскрипта сабагента — id родительской сессии. Сабагенты лежат в
+   * `projects/<slug>/<sessionId>/subagents/agent-<agentId>.jsonl`, рядом
+   * `.meta.json` с `agentType` и `toolUseId` вызова, породившего сабагента.
+   */
   parentSessionId?: string
+  /** `toolUseId` вызова `Agent` в родителе — связь без догадок. */
+  parentToolUseId?: string
+  /** Имя сабагента из `.meta.json`: `Explore`, `Plan`, свои из `.claude/agents`. */
+  agentType?: string
   /** Все запросы сессии — сайдчейновые. Признак файла-сабагента. */
   isSidechain?: boolean
 }
@@ -60,8 +68,10 @@ export interface Session {
  * Один вызов API — одна оплаченная единица работы.
  *
  * В транскрипте Claude один вызов размазан по нескольким строкам `assistant`
- * (по строке на блок контента) с продублированным `usage` и общим `requestId`.
- * Здесь он уже собран в одну запись: суммировать `Request[]` можно и нужно.
+ * (по строке на блок контента) с общим `requestId`. Здесь он уже собран в одну
+ * запись — суммировать `Request[]` можно и нужно. Схлопывать надо максимумом
+ * по каждому полю: `output_tokens` в ранних строках частичный, стриминг
+ * дописывает его по ходу ответа.
  */
 export interface Request {
   sessionId: string
@@ -71,6 +81,16 @@ export interface Request {
   requestId: string
   ts: number
   model: string
+
+  /**
+   * `log` — запись есть в транскрипте. `reconstructed` — запроса в логе нет,
+   * он восстановлен по разрыву цепочки кэша (`cr(N+1) > cr(N) + cw(N)`).
+   * Восстановленные — служебные прогревы между ходами; их стоимость известна
+   * точно, а вот `ts`, `model` и `requestId` у них выведены, а не прочитаны.
+   * Всё, что показывается пользователем как точная цифра, должно уметь
+   * объяснить эту разницу — см. 1.3.
+   */
+  origin: 'log' | 'reconstructed'
 
   /** Свежий ввод, не покрытый кэшем. */
   input: number
