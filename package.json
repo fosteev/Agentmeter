@@ -14,15 +14,17 @@
   ],
   "scripts": {
     "build": "tsc --build",
+    "check": "npm run lint && npm run build && npm test",
     "clean": "tsc --build --clean",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --build --force",
-    "lint": "eslint .",
+    "cli": "node --experimental-strip-types apps/cli/src/main.ts",
+    "fixtures": "node --experimental-strip-types scripts/make-fixtures.ts",
+    "fixtures:check": "node --experimental-strip-types scripts/check-fixtures.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run build && npm test",
-    "cli": "node --experimental-strip-types apps/cli/src/main.ts"
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --build --force"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

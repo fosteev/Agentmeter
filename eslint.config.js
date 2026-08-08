@@ -15,4 +15,10 @@ export default tseslint.config(
       eqeqeq: ['error', 'always', { null: 'ignore' }],
     },
   },
+  {
+    // Инструменты вокруг репозитория ходят по сырому JSON из чужих логов,
+    // где схема заранее неизвестна. Типизировать это — сочинять формат.
+    files: ['scripts/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
 )

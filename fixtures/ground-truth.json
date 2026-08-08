@@ -1,0 +1,1232 @@
+{
+  "_": "Эталон Claude Code, снят один раз. Только читать — пересъёмка обесценивает сверку.",
+  "takenAt": "2026-08-08T21:36:04.933Z",
+  "projects": [
+    {
+      "project": "proj-00",
+      "sessionId": "5bb80f7e-b88d-4341-b77f-55a34682a5ea",
+      "slugHash": "70f2a9663b92",
+      "totals": {
+        "input": 3588,
+        "output": 12279,
+        "cacheWrite": 107506,
+        "cacheRead": 741390
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 4156,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.009373999999999999,
+          "inputTokens": 3354,
+          "outputTokens": 165,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 103350,
+          "cacheReadInputTokens": 741390,
+          "costUSD": 0.7923915,
+          "inputTokens": 234,
+          "outputTokens": 12114,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-01",
+      "sessionId": "7d680cba-b6b9-448a-a5d6-eb13f361a4cb",
+      "slugHash": "aaaae64c1d72",
+      "totals": {
+        "input": 3566,
+        "output": 49358,
+        "cacheWrite": 111151,
+        "cacheRead": 4824499
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 637,
+          "outputTokens": 28,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0007769999999999999
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 2929,
+          "outputTokens": 49330,
+          "cacheReadInputTokens": 4824499,
+          "cacheCreationInputTokens": 111151,
+          "webSearchRequests": 0,
+          "costUSD": 4.7716544999999995
+        }
+      }
+    },
+    {
+      "project": "proj-02",
+      "sessionId": "90dfa0c6-b2a5-4af7-86e0-7156d3c12c33",
+      "slugHash": "42324769bffd",
+      "totals": {
+        "input": 1240,
+        "output": 10798,
+        "cacheWrite": 72678,
+        "cacheRead": 1986986
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000424,
+          "inputTokens": 349,
+          "outputTokens": 15,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 72678,
+          "cacheReadInputTokens": 1986986,
+          "costUSD": 1.7217604999999998,
+          "inputTokens": 891,
+          "outputTokens": 10783,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-03",
+      "sessionId": "099383d5-9916-4b11-aa7c-61c6ef3c0937",
+      "slugHash": "e63e016767ba",
+      "totals": {
+        "input": 45,
+        "output": 10376,
+        "cacheWrite": 107120,
+        "cacheRead": 1817291
+      },
+      "byModel": {
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 107120,
+          "cacheReadInputTokens": 1817291,
+          "costUSD": 1.8377704999999998,
+          "inputTokens": 45,
+          "outputTokens": 10376,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-04",
+      "sessionId": "e1f9b5af-4329-483f-a93d-97d72a0b09d5",
+      "slugHash": "ba62ffb9e2b2",
+      "totals": {
+        "input": 663,
+        "output": 666,
+        "cacheWrite": 10087,
+        "cacheRead": 92450
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 362,
+          "outputTokens": 17,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000447
+        },
+        "claude-opus-4-6": {
+          "inputTokens": 301,
+          "outputTokens": 649,
+          "cacheReadInputTokens": 92450,
+          "cacheCreationInputTokens": 10087,
+          "webSearchRequests": 0,
+          "costUSD": 0.12699875000000002
+        }
+      }
+    },
+    {
+      "project": "proj-05",
+      "sessionId": "aa0f2c74-5cda-4f59-b79e-9f002dbb6d2d",
+      "slugHash": "70380f77c462",
+      "totals": {
+        "input": 4993,
+        "output": 27827,
+        "cacheWrite": 71590,
+        "cacheRead": 3040761
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 3405,
+          "outputTokens": 17,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.00349
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 1588,
+          "outputTokens": 27810,
+          "cacheReadInputTokens": 3040761,
+          "cacheCreationInputTokens": 71590,
+          "webSearchRequests": 0,
+          "costUSD": 2.939470499999999
+        }
+      }
+    },
+    {
+      "project": "proj-06",
+      "sessionId": "cbd5c5ce-389a-4fa6-a544-a90ea2ebd4dd",
+      "slugHash": "e6629c96c257",
+      "totals": {
+        "input": 5408,
+        "output": 8475,
+        "cacheWrite": 38199,
+        "cacheRead": 528983
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.005536,
+          "inputTokens": 5266,
+          "outputTokens": 54,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-5-20251101": {
+          "cacheCreationInputTokens": 38199,
+          "cacheReadInputTokens": 528983,
+          "costUSD": 0.7144702500000001,
+          "inputTokens": 142,
+          "outputTokens": 8421,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-07",
+      "sessionId": "fcb63568-1c75-49a3-aeac-3eb41cd63c4f",
+      "slugHash": "6841254c191b",
+      "totals": {
+        "input": 236755,
+        "output": 236249,
+        "cacheWrite": 960606,
+        "cacheRead": 17938179
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 111977,
+          "cacheReadInputTokens": 1505079,
+          "costUSD": 0.57131415,
+          "inputTokens": 219880,
+          "outputTokens": 12191,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 580653,
+          "cacheReadInputTokens": 7308132,
+          "costUSD": 10.415067249999998,
+          "inputTokens": 14994,
+          "outputTokens": 122278,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-6": {
+          "cacheCreationInputTokens": 267976,
+          "cacheReadInputTokens": 9124968,
+          "costUSD": 5.274743399999997,
+          "inputTokens": 1881,
+          "outputTokens": 101780,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-08",
+      "sessionId": "b08b3f94-4442-4bd8-ba3b-836361b49502",
+      "slugHash": "6f5430cd1d8b",
+      "totals": {
+        "input": 3588,
+        "output": 10511,
+        "cacheWrite": 28456,
+        "cacheRead": 1169538
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 1018,
+          "outputTokens": 21,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001123
+        },
+        "claude-opus-4-8[1m]": {
+          "inputTokens": 2570,
+          "outputTokens": 10490,
+          "cacheReadInputTokens": 1169538,
+          "cacheCreationInputTokens": 28456,
+          "webSearchRequests": 0,
+          "costUSD": 1.1444290000000001
+        }
+      }
+    },
+    {
+      "project": "proj-09",
+      "sessionId": "3c5d682a-5dc8-40f5-b684-095ac66e13f0",
+      "slugHash": "76afd081af0c",
+      "totals": {
+        "input": 82401,
+        "output": 47884,
+        "cacheWrite": 133960,
+        "cacheRead": 2632072
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 52503,
+          "cacheReadInputTokens": 730332,
+          "costUSD": 0.24591195,
+          "inputTokens": 76650,
+          "outputTokens": 6120,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-6": {
+          "cacheCreationInputTokens": 81457,
+          "cacheReadInputTokens": 1901740,
+          "costUSD": 1.5196987499999997,
+          "inputTokens": 5751,
+          "outputTokens": 41764,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-10",
+      "sessionId": "3977e6a5-2194-4cb2-8314-e1b4eed1f9d1",
+      "slugHash": "8426d562afe0",
+      "totals": {
+        "input": 3165,
+        "output": 45601,
+        "cacheWrite": 154697,
+        "cacheRead": 3366336
+      },
+      "byModel": {
+        "claude-opus-4-8[1m]": {
+          "inputTokens": 2612,
+          "outputTokens": 45579,
+          "cacheReadInputTokens": 3366336,
+          "cacheCreationInputTokens": 154697,
+          "webSearchRequests": 0,
+          "costUSD": 4.382673
+        },
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 553,
+          "outputTokens": 22,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000663
+        }
+      }
+    },
+    {
+      "project": "proj-11",
+      "sessionId": "ee77e9e8-a7fd-4b99-9294-215e5c17388b",
+      "slugHash": "bee6c9deebf1",
+      "totals": {
+        "input": 14677,
+        "output": 53509,
+        "cacheWrite": 620486,
+        "cacheRead": 6717455
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.016854,
+          "inputTokens": 13839,
+          "outputTokens": 603,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 620486,
+          "cacheReadInputTokens": 6717455,
+          "costUSD": 5.138163000000001,
+          "inputTokens": 838,
+          "outputTokens": 52906,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-12",
+      "sessionId": "d1a625fc-2c8b-4775-a939-c1504eba8a35",
+      "slugHash": "bf297f5213b7",
+      "totals": {
+        "input": 4408,
+        "output": 19317,
+        "cacheWrite": 41006,
+        "cacheRead": 1412622
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.003182,
+          "inputTokens": 2637,
+          "outputTokens": 109,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 41006,
+          "cacheReadInputTokens": 1412622,
+          "costUSD": 0.8709920999999998,
+          "inputTokens": 1771,
+          "outputTokens": 19208,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-13",
+      "sessionId": "d399c700-c9b5-461b-8a76-3ef4aec1c557",
+      "slugHash": "7cf39d72a786",
+      "totals": {
+        "input": 9481,
+        "output": 13657,
+        "cacheWrite": 34292,
+        "cacheRead": 1176758
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.010144,
+          "inputTokens": 8539,
+          "outputTokens": 321,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 34292,
+          "cacheReadInputTokens": 1176758,
+          "costUSD": 0.6844883999999999,
+          "inputTokens": 942,
+          "outputTokens": 13336,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-14",
+      "sessionId": "113ad0af-b18b-411e-aa56-d18864fed698",
+      "slugHash": "dfc921f9318a",
+      "totals": {
+        "input": 1071,
+        "output": 2711,
+        "cacheWrite": 25038,
+        "cacheRead": 168965
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000442,
+          "inputTokens": 337,
+          "outputTokens": 21,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 25038,
+          "cacheReadInputTokens": 168965,
+          "costUSD": 0.18713400000000002,
+          "inputTokens": 734,
+          "outputTokens": 2690,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-15",
+      "sessionId": "4ba0e078-8897-4d93-aefd-9c4d1de9c734",
+      "slugHash": "db922d6eb390",
+      "totals": {
+        "input": 735,
+        "output": 797,
+        "cacheWrite": 12921,
+        "cacheRead": 16297
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000799,
+          "inputTokens": 729,
+          "outputTokens": 14,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 12921,
+          "cacheReadInputTokens": 16297,
+          "costUSD": 0.10850975,
+          "inputTokens": 6,
+          "outputTokens": 783,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-16",
+      "sessionId": "ffa3c64b-1481-4cc4-b9db-8e30dcf227bd",
+      "slugHash": "ccc7725bd432",
+      "totals": {
+        "input": 648,
+        "output": 26654,
+        "cacheWrite": 86589,
+        "cacheRead": 4206615
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 550,
+          "outputTokens": 19,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0006450000000000001
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 98,
+          "outputTokens": 26635,
+          "cacheReadInputTokens": 4206615,
+          "cacheCreationInputTokens": 86589,
+          "webSearchRequests": 0,
+          "costUSD": 3.6355625000000003
+        }
+      }
+    },
+    {
+      "project": "proj-17",
+      "sessionId": "9777884f-8e56-434d-b4fd-9126f53d8958",
+      "slugHash": "8a983dd01a23",
+      "totals": {
+        "input": 2683,
+        "output": 26539,
+        "cacheWrite": 79294,
+        "cacheRead": 4467874
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 549,
+          "outputTokens": 14,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000619
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 2134,
+          "outputTokens": 26525,
+          "cacheReadInputTokens": 4467874,
+          "cacheCreationInputTokens": 79294,
+          "webSearchRequests": 0,
+          "costUSD": 3.7006719999999995
+        }
+      }
+    },
+    {
+      "project": "proj-18",
+      "sessionId": "d8498acf-74a4-4900-a806-9345b3030b75",
+      "slugHash": "5d73ec825192",
+      "totals": {
+        "input": 3069,
+        "output": 16282,
+        "cacheWrite": 58969,
+        "cacheRead": 1718712
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 1510,
+          "outputTokens": 17,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001595
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 1559,
+          "outputTokens": 16265,
+          "cacheReadInputTokens": 1718712,
+          "cacheCreationInputTokens": 58969,
+          "webSearchRequests": 0,
+          "costUSD": 1.8634660000000005
+        }
+      }
+    },
+    {
+      "project": "proj-19",
+      "sessionId": "95a46978-e411-4ef5-bb78-5952766dbbe0",
+      "slugHash": "ce27e41d13d3",
+      "totals": {
+        "input": 14834,
+        "output": 446297,
+        "cacheWrite": 1330321,
+        "cacheRead": 41717642
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000449,
+          "inputTokens": 369,
+          "outputTokens": 16,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 1330321,
+          "cacheReadInputTokens": 41717642,
+          "costUSD": 40.40267725000001,
+          "inputTokens": 14465,
+          "outputTokens": 446281,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-20",
+      "sessionId": "a965cde8-1150-4257-9ec6-427b7a049783",
+      "slugHash": "e7090310aaac",
+      "totals": {
+        "input": 2834,
+        "output": 23953,
+        "cacheWrite": 69850,
+        "cacheRead": 4408320
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 701,
+          "outputTokens": 15,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000776
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 2133,
+          "outputTokens": 23938,
+          "cacheReadInputTokens": 4408320,
+          "cacheCreationInputTokens": 69850,
+          "webSearchRequests": 0,
+          "costUSD": 3.5117750000000014
+        }
+      }
+    },
+    {
+      "project": "proj-21",
+      "sessionId": "5bcc63d3-c0b5-416d-ba58-61b3fa6aff76",
+      "slugHash": "6c96dcc2c655",
+      "totals": {
+        "input": 758,
+        "output": 6596,
+        "cacheWrite": 71270,
+        "cacheRead": 322174
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000843,
+          "inputTokens": 638,
+          "outputTokens": 41,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 71270,
+          "cacheReadInputTokens": 322174,
+          "costUSD": 0.46259969999999995,
+          "inputTokens": 120,
+          "outputTokens": 6555,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-22",
+      "sessionId": "8ea850f6-6875-4d6a-a327-4f68844f969f",
+      "slugHash": "97f5c5c3a511",
+      "totals": {
+        "input": 139874,
+        "output": 80104,
+        "cacheWrite": 944306,
+        "cacheRead": 14362280
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 110153,
+          "cacheReadInputTokens": 1208630,
+          "costUSD": 0.4625062499999999,
+          "inputTokens": 138317,
+          "outputTokens": 13127,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 834153,
+          "cacheReadInputTokens": 13153650,
+          "costUSD": 8.08349475,
+          "inputTokens": 1557,
+          "outputTokens": 66977,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-23",
+      "sessionId": "907801a6-1d9e-43f2-9462-93ef6b6a5bef",
+      "slugHash": "f5ff0aee2fd9",
+      "totals": {
+        "input": 26077,
+        "output": 19836,
+        "cacheWrite": 159657,
+        "cacheRead": 1161248
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 26789,
+          "cacheReadInputTokens": 237905,
+          "costUSD": 0.11963975000000002,
+          "inputTokens": 25848,
+          "outputTokens": 7303,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-5-20251101": {
+          "cacheCreationInputTokens": 63709,
+          "cacheReadInputTokens": 794306,
+          "costUSD": 1.07522425,
+          "inputTokens": 193,
+          "outputTokens": 11157,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 69159,
+          "cacheReadInputTokens": 129037,
+          "costUSD": 0.31880535,
+          "inputTokens": 36,
+          "outputTokens": 1376,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-24",
+      "sessionId": "1c12c591-148c-4727-8240-6358ab3cc880",
+      "slugHash": "702e84ec2808",
+      "totals": {
+        "input": 585,
+        "output": 30651,
+        "cacheWrite": 65210,
+        "cacheRead": 1963306
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.000607,
+          "inputTokens": 512,
+          "outputTokens": 19,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 65210,
+          "cacheReadInputTokens": 1963306,
+          "costUSD": 2.155380500000001,
+          "inputTokens": 73,
+          "outputTokens": 30632,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-25",
+      "sessionId": "2af224fd-9312-4cec-bef5-b6baf42be36c",
+      "slugHash": "0b2f93d6ed0a",
+      "totals": {
+        "input": 13890,
+        "output": 4026,
+        "cacheWrite": 30726,
+        "cacheRead": 219207
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.007441,
+          "inputTokens": 5766,
+          "outputTokens": 335,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 30726,
+          "cacheReadInputTokens": 219207,
+          "costUSD": 0.2607216,
+          "inputTokens": 8124,
+          "outputTokens": 3691,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-26",
+      "sessionId": "fd0f55b5-a064-4885-9282-b68375efe0c5",
+      "slugHash": "9568dc354954",
+      "totals": {
+        "input": 54449,
+        "output": 56059,
+        "cacheWrite": 466176,
+        "cacheRead": 11396907
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.060958,
+          "inputTokens": 53548,
+          "outputTokens": 1482,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 466176,
+          "cacheReadInputTokens": 11396907,
+          "costUSD": 5.9885901,
+          "inputTokens": 901,
+          "outputTokens": 54577,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-27",
+      "sessionId": "51d6725c-14e9-4695-a898-ef462ae31e93",
+      "slugHash": "13995442b037",
+      "totals": {
+        "input": 3454,
+        "output": 24988,
+        "cacheWrite": 113775,
+        "cacheRead": 1137222
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.003868,
+          "inputTokens": 3198,
+          "outputTokens": 134,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 113775,
+          "cacheReadInputTokens": 1137222,
+          "costUSD": 1.1414008500000001,
+          "inputTokens": 256,
+          "outputTokens": 24854,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-28",
+      "sessionId": "3655acfd-60b6-4f3e-b6ca-83d854cc2292",
+      "slugHash": "683c8fe7fe3a",
+      "totals": {
+        "input": 2248,
+        "output": 20547,
+        "cacheWrite": 42367,
+        "cacheRead": 1903992
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 576,
+          "outputTokens": 30,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0007260000000000001
+        },
+        "claude-opus-4-8[1m]": {
+          "inputTokens": 1672,
+          "outputTokens": 20517,
+          "cacheReadInputTokens": 1903992,
+          "cacheCreationInputTokens": 42367,
+          "webSearchRequests": 0,
+          "costUSD": 1.8969510000000005
+        }
+      }
+    },
+    {
+      "project": "proj-29",
+      "sessionId": "82f02374-c77d-4b2f-8501-168a8ce2c22e",
+      "slugHash": "38b9c597738c",
+      "totals": {
+        "input": 703,
+        "output": 12965,
+        "cacheWrite": 28083,
+        "cacheRead": 286368
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.0007740000000000001,
+          "inputTokens": 684,
+          "outputTokens": 18,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-7": {
+          "cacheCreationInputTokens": 28083,
+          "cacheReadInputTokens": 286368,
+          "costUSD": 0.64247275,
+          "inputTokens": 19,
+          "outputTokens": 12947,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-30",
+      "sessionId": "db48207b-e242-4831-9207-567dd6b9180f",
+      "slugHash": "c168c27d5db6",
+      "totals": {
+        "input": 5756,
+        "output": 1551,
+        "cacheWrite": 15728,
+        "cacheRead": 236303
+      },
+      "byModel": {
+        "claude-opus-4-6": {
+          "inputTokens": 305,
+          "outputTokens": 1537,
+          "cacheReadInputTokens": 236303,
+          "cacheCreationInputTokens": 15728,
+          "webSearchRequests": 0,
+          "costUSD": 0.2564015
+        },
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 5451,
+          "outputTokens": 14,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.005521
+        }
+      }
+    },
+    {
+      "project": "proj-31",
+      "sessionId": "f9ad6da0-1246-42a1-8290-3d98e32e2523",
+      "slugHash": "45b8da1bd057",
+      "totals": {
+        "input": 1767,
+        "output": 2206,
+        "cacheWrite": 15042,
+        "cacheRead": 214591
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.001836,
+          "inputTokens": 1751,
+          "outputTokens": 17,
+          "webSearchRequests": 0
+        },
+        "claude-opus-4-6": {
+          "cacheCreationInputTokens": 15042,
+          "cacheReadInputTokens": 214591,
+          "costUSD": 0.25611300000000004,
+          "inputTokens": 16,
+          "outputTokens": 2189,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-32",
+      "sessionId": "feaff7ab-f8bf-46e8-ba93-f263fee03809",
+      "slugHash": "2c24c0cca7d7",
+      "totals": {
+        "input": 4674,
+        "output": 65364,
+        "cacheWrite": 145951,
+        "cacheRead": 6160967
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 556,
+          "outputTokens": 26,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000686
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4118,
+          "outputTokens": 65338,
+          "cacheReadInputTokens": 6160967,
+          "cacheCreationInputTokens": 145951,
+          "webSearchRequests": 0,
+          "costUSD": 6.1940335000000015
+        }
+      }
+    },
+    {
+      "project": "proj-33",
+      "sessionId": "7d52383a-b4fc-42e0-9545-0cb57f8615ad",
+      "slugHash": "5203683716dd",
+      "totals": {
+        "input": 7141,
+        "output": 3489,
+        "cacheWrite": 20260,
+        "cacheRead": 299451
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "cacheCreationInputTokens": 0,
+          "cacheReadInputTokens": 0,
+          "costUSD": 0.008078,
+          "inputTokens": 6338,
+          "outputTokens": 348,
+          "webSearchRequests": 0
+        },
+        "claude-sonnet-4-5-20250929": {
+          "cacheCreationInputTokens": 20260,
+          "cacheReadInputTokens": 299451,
+          "costUSD": 0.21533429999999998,
+          "inputTokens": 803,
+          "outputTokens": 3141,
+          "webSearchRequests": 0
+        }
+      }
+    },
+    {
+      "project": "proj-34",
+      "sessionId": "b924a625-9ea2-4cdc-a60a-d0bcf4098cee",
+      "slugHash": "6395649c0354",
+      "totals": {
+        "input": 972,
+        "output": 3723,
+        "cacheWrite": 43796,
+        "cacheRead": 548033
+      },
+      "byModel": {
+        "claude-opus-4-6": {
+          "inputTokens": 616,
+          "outputTokens": 3707,
+          "cacheReadInputTokens": 548033,
+          "cacheCreationInputTokens": 43796,
+          "webSearchRequests": 0,
+          "costUSD": 0.6434964999999999
+        },
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 356,
+          "outputTokens": 16,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.00043599999999999997
+        }
+      }
+    },
+    {
+      "project": "proj-35",
+      "sessionId": "7b04fab6-49ca-4968-bd1d-34732d2c709e",
+      "slugHash": "534b0f734c45",
+      "totals": {
+        "input": 2632,
+        "output": 20273,
+        "cacheWrite": 44180,
+        "cacheRead": 623313
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 1098,
+          "outputTokens": 14,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001168
+        },
+        "claude-opus-4-8[1m]": {
+          "inputTokens": 1534,
+          "outputTokens": 20259,
+          "cacheReadInputTokens": 623313,
+          "cacheCreationInputTokens": 44180,
+          "webSearchRequests": 0,
+          "costUSD": 1.2676015
+        }
+      }
+    },
+    {
+      "project": "proj-36",
+      "sessionId": "0c7dcb0b-9af9-4019-bbe3-e134e11d35c3",
+      "slugHash": "d5909292213e",
+      "totals": {
+        "input": 22994,
+        "output": 301139,
+        "cacheWrite": 1242044,
+        "cacheRead": 31207215
+      },
+      "byModel": {
+        "claude-opus-4-6[1m]": {
+          "inputTokens": 22647,
+          "outputTokens": 301122,
+          "cacheReadInputTokens": 31207215,
+          "cacheCreationInputTokens": 1242044,
+          "webSearchRequests": 0,
+          "costUSD": 31.007667499999975
+        },
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 347,
+          "outputTokens": 17,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000432
+        }
+      }
+    },
+    {
+      "project": "proj-37",
+      "sessionId": "0800c8c8-b0e2-4073-85b6-87f5582745af",
+      "slugHash": "c7ada6df47ef",
+      "totals": {
+        "input": 6046,
+        "output": 108984,
+        "cacheWrite": 147739,
+        "cacheRead": 4090735
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 930,
+          "outputTokens": 18,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.00102
+        },
+        "claude-opus-4-8[1m]": {
+          "inputTokens": 5116,
+          "outputTokens": 108966,
+          "cacheReadInputTokens": 4090735,
+          "cacheCreationInputTokens": 147739,
+          "webSearchRequests": 0,
+          "costUSD": 6.2724874999999995
+        }
+      }
+    },
+    {
+      "project": "proj-38",
+      "sessionId": "cd512e18-a38c-4fc3-8099-e5b1b57cf708",
+      "slugHash": "bec7352d8b30",
+      "totals": {
+        "input": 5165,
+        "output": 26752,
+        "cacheWrite": 67404,
+        "cacheRead": 2196563
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 585,
+          "outputTokens": 24,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.000705
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 4580,
+          "outputTokens": 26728,
+          "cacheReadInputTokens": 2196563,
+          "cacheCreationInputTokens": 67404,
+          "webSearchRequests": 0,
+          "costUSD": 2.4634215
+        }
+      }
+    },
+    {
+      "project": "proj-39",
+      "sessionId": "ed511804-c1dc-4bd4-b7b8-5c18f2169a56",
+      "slugHash": "40a5acf32cc3",
+      "totals": {
+        "input": 36803,
+        "output": 243684,
+        "cacheWrite": 545878,
+        "cacheRead": 63887188
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 31683,
+          "outputTokens": 890,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 2,
+          "costUSD": 0.056133
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 5120,
+          "outputTokens": 242794,
+          "cacheReadInputTokens": 63887188,
+          "cacheCreationInputTokens": 545878,
+          "webSearchRequests": 0,
+          "costUSD": 42.68993900000001
+        }
+      }
+    },
+    {
+      "project": "proj-40",
+      "sessionId": "05f2e755-44d0-4613-b77e-7cc6f72077fa",
+      "slugHash": "afc2e05e43e0",
+      "totals": {
+        "input": 77605,
+        "output": 268899,
+        "cacheWrite": 472430,
+        "cacheRead": 99892677
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 64298,
+          "outputTokens": 6951,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.099053
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 13307,
+          "outputTokens": 261948,
+          "cacheReadInputTokens": 99892677,
+          "cacheCreationInputTokens": 472430,
+          "webSearchRequests": 0,
+          "costUSD": 61.28587350000001
+        }
+      }
+    },
+    {
+      "project": "proj-41",
+      "sessionId": "d9762bdb-e8dc-4c99-80a4-f541b278e18c",
+      "slugHash": "863c2d6f036c",
+      "totals": {
+        "input": 133118,
+        "output": 88373,
+        "cacheWrite": 310884,
+        "cacheRead": 14213344
+      },
+      "byModel": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 124719,
+          "outputTokens": 7630,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 1,
+          "costUSD": 0.172869
+        },
+        "claude-opus-5[1m]": {
+          "inputTokens": 8399,
+          "outputTokens": 80743,
+          "cacheReadInputTokens": 14213344,
+          "cacheCreationInputTokens": 310884,
+          "webSearchRequests": 0,
+          "costUSD": 12.276081999999995
+        }
+      }
+    }
+  ]
+}

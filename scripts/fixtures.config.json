@@ -1,0 +1,53 @@
+{
+  "_": "Источники фикстур. Пути локальные — на другой машине пересобрать не выйдет, и не нужно: фикстуры коммитятся. Здесь зафиксировано, из чего они собраны и что каждая проверяет.",
+  "claude": [
+    {
+      "name": "plain",
+      "checks": "обычная сессия: дубли requestId, прогрев кэша, ai-title, last-prompt",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot/6da29c69-2f19-4569-b6bf-6f674a0a6529.jsonl"
+    },
+    {
+      "name": "sidechain",
+      "checks": "сабагенты: транскрипты в <sessionId>/subagents/, связь через toolUseId",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot-garmhub/f345e89a-c376-428a-8496-31a39e643a10.jsonl",
+      "withSubagents": true
+    },
+    {
+      "name": "mcp",
+      "checks": "mcp__<server>__<tool>: разбор имени на сервер и тул",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot/3b73eca0-23c8-4bf7-8c10-33dec036fdf0.jsonl"
+    },
+    {
+      "name": "parallel",
+      "checks": "несколько tool_use на один requestId — дележ дельты между вызовами",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot/35b98bba-4dc3-467e-aef1-ac5812ff2c02.jsonl"
+    },
+    {
+      "name": "images",
+      "checks": "тул вернул картинку; base64 в лог не попал, цена видна только по дельте",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot-flutter-pulse-mobile/e4826e7c-07d7-4369-970b-85ade886c5bd.jsonl"
+    },
+    {
+      "name": "compact",
+      "checks": "префикс обвалился — контекст сжали, соседство для атрибуции разорвано",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot-Pilot7/9e57d218-b28b-422f-b40c-8a41b5bad336.jsonl"
+    },
+    {
+      "name": "version-old",
+      "checks": "старый формат CLI (2.1.85) — разбор не должен падать",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot-Pilot7/f98977ac-98a1-48ed-82aa-304f141d61ac.jsonl"
+    },
+    {
+      "name": "version-mid",
+      "checks": "средний формат CLI (2.1.206)",
+      "source": "~/.claude/projects/-Users-fost-Projects-pilot/71d55ecd-9c34-4e40-bbc6-eacb280f2d3e.jsonl"
+    }
+  ],
+  "codex": [
+    {
+      "name": "rollout",
+      "checks": "token_count с total_token_usage, заполненный rate_limits, вызовы MCP",
+      "source": "~/.codex/sessions/2026/06/15/rollout-2026-06-15T11-45-50-019eca75-617f-7dd3-a42e-8e52ede19e5a.jsonl"
+    }
+  ]
+}

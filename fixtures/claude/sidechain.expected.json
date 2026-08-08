@@ -1,0 +1,267 @@
+{
+  "checks": "сабагенты: транскрипты в <sessionId>/subagents/, связь через toolUseId",
+  "session": {
+    "id": "92cc27dc-193d-4c2c-aef1-843d7d41aeab",
+    "cwd": "/proj/b",
+    "branch": "feature/one",
+    "model": "claude-opus-4-6",
+    "cliVersion": "2.1.88",
+    "startedAt": "2026-07-10T10:48:23.863Z",
+    "endedAt": "2026-07-10T11:22:21.589Z"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "requestId": "req_011CctFBQDKUZ3YWh3aVBMKE",
+      "ts": "2026-07-10T10:48:23.863Z",
+      "model": "claude-opus-4-6",
+      "input": 3,
+      "output": 224,
+      "cacheWrite": 10574,
+      "cacheRead": 10796,
+      "contextTokens": 21373,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01MTmSKeRW7tDkYcgXdoCNe5",
+          "name": "Read",
+          "kind": "builtin",
+          "resultBytes": 105,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_014TeHgdrkkBRXL6Z8h53ATy",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 472,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "requestId": "req_011CctFBvoaL9VLFJxN8vzLA",
+      "ts": "2026-07-10T10:48:37.064Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 450,
+      "cacheWrite": 426,
+      "cacheRead": 21370,
+      "contextTokens": 21797,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01VdafG44DvHGoMTN142FbU7",
+          "name": "Agent",
+          "kind": "agent",
+          "resultBytes": 15707,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "requestId": "req_011CctFa2u419BryVHRgE83a",
+      "ts": "2026-07-10T10:53:34.151Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 1718,
+      "cacheWrite": 4237,
+      "cacheRead": 21796,
+      "contextTokens": 26034,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    },
+    {
+      "seq": 3,
+      "requestId": "reconstructed:req_011CctFa2u419BryVHRgE83a",
+      "ts": "2026-07-10T10:53:34.151Z",
+      "model": "claude-opus-4-6",
+      "input": 0,
+      "output": 0,
+      "cacheWrite": 1716,
+      "cacheRead": 26033,
+      "contextTokens": 27749,
+      "isSidechain": false,
+      "origin": "reconstructed",
+      "tools": []
+    },
+    {
+      "seq": 4,
+      "requestId": "req_011CctHcttfMWnPCUVxDHwaC",
+      "ts": "2026-07-10T11:20:30.300Z",
+      "model": "claude-opus-4-6",
+      "input": 2,
+      "output": 206,
+      "cacheWrite": 479,
+      "cacheRead": 27749,
+      "contextTokens": 28230,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01PycNoUWYCYcQiH2KJzndjc",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 106,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_01QcYRWQtL8juMx2UY8Dr7qT",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 115,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_01RVe73W1ddnMapEK7zhzA9U",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 168,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "requestId": "req_011CctHdvA6AmLrdRNocCL3a",
+      "ts": "2026-07-10T11:20:37.016Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 289,
+      "cacheWrite": 347,
+      "cacheRead": 28228,
+      "contextTokens": 28576,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01Nt3LqqQZ1iuMLGjnC6LBJo",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 181,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "requestId": "req_011CctHfEjpfK9znFvxFcBDF",
+      "ts": "2026-07-10T11:20:53.368Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 94,
+      "cacheWrite": 327,
+      "cacheRead": 28575,
+      "contextTokens": 28903,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_016U6YVYdjM29GmGXWwk4wWv",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 190,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "requestId": "req_011CctHfaSV2nisTiXR19RCC",
+      "ts": "2026-07-10T11:20:59.912Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 292,
+      "cacheWrite": 265,
+      "cacheRead": 28902,
+      "contextTokens": 29168,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01MS3Goewmj6sMoNoan5kWKC",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 272,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_019b8VrW73hAfdhh9QvzDEim",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 159,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "requestId": "req_011CctHgNXQb3pK8jg6AzuFc",
+      "ts": "2026-07-10T11:21:14.108Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 212,
+      "cacheWrite": 463,
+      "cacheRead": 29167,
+      "contextTokens": 29631,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_016a2L6At9R1poMnkg29cYwx",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 409,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "requestId": "req_011CctHkyRzANQf9NTuQT63P",
+      "ts": "2026-07-10T11:22:12.746Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 74,
+      "cacheWrite": 297,
+      "cacheRead": 29630,
+      "contextTokens": 29928,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_0128ve3i3aVYHGLReSSFh6C3",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 107,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "requestId": "req_011CctHmdLHMU5upct4eipvJ",
+      "ts": "2026-07-10T11:22:21.589Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 132,
+      "cacheWrite": 95,
+      "cacheRead": 29927,
+      "contextTokens": 30023,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    }
+  ],
+  "totals": {
+    "input": 13,
+    "output": 3691,
+    "cacheWrite": 19226,
+    "cacheRead": 282173
+  },
+  "unknownTypes": {}
+}

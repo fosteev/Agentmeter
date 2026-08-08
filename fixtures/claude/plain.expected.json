@@ -1,0 +1,241 @@
+{
+  "checks": "обычная сессия: дубли requestId, прогрев кэша, ai-title, last-prompt",
+  "session": {
+    "firstPrompt": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim ve",
+    "id": "df072e0f-4296-4606-a960-82e64878f26c",
+    "cwd": "/proj/a",
+    "branch": "feature/one",
+    "model": "claude-opus-5",
+    "cliVersion": "2.1.220",
+    "startedAt": "2026-07-28T12:06:55.122Z",
+    "endedAt": "2026-07-28T12:37:53.220Z",
+    "title": "lorem ipsum dolor sit amet consectetur ad"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "requestId": "req_011CdURjbxCBb1W88csZ2KDg",
+      "ts": "2026-07-28T12:06:55.122Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 174,
+      "cacheWrite": 20063,
+      "cacheRead": 20628,
+      "contextTokens": 40693,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01MSD56o275Atm2uRbiwo3hD",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 742,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "requestId": "req_011CdURjwf7Wb1dfW3pLszVG",
+      "ts": "2026-07-28T12:07:00.519Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 129,
+      "cacheWrite": 520,
+      "cacheRead": 40691,
+      "contextTokens": 41213,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_016xgZD8Bo9qm5GoqpcWLXYv",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 2068,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "requestId": "req_011CdURkCWaNpxDZu5kcgEiv",
+      "ts": "2026-07-28T12:07:04.059Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 218,
+      "cacheWrite": 1010,
+      "cacheRead": 41211,
+      "contextTokens": 42223,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_017ZKMNKQjwpmWhdhCd3oTuK",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 484,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "requestId": "req_011CdURkYX6gkNScMPZu9Eqb",
+      "ts": "2026-07-28T12:07:08.416Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 157,
+      "cacheWrite": 425,
+      "cacheRead": 42221,
+      "contextTokens": 42648,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01NcGgvWq89J6Cd6MJvm1nk5",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 3867,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "requestId": "req_011CdURkpexESc73GMpPXvpU",
+      "ts": "2026-07-28T12:07:15.475Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 852,
+      "cacheWrite": 1984,
+      "cacheRead": 42646,
+      "contextTokens": 44632,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01CBu6B5zNX62pay6rWjvYYj",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 111,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "requestId": "req_011CdURmnyn5eSiyRiV3yPTH",
+      "ts": "2026-07-28T12:07:26.199Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 375,
+      "cacheWrite": 873,
+      "cacheRead": 44630,
+      "contextTokens": 45505,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01MV61WBqJWKh6phgsSJx2QA",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 894,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "requestId": "req_011CdURoKdHegZDxdCxhcFh2",
+      "ts": "2026-07-28T12:07:46.939Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 220,
+      "cacheWrite": 889,
+      "cacheRead": 45503,
+      "contextTokens": 46394,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01TZ52Y1X51DSS9ZnhjzcD9M",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 131,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "requestId": "req_011CdURoe7HS4WJzPxQy8eXU",
+      "ts": "2026-07-28T12:07:52.117Z",
+      "model": "claude-opus-5",
+      "input": 1,
+      "output": 173,
+      "cacheWrite": 376,
+      "cacheRead": 46392,
+      "contextTokens": 46769,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    },
+    {
+      "seq": 8,
+      "requestId": "reconstructed:req_011CdURoe7HS4WJzPxQy8eXU",
+      "ts": "2026-07-28T12:07:52.117Z",
+      "model": "claude-opus-5",
+      "input": 0,
+      "output": 0,
+      "cacheWrite": 172,
+      "cacheRead": 46768,
+      "contextTokens": 46940,
+      "isSidechain": false,
+      "origin": "reconstructed",
+      "tools": []
+    },
+    {
+      "seq": 9,
+      "requestId": "req_011CdUU5JrLMsqw2NZFNtxpN",
+      "ts": "2026-07-28T12:37:42.456Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 700,
+      "cacheWrite": 24,
+      "cacheRead": 46940,
+      "contextTokens": 46966,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01HPjvhpW6Fc8MT2yGgFkX6t",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 147,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "requestId": "req_011CdUU6Rm63hRGYubS3xWdX",
+      "ts": "2026-07-28T12:37:53.220Z",
+      "model": "claude-opus-5",
+      "input": 2,
+      "output": 127,
+      "cacheWrite": 737,
+      "cacheRead": 46964,
+      "contextTokens": 47703,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    }
+  ],
+  "totals": {
+    "input": 19,
+    "output": 3125,
+    "cacheWrite": 27073,
+    "cacheRead": 464594
+  },
+  "unknownTypes": {}
+}

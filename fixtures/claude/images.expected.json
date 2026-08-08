@@ -1,0 +1,292 @@
+{
+  "checks": "тул вернул картинку; base64 в лог не попал, цена видна только по дельте",
+  "session": {
+    "firstPrompt": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dol",
+    "id": "4297c882-8a7a-415d-a58d-6fccfcf49da3",
+    "cwd": "/proj/e",
+    "branch": "feature/one",
+    "model": "claude-opus-4-8",
+    "cliVersion": "2.1.217",
+    "startedAt": "2026-07-22T12:14:50.613Z",
+    "endedAt": "2026-07-22T12:17:01.998Z"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "requestId": "req_011CdH5VDt8uCSEtqw5DQuSK",
+      "ts": "2026-07-22T12:14:50.613Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 159,
+      "cacheWrite": 19789,
+      "cacheRead": 20408,
+      "contextTokens": 40199,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01NTiqJiE7VhyjNGztxKGS7Q",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 3212,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "requestId": "req_011CdH5VYquU8x4iqJnFt8uM",
+      "ts": "2026-07-22T12:15:00.516Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 726,
+      "cacheWrite": 1650,
+      "cacheRead": 40197,
+      "contextTokens": 41849,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01Ek2tUiJz66MTQSUAprx65G",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 1361,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_017x8MagPiMzi2iQWViHTJHS",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 487,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "requestId": "req_011CdH5WZ4pmE7ZCFiHyvwRT",
+      "ts": "2026-07-22T12:15:10.174Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 250,
+      "cacheWrite": 1441,
+      "cacheRead": 41847,
+      "contextTokens": 43290,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01H4HvbMur9vP1pvjzWkzWEN",
+          "name": "Read",
+          "kind": "builtin",
+          "resultBytes": 8279,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "requestId": "req_011CdH5WxeeyfNNyGe8EtUFU",
+      "ts": "2026-07-22T12:15:22.158Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 653,
+      "cacheWrite": 3993,
+      "cacheRead": 43288,
+      "contextTokens": 47283,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_016QYEgD5tWFaNFgqRoe2dxw",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 562,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "requestId": "req_011CdH5XsKDEDraEz6WJDVTQ",
+      "ts": "2026-07-22T12:15:28.225Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 144,
+      "cacheWrite": 848,
+      "cacheRead": 47281,
+      "contextTokens": 48131,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01RXfLyqociFgKbf6rHsU8oe",
+          "name": "Skill",
+          "kind": "skill",
+          "resultBytes": 38,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "requestId": "req_011CdH5YDvCZq9NJhS6AdgZ9",
+      "ts": "2026-07-22T12:15:33.191Z",
+      "model": "claude-opus-4-8",
+      "input": 1,
+      "output": 204,
+      "cacheWrite": 1623,
+      "cacheRead": 48129,
+      "contextTokens": 49753,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01PR63myLwyfYJgi3GJKfjfZ",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 520,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "requestId": "req_011CdH5Yxx59M1xCStPiBLVF",
+      "ts": "2026-07-22T12:15:41.299Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 87,
+      "cacheWrite": 436,
+      "cacheRead": 49752,
+      "contextTokens": 50190,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01XjmLtWuLdcVGrSbFM4gpDZ",
+          "name": "Read",
+          "kind": "builtin",
+          "resultBytes": 29380,
+          "hasImage": true
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "requestId": "req_011CdH5ZBFVkxcn7bDe7uHor",
+      "ts": "2026-07-22T12:16:02.769Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 1820,
+      "cacheWrite": 246,
+      "cacheRead": 50188,
+      "contextTokens": 50436,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01NrLq9CYnHbUL7mpiAjnozE",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 271,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_01DCwx62jcgY6964R1DHYm3v",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 132,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "requestId": "req_011CdH5b2uWJHgdqcKUueVM3",
+      "ts": "2026-07-22T12:16:19.747Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 133,
+      "cacheWrite": 1924,
+      "cacheRead": 50434,
+      "contextTokens": 52360,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01XnwbfFPvtGp3GNiHg8dpbh",
+          "name": "Read",
+          "kind": "builtin",
+          "resultBytes": 404,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "requestId": "req_011CdH5c1Qjad64X128Jx3pz",
+      "ts": "2026-07-22T12:16:26.580Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 696,
+      "cacheWrite": 268,
+      "cacheRead": 52358,
+      "contextTokens": 52628,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01NwXyFPD1eN7HDLVRuHCVD2",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 506,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "requestId": "req_011CdH5cqop2oKCBsAcowUEV",
+      "ts": "2026-07-22T12:16:35.354Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 127,
+      "cacheWrite": 847,
+      "cacheRead": 52626,
+      "contextTokens": 53475,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01Bs5qwEEm18g4ytiPrstqfa",
+          "name": "Read",
+          "kind": "builtin",
+          "resultBytes": 3433,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 11,
+      "requestId": "req_011CdH5d9KmKnNavHcrSJpnj",
+      "ts": "2026-07-22T12:16:48.284Z",
+      "model": "claude-opus-4-8",
+      "input": 2,
+      "output": 1478,
+      "cacheWrite": 1159,
+      "cacheRead": 53473,
+      "contextTokens": 54634,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    }
+  ],
+  "totals": {
+    "input": 23,
+    "output": 6477,
+    "cacheWrite": 34224,
+    "cacheRead": 549981
+  },
+  "unknownTypes": {}
+}

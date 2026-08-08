@@ -1,0 +1,218 @@
+{
+  "checks": "средний формат CLI (2.1.206)",
+  "session": {
+    "id": "8bf88d63-d135-459d-addd-98777ac8f242",
+    "cwd": "/proj/a",
+    "branch": "feature/one",
+    "model": "claude-fable-5",
+    "cliVersion": "2.1.206",
+    "startedAt": "2026-07-10T13:45:44.796Z",
+    "endedAt": "2026-07-10T13:47:37.251Z"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "requestId": "req_011CctUhEpNBRqXF9d2QM9Ww",
+      "ts": "2026-07-10T13:45:44.796Z",
+      "model": "claude-fable-5",
+      "input": 8320,
+      "output": 1147,
+      "cacheWrite": 9032,
+      "cacheRead": 18871,
+      "contextTokens": 36223,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01Jts9P2Fsvi6S1FqzpbuiQo",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 455,
+          "hasImage": false
+        },
+        {
+          "id": "toolu_01SydDSaPXAzJLX4zTiqfjyy",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 90,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "requestId": "req_011CctUicYMWbCrGdYt56u76",
+      "ts": "2026-07-10T13:45:56.087Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 1011,
+      "cacheWrite": 9707,
+      "cacheRead": 27903,
+      "contextTokens": 37612,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_018hZgo5YokRYB9tyb2KF3Pp",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 420,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "requestId": "req_011CctUjeafcxPZL46S1Yweg",
+      "ts": "2026-07-10T13:46:40.302Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 1869,
+      "cacheWrite": 1159,
+      "cacheRead": 37610,
+      "contextTokens": 38771,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_011GSQw9ymsoru7A218uEYQM",
+          "name": "AskUserQuestion",
+          "kind": "builtin",
+          "resultBytes": 644,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "requestId": "req_011CctUo4omzGgFJDLh1bEk4",
+      "ts": "2026-07-10T13:46:57.017Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 262,
+      "cacheWrite": 2824,
+      "cacheRead": 38769,
+      "contextTokens": 41595,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01QYEPJ2ssNEgqtjPBJuu75v",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 93,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "requestId": "req_011CctUoWTNoe9eekg4RJ4jG",
+      "ts": "2026-07-10T13:47:03.498Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 214,
+      "cacheWrite": 270,
+      "cacheRead": 41593,
+      "contextTokens": 41865,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01RKMaGSZeDszAvGxDxuiHiM",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 357,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "requestId": "req_011CctUp3f6Yk2j1trQow8zn",
+      "ts": "2026-07-10T13:47:11.128Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 151,
+      "cacheWrite": 349,
+      "cacheRead": 41863,
+      "contextTokens": 42214,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_013bSJKSRQ7ZDB6hSMoDW8Tt",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 504,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "requestId": "req_011CctUpZDM99yoaWscNTdhY",
+      "ts": "2026-07-10T13:47:17.225Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 173,
+      "cacheWrite": 327,
+      "cacheRead": 42212,
+      "contextTokens": 42541,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_011mZ4Tct3Fbm3dMc17TecZD",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 206,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "requestId": "req_011CctUqJVbdJz9ZmDvyxHAb",
+      "ts": "2026-07-10T13:47:27.596Z",
+      "model": "claude-fable-5",
+      "input": 2,
+      "output": 99,
+      "cacheWrite": 214,
+      "cacheRead": 42539,
+      "contextTokens": 42755,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_01QtDV3PEFLdX9iUi1NGPrfY",
+          "name": "Bash",
+          "kind": "builtin",
+          "resultBytes": 111,
+          "hasImage": false
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "requestId": "req_011CctUqmJer2Gj19f1318bQ",
+      "ts": "2026-07-10T13:47:37.251Z",
+      "model": "claude-fable-5",
+      "input": 131,
+      "output": 140,
+      "cacheWrite": 117,
+      "cacheRead": 42753,
+      "contextTokens": 43001,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
+    }
+  ],
+  "totals": {
+    "input": 8465,
+    "output": 5066,
+    "cacheWrite": 23999,
+    "cacheRead": 334113
+  },
+  "unknownTypes": {}
+}
