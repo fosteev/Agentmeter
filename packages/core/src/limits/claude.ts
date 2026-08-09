@@ -3,6 +3,15 @@ import type { LimitUsage, LimitWindow, Request } from '../sources/types.ts'
 
 const MINUTE_MS = 60_000
 
+/**
+ * Что окну нужно от запроса: момент и четыре счётчика.
+ *
+ * Уже, чем `Request`, намеренно. Окна пересобираются из индекса, а не из
+ * разбора, и собирать там полный `Request` со списком тулов пришлось бы только
+ * ради того, чтобы его выбросили здесь же.
+ */
+export type LimitRequest = Pick<Request, 'ts' | 'input' | 'output' | 'cacheWrite' | 'cacheRead'>
+
 interface ClaudeWindowSpec {
   kind: 'fiveHour' | 'weekly'
   windowMinutes: 300 | 10_080
@@ -10,7 +19,10 @@ interface ClaudeWindowSpec {
 }
 
 /** Запросы Claude (из всех сессий сразу) → окна с расходом. */
-export function buildClaudeWindows(requests: Request[], limits: ClaudeLimits): LimitWindow[] {
+export function buildClaudeWindows(
+  requests: readonly LimitRequest[],
+  limits: ClaudeLimits,
+): LimitWindow[] {
   const sorted = [...requests].sort((left, right) => left.ts - right.ts)
   const specs: ClaudeWindowSpec[] = [
     { kind: 'fiveHour', windowMinutes: 300, cap: limits.fiveHourCap },
@@ -26,7 +38,7 @@ export function buildClaudeWindows(requests: Request[], limits: ClaudeLimits): L
 }
 
 function buildWindows(
-  requests: Request[],
+  requests: readonly LimitRequest[],
   spec: ClaudeWindowSpec,
   cacheReadWeight: number | null,
 ): LimitWindow[] {
@@ -47,7 +59,7 @@ function buildWindows(
 }
 
 function createWindow(
-  request: Request,
+  request: LimitRequest,
   spec: ClaudeWindowSpec,
   cacheReadWeight: number | null,
 ): LimitWindow {
@@ -69,7 +81,7 @@ function createWindow(
 
 function addRequest(
   window: LimitWindow,
-  request: Request,
+  request: LimitRequest,
   cap: number | null,
   cacheReadWeight: number | null,
 ): void {

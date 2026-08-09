@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openDb } from '../../src/index/db.ts'
-import { SCHEMA_VERSION } from '../../src/index/schema.ts'
+import { MIGRATIONS, SCHEMA_VERSION } from '../../src/index/schema.ts'
 
 let dir: string
 const dbPath = () => join(dir, 'index.sqlite')
@@ -78,42 +78,109 @@ describe('схема индекса', () => {
     db.close()
   })
 
-  it('мигрирует версию 1 в 3 без rebuild и сохраняет данные', () => {
+  // Версия 4 — первая миграция с rebuild, и до неё эта ветка openDb не
+  // выполнялась ни разу. Проверяется именно она: снос базы под открытым
+  // соединением, с включёнными внешними ключами и данными во всех таблицах.
+  it.each([1, 2, 3])('индекс версии %i пересобирается, а не чинится по кусочкам', (version) => {
     const first = openDb(dbPath())
     seedMigrationData(first.db)
-    first.db.run('DROP INDEX sessions_source')
-    first.db.run('ALTER TABLE tool_calls DROP COLUMN marginal_basis')
-    first.db.run('ALTER TABLE requests DROP COLUMN interjected_bytes')
-    first.db.run('UPDATE meta SET value = ? WHERE key = ?', '1', 'schema_version')
+    first.db.run('UPDATE meta SET value = ? WHERE key = ?', String(version), 'schema_version')
     first.db.close()
 
     const { db, rebuilt } = openDb(dbPath())
-    expectMigratedToCurrent(db, rebuilt)
+    // rebuilt = true — обещание вызывающему перечитать логи. Отдать пустую
+    // базу молча значит показать ноль вместо расхода.
+    expect(rebuilt).toBe(true)
     expect(
-      db.get<{ name: string }>(
-        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'sessions_source'",
-      ),
-    ).toEqual({
-      name: 'sessions_source',
-    })
+      db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
+    ).toEqual({ value: String(SCHEMA_VERSION) })
+    for (const table of ['sources', 'sessions', 'requests', 'tool_calls', 'diagnostics']) {
+      expect(db.all(`SELECT * FROM ${table}`), table).toHaveLength(0)
+    }
+    // Пересборка гасит внешние ключи, чтобы снести таблицы в любом порядке.
+    // Забыть их вернуть значит на весь сеанс остаться без каскадов — тихо, до
+    // первого осиротевшего запроса.
+    expect(db.get('PRAGMA foreign_keys')).toEqual({ foreign_keys: 1 })
     db.close()
   })
 
-  it('мигрирует версию 2 в 3 без rebuild и сохраняет данные', () => {
-    const first = openDb(dbPath())
-    seedMigrationData(first.db)
-    first.db.run('ALTER TABLE tool_calls DROP COLUMN marginal_basis')
-    first.db.run('ALTER TABLE requests DROP COLUMN interjected_bytes')
-    first.db.run('UPDATE meta SET value = ? WHERE key = ?', '2', 'schema_version')
-    first.db.close()
+  it('список миграций доводит ровно до текущей версии', () => {
+    const versions = MIGRATIONS.map((migration) => migration.version)
+    expect(versions).toEqual([...versions].sort((a, b) => a - b))
+    expect(new Set(versions).size).toBe(versions.length)
+    expect(Math.max(...versions)).toBe(SCHEMA_VERSION)
+    for (const migration of MIGRATIONS) {
+      expect(Boolean(migration.sql) !== Boolean(migration.rebuild), String(migration.version)).toBe(
+        true,
+      )
+    }
+  })
+})
 
-    const { db, rebuilt } = openDb(dbPath())
-    expectMigratedToCurrent(db, rebuilt)
+describe('лимиты в индексе', () => {
+  it('процент окна законно пустой, а расход отличим от нуля', () => {
+    const { db } = openDb(dbPath())
+    db.run(
+      `INSERT INTO limit_windows (
+         provider, kind, window_minutes, starts_at, resets_at, used_percent, observed_at, exact
+       ) VALUES ('claude', 'fiveHour', 300, 1000, 1000 + 300 * 60000, NULL, 2000, 0)`,
+    )
+    db.run(
+      `INSERT INTO limit_windows (
+         provider, kind, window_minutes, starts_at, resets_at, used_percent, observed_at, exact
+       ) VALUES ('codex', 'weekly', 10080, 1000, 1000 + 10080 * 60000, 16.5, 2000, 1)`,
+    )
+    expect(
+      db.all('SELECT provider, used_percent, usage_weighted FROM limit_windows ORDER BY provider'),
+    ).toEqual([
+      { provider: 'claude', used_percent: null, usage_weighted: null },
+      { provider: 'codex', used_percent: 16.5, usage_weighted: null },
+    ])
+    db.close()
+  })
+
+  it('два окна с одним якорем не сливаются молча', () => {
+    const { db } = openDb(dbPath())
+    const insert = (percent: number) =>
+      db.run(
+        `INSERT INTO limit_windows (
+           provider, kind, window_minutes, starts_at, resets_at, used_percent, observed_at, exact
+         ) VALUES ('codex', 'fiveHour', 300, 1000, 1000 + 300 * 60000, ?, 2000, 1)`,
+        percent,
+      )
+    insert(30)
+    expect(() => insert(2)).toThrow()
+    db.close()
+  })
+
+  it('наблюдения снимаются вместе с источником', () => {
+    const { db } = openDb(dbPath())
+    for (const ts of [1000, 2000]) {
+      db.run(
+        `INSERT INTO limit_observations (source_path, provider, ts, window_minutes, used_percent, resets_at)
+         VALUES ('/rollout.jsonl', 'codex', ?, 300, 12, 99000)`,
+        ts,
+      )
+    }
+    // Один и тот же слот в одну и ту же секунду — не ошибка: Codex пишет
+    // `token_count` дважды на запрос. Сборка окон берёт максимум, поэтому
+    // дубль безвреден, а вот отказ вставки уронил бы ingest на живых логах.
+    db.run(
+      `INSERT INTO limit_observations (source_path, provider, ts, window_minutes, used_percent, resets_at)
+       VALUES ('/rollout.jsonl', 'codex', 1000, 300, 12, 99000)`,
+    )
+    expect(db.all('SELECT * FROM limit_observations')).toHaveLength(3)
+    db.run('DELETE FROM limit_observations WHERE source_path = ?', '/rollout.jsonl')
+    expect(db.all('SELECT * FROM limit_observations')).toHaveLength(0)
     db.close()
   })
 })
 
 function seedMigrationData(db: ReturnType<typeof openDb>['db']): void {
+  db.run(
+    `INSERT INTO sources (path, provider, inode, size, mtime, offset, parsed_at)
+     VALUES ('/migration.jsonl', 'claude', 1, 2, 3, 2, 4)`,
+  )
   db.run(
     `INSERT INTO sessions (id, provider, source_path, cwd, project, started_at, ended_at)
      VALUES ('migration-session', 'claude', '/migration.jsonl', '/proj/a', 'a', 1, 2)`,
@@ -127,29 +194,8 @@ function seedMigrationData(db: ReturnType<typeof openDb>['db']): void {
        session_id, seq, idx, name, kind, marginal_tokens, marginal_basis
      ) VALUES ('migration-session', 0, 0, 'Read', 'builtin', 13, 'measured')`,
   )
-}
-
-function expectMigratedToCurrent(db: ReturnType<typeof openDb>['db'], rebuilt: boolean): void {
-  expect(rebuilt).toBe(false)
-  expect(
-    db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
-  ).toEqual({ value: String(SCHEMA_VERSION) })
-  expect(
-    db.all<{ name: string }>('PRAGMA table_info(requests)').map((column) => column.name),
-  ).toContain('interjected_bytes')
-  expect(
-    db.all<{ name: string }>('PRAGMA table_info(tool_calls)').map((column) => column.name),
-  ).toContain('marginal_basis')
-  expect(
-    db.get(
-      'SELECT request_id, output, interjected_bytes FROM requests WHERE session_id = ?',
-      'migration-session',
-    ),
-  ).toEqual({ request_id: 'migration-request', output: 42, interjected_bytes: 0 })
-  expect(
-    db.get(
-      'SELECT name, marginal_tokens, marginal_basis FROM tool_calls WHERE session_id = ?',
-      'migration-session',
-    ),
-  ).toEqual({ name: 'Read', marginal_tokens: 13, marginal_basis: 'unknown' })
+  db.run(
+    `INSERT INTO diagnostics (source_path, kind, detail, count, cli_version, seen_at)
+     VALUES ('/migration.jsonl', 'unknown_record_type', 'queue-operation', 12, '2.1.220', 5)`,
+  )
 }

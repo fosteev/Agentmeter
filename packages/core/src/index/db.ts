@@ -86,7 +86,11 @@ export function openDb(path: string): { db: Db; rebuilt: boolean } {
   if (!hasMeta) {
     db.transaction(() => {
       db.exec(SCHEMA_SQL)
-      db.run('INSERT INTO meta (key, value) VALUES (?, ?)', 'schema_version', String(SCHEMA_VERSION))
+      db.run(
+        'INSERT INTO meta (key, value) VALUES (?, ?)',
+        'schema_version',
+        String(SCHEMA_VERSION),
+      )
     })
     return { db, rebuilt: true }
   }
@@ -102,14 +106,30 @@ export function openDb(path: string): { db: Db; rebuilt: boolean } {
     )
   }
 
-  const pending = MIGRATIONS.filter((m) => m.version > current).sort((a, b) => a.version - b.version)
+  const pending = MIGRATIONS.filter((m) => m.version > current).sort(
+    (a, b) => a.version - b.version,
+  )
   const needsRebuild = pending.some((m) => m.rebuild)
   if (needsRebuild) {
-    db.transaction(() => {
-      dropEverything(db)
-      db.exec(SCHEMA_SQL)
-      db.run('INSERT INTO meta (key, value) VALUES (?, ?)', 'schema_version', String(SCHEMA_VERSION))
-    })
+    // Ключи выключаются снаружи транзакции: внутри неё этот PRAGMA — no-op
+    // (так устроен SQLite), и тогда DROP TABLE родителя ломает следующий DROP
+    // ребёнка с «no such table». Транзакция при этом остаётся: снос и создание
+    // схемы обязаны быть атомарны, иначе падение посередине оставит базу без
+    // таблиц и с прежним номером версии.
+    raw.exec('PRAGMA foreign_keys = OFF')
+    try {
+      db.transaction(() => {
+        dropEverything(db)
+        db.exec(SCHEMA_SQL)
+        db.run(
+          'INSERT INTO meta (key, value) VALUES (?, ?)',
+          'schema_version',
+          String(SCHEMA_VERSION),
+        )
+      })
+    } finally {
+      raw.exec('PRAGMA foreign_keys = ON')
+    }
     return { db, rebuilt: true }
   }
 
@@ -124,7 +144,5 @@ function dropEverything(db: Db): void {
   const tables = db.all<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
   )
-  db.exec('PRAGMA foreign_keys = OFF')
   for (const { name } of tables) db.exec(`DROP TABLE IF EXISTS "${name}"`)
-  db.exec('PRAGMA foreign_keys = ON')
 }

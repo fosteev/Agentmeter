@@ -17,7 +17,7 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
@@ -114,19 +114,67 @@ CREATE TABLE IF NOT EXISTS tool_calls (
 CREATE INDEX IF NOT EXISTS tool_calls_name   ON tool_calls (name);
 CREATE INDEX IF NOT EXISTS tool_calls_server ON tool_calls (server) WHERE server IS NOT NULL;
 
--- Окна лимитов: у Codex приходят точными в логе, у Claude считаются нами и
--- всегда помечены exact = 0. Хранится история, а не только последнее
--- состояние: по ней видно, когда упирались в потолок.
+-- Наблюдения лимита из логов Codex: по строке на слот записи token_count.
+-- В индексе лежит вход сборки, а не её результат, и вот почему: окно живёт
+-- поперёк файлов. Лимит общий на аккаунт, одно пятичасовое окно размазано по
+-- всем роллаутам этих пяти часов, а ingest идёт файл за файлом и видит только
+-- кусок. Собрать окно при разборе одного файла нельзя в принципе.
+--
+-- Имени слота (primary/secondary) здесь нет намеренно: до Codex CLI 0.145.0
+-- primary был пятичасовым, с 0.145.0 стал недельным. Вид окна выводится из
+-- его длины, и window_minutes — единственный надёжный признак (1.8).
+--
+-- Привязка к файлу нужна ровно для одного: снять наблюдения вместе с
+-- источником, когда файл исчез или перечитан. Как у diagnostics, внешнего
+-- ключа нет — строка источника пишется последней в той же транзакции.
+CREATE TABLE IF NOT EXISTS limit_observations (
+  source_path    TEXT    NOT NULL,
+  provider       TEXT    NOT NULL,
+  ts             INTEGER NOT NULL,
+  window_minutes INTEGER NOT NULL,
+  used_percent   REAL    NOT NULL,
+  resets_at      INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS limit_observations_source ON limit_observations (source_path);
+CREATE INDEX IF NOT EXISTS limit_observations_window
+  ON limit_observations (provider, window_minutes, ts);
+
+-- Окна лимита: у Codex собраны из наблюдений выше, у Claude — из наших же
+-- запросов, и тогда всегда exact = 0. Таблица целиком пересобирается после
+-- ingest: окно не принадлежит файлу, дописать его по частям нельзя.
+--
+-- Ключ — якорь окна, а не момент наблюдения. Окно фиксировано первым запросом
+-- после истечения предыдущего, и (provider, window_minutes, starts_at) —
+-- это и есть его личность (1.8). INSERT без OR REPLACE намеренно: два
+-- разных окна с одним якорем означают ошибку сборки, и слить их в одно значит
+-- занизить расход молча.
 CREATE TABLE IF NOT EXISTS limit_windows (
   provider       TEXT    NOT NULL,
   kind           TEXT    NOT NULL,
-  observed_at    INTEGER NOT NULL,
-  used_percent   REAL    NOT NULL,
   window_minutes INTEGER NOT NULL,
-  resets_at      INTEGER,
+  starts_at      INTEGER NOT NULL,
+  resets_at      INTEGER NOT NULL,
+  -- null — законное значение, а не «ноль»: у Claude нет потолка плана в
+  -- конфиге либо не откалиброван вес cache_read (1.9). Доля от неизвестного
+  -- потолка не существует, и ноль здесь был бы утверждением, которого мы не
+  -- делали.
+  used_percent   REAL,
+  observed_at    INTEGER NOT NULL,
   exact          INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (provider, kind, observed_at)
+  -- Расход окна. У Codex его нет — провайдер сообщает только процент, — и все
+  -- шесть колонок остаются NULL. NULL значит «не считали», ноль значил бы
+  -- «посчитали и вышло ноль».
+  usage_input       INTEGER,
+  usage_output      INTEGER,
+  usage_cache_write INTEGER,
+  usage_cache_read  INTEGER,
+  usage_weighted    REAL,
+  usage_requests    INTEGER,
+  PRIMARY KEY (provider, window_minutes, starts_at)
 ) STRICT;
+
+CREATE INDEX IF NOT EXISTS limit_windows_span ON limit_windows (provider, kind, starts_at);
 
 -- Что парсер не понял: незнакомые типы записей и битые строки, с версией CLI.
 -- Отсюда команда doctor берёт свой отчёт (1.4).
@@ -161,5 +209,15 @@ export const MIGRATIONS: Migration[] = [
     version: 3,
     sql: `ALTER TABLE tool_calls ADD COLUMN marginal_basis TEXT NOT NULL DEFAULT 'unknown';
 ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
+  },
+  {
+    // `limit_windows` переписана под якорь окна и расход, и рядом появилась
+    // `limit_observations`, которой в индексе не было вовсе. Долить наблюдения
+    // ALTER-ом неоткуда: они лежат только в логах, а старая база помнит эти
+    // файлы разобранными и дочитывать их не станет. Пустая таблица при этом
+    // выглядела бы как «лимитов нет» — ровно то враньё, против которого весь
+    // продукт. Поэтому единственный честный путь — перечитать логи (правило 3).
+    version: 4,
+    rebuild: true,
   },
 ]
