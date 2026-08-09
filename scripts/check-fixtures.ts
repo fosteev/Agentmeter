@@ -14,6 +14,7 @@ const ROOT = resolve(import.meta.dirname, '..')
 const CLAUDE = join(ROOT, 'fixtures/claude')
 const CODEX = join(ROOT, 'fixtures/codex')
 const PREFIX = join(ROOT, 'fixtures/prefix')
+const LIMITS = join(ROOT, 'fixtures/limits')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -238,7 +239,7 @@ check(
         t.output === total.output_tokens &&
           t.input + t.cacheRead === total.input_tokens &&
           t.reasoning === total.reasoning_output_tokens,
-        `${exp.requests.length} запросов, ${exp.limits.length} окон лимитов`,
+        `${exp.requests.length} запросов, ${exp.limits.length} наблюдений лимита`,
       )
 
       // Один вызов тула лежит в логе двумя записями: response_item/function_call
@@ -276,6 +277,84 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
   const text = readFileSync(jsonl, 'utf8')
   const leak = LEAKS.find((re) => re.test(text))
   if (leak) failures.push(`  ✗ prefix / ${name} — обезличивание не прошло, найдено ${leak}`)
+}
+
+// ─── окна лимита: сценарий важнее формы ─────────────────────────────────────
+
+{
+  const slots = (rows: Record<string, any>[]): Record<string, any>[] =>
+    rows.flatMap((r) => {
+      const rl = r.payload?.rate_limits
+      return rl ? [rl.primary, rl.secondary].filter(Boolean) : []
+    })
+
+  for (const name of ['codex-limits', 'codex-limits-new', 'codex-limits-odd', 'claude-limits']) {
+    const jsonl = join(LIMITS, `${name}.jsonl`)
+    if (!existsSync(jsonl)) {
+      failures.push(`  ✗ limits / ${name} — нет ${name}.jsonl`)
+      continue
+    }
+    if (!existsSync(join(LIMITS, `${name}.expected.json`))) {
+      failures.push(`  ✗ limits / ${name} — нет ручного expected.json`)
+    }
+    const text = readFileSync(jsonl, 'utf8')
+    const leak = LEAKS.find((re) => re.test(text))
+    if (leak) failures.push(`  ✗ limits / ${name} — обезличивание не прошло, найдено ${leak}`)
+  }
+
+  const old = slots(readJsonl(join(LIMITS, 'codex-limits.jsonl')))
+  const five = old.filter((s) => s.window_minutes === 300)
+  check(
+    'limits / старая раскладка слотов',
+    five.length > 0 && old.some((s) => s.window_minutes === 10080),
+    `${five.length} наблюдений 300 мин и ${old.length - five.length} недельных`,
+  )
+  // Ради этого наблюдения фикстура и существует: взять последнее вместо
+  // максимума значит показать 3% там, где израсходовано 12%.
+  const stale = five.findIndex((s, i) => i > 0 && s.used_percent < five[i - 1].used_percent)
+  check(
+    'limits / есть протухшее наблюдение',
+    stale > 0,
+    `падение ${five[stale - 1]?.used_percent}% → ${five[stale]?.used_percent}% внутри окна`,
+  )
+  check(
+    'limits / окно истекает и открывается заново',
+    new Set(five.map((s) => s.resets_at)).size >= 2,
+    `${new Set(five.map((s) => s.resets_at)).size} разных resets_at на 300 мин`,
+  )
+
+  const fresh = readJsonl(join(LIMITS, 'codex-limits-new.jsonl'))
+  const freshSlots = fresh.flatMap((r) => (r.payload?.rate_limits ? [r.payload.rate_limits] : []))
+  check(
+    'limits / раскладка после 0.145.0',
+    freshSlots.length > 0 &&
+      freshSlots.every((rl) => rl.primary?.window_minutes === 10080 && rl.secondary === null),
+    `${freshSlots.length} записей, primary = недельное, secondary = null`,
+  )
+
+  const odd = slots(readJsonl(join(LIMITS, 'codex-limits-odd.jsonl'))).map((s) => s.window_minutes)
+  check(
+    'limits / месячное и незнакомое окно',
+    odd.includes(43200) && odd.some((m) => ![300, 10080, 43200].includes(m)),
+    `длины окон: ${odd.join(', ')}`,
+  )
+
+  const turns = readJsonl(join(LIMITS, 'claude-limits.jsonl')).filter((r) => r.type === 'assistant')
+  const stamps = turns.map((r) => Date.parse(r.timestamp))
+  {
+    // Восстановленные запросы (1.3) обязаны быть: без них правило «в окно
+    // входят все вызовы API, а не только записанные» ничем не проверяется, и
+    // фильтр по origin прошёл бы незамеченным.
+    const rs = requests(readJsonl(join(LIMITS, 'claude-limits.jsonl')))
+    const warms = rs.filter((r, i) => i > 0 && r.cr - (rs[i - 1]!.cr + rs[i - 1]!.cw) > 0).length
+    check('limits / незаписанные запросы внутри окна', warms === 3, `${warms} разрывов цепочки кэша`)
+  }
+  const border = stamps[0] + 5 * 60 * 60 * 1000
+  check(
+    'limits / граница пятичасового окна проверяется минутой',
+    stamps.some((t) => border - t > 0 && border - t <= 60_000) && stamps.some((t) => t > border),
+    `${turns.length} запросов, последний внутри окна за ${(border - Math.max(...stamps.filter((t) => t < border))) / 1000} с до сброса`,
+  )
 }
 
 // ─── итог ────────────────────────────────────────────────────────────────────

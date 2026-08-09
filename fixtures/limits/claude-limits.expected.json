@@ -1,0 +1,79 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Лимитов в логах Claude нет: окна строятся из наших запросов по модели якоря, измеренной на Codex. exact всегда false. В окна входят все запросы, включая три восстановленных по разрыву цепочки кэша (1.3) — провайдер их посчитал.",
+  "provider": "claude",
+  "requests": {
+    "log": 4,
+    "reconstructed": 3,
+    "_note": "Отфильтровать восстановленные — единственный способ провалить этот эталон незаметно."
+  },
+  "cases": {
+    "withWeightAndCaps": {
+      "config": { "fiveHourCap": 1000000, "weeklyCap": 3000000, "cacheReadWeight": 0.1 },
+      "windows": [
+        {
+          "kind": "fiveHour",
+          "windowMinutes": 300,
+          "startsAt": "2026-05-01T10:00:00.000Z",
+          "resetsAt": "2026-05-01T15:00:00.000Z",
+          "usedPercent": 36.5,
+          "observedAt": "2026-05-01T14:59:00.000Z",
+          "exact": false,
+          "usage": {
+            "input": 1200,
+            "output": 1200,
+            "cacheWrite": 300000,
+            "cacheRead": 626000,
+            "weighted": 365000,
+            "requests": 6
+          }
+        },
+        {
+          "kind": "fiveHour",
+          "windowMinutes": 300,
+          "startsAt": "2026-05-01T15:30:00.000Z",
+          "resetsAt": "2026-05-01T20:30:00.000Z",
+          "usedPercent": 3.22,
+          "observedAt": "2026-05-01T15:30:00.000Z",
+          "exact": false,
+          "usage": {
+            "input": 100,
+            "output": 100,
+            "cacheWrite": 2000,
+            "cacheRead": 300000,
+            "weighted": 32200,
+            "requests": 1
+          }
+        },
+        {
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": "2026-05-01T10:00:00.000Z",
+          "resetsAt": "2026-05-08T10:00:00.000Z",
+          "usedPercent": 13.24,
+          "observedAt": "2026-05-01T15:30:00.000Z",
+          "exact": false,
+          "usage": {
+            "input": 1300,
+            "output": 1300,
+            "cacheWrite": 302000,
+            "cacheRead": 926000,
+            "weighted": 397200,
+            "requests": 7
+          }
+        }
+      ]
+    },
+    "withoutWeight": {
+      "config": { "fiveHourCap": 1000000, "weeklyCap": 3000000, "cacheReadWeight": null },
+      "_note": "Границы окон и сырые суммы те же; взвешивать нечем, доли нет.",
+      "weighted": [null, null, null],
+      "usedPercent": [null, null, null]
+    },
+    "withoutCaps": {
+      "config": { "fiveHourCap": null, "weeklyCap": null, "cacheReadWeight": 0.1 },
+      "_note": "Расход известен, а доля от чего — нет.",
+      "weighted": [365000, 32200, 397200],
+      "usedPercent": [null, null, null]
+    }
+  }
+}

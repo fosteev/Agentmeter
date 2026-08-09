@@ -1,10 +1,17 @@
 import { readFileSync } from 'node:fs'
-import type { LimitWindow } from '../types.ts'
+import type { LimitObservation } from '../types.ts'
 
 type JsonObject = Record<string, unknown>
 
-export function readLimits(path: string): LimitWindow[] {
-  const windows: LimitWindow[] = []
+/**
+ * Сырые наблюдения лимита из одного роллаута, в порядке появления.
+ *
+ * Имя слота (`primary`/`secondary`) сюда не попадает намеренно: до Codex CLI
+ * 0.145.0 `primary` был пятичасовым, с 0.145.0 стал недельным. Единственный
+ * надёжный признак вида окна — его длина.
+ */
+export function readLimits(path: string): LimitObservation[] {
+  const observations: LimitObservation[] = []
 
   for (const line of readFileSync(path, 'utf8').split('\n')) {
     if (line.trim() === '') continue
@@ -15,29 +22,26 @@ export function readLimits(path: string): LimitWindow[] {
 
     const rateLimits = objectField(payload ?? {}, 'rate_limits')
     if (!rateLimits) continue
-    appendWindow(windows, 'primary', objectField(rateLimits, 'primary'))
-    appendWindow(windows, 'secondary', objectField(rateLimits, 'secondary'))
+    const ts = Date.parse(stringField(record, 'timestamp') ?? '')
+    for (const slot of ['primary', 'secondary'] as const) {
+      append(observations, ts, objectField(rateLimits, slot))
+    }
   }
 
-  return windows
+  return observations
 }
 
-function appendWindow(windows: LimitWindow[], kind: 'primary' | 'secondary', payload: JsonObject | undefined): void {
+function append(observations: LimitObservation[], ts: number, payload: JsonObject | undefined): void {
   if (!payload) return
   const usedPercent = numberField(payload, 'used_percent')
   const windowMinutes = numberField(payload, 'window_minutes')
-  if (usedPercent === undefined || windowMinutes === undefined) return
-
-  const window: LimitWindow = {
-    provider: 'codex',
-    kind,
-    usedPercent,
-    windowMinutes,
-    exact: true,
-  }
   const resetsAt = numberField(payload, 'resets_at')
-  if (resetsAt !== undefined) window.resetsAt = resetsAt * 1000
-  windows.push(window)
+  // Без `resets_at` наблюдение бесполезно: границ окна из него не построить,
+  // а класть его в «текущее окно» наугад — тихо соврать.
+  if (usedPercent === undefined || windowMinutes === undefined || resetsAt === undefined) return
+  if (!Number.isFinite(ts)) return
+
+  observations.push({ ts, windowMinutes, usedPercent, resetsAt: resetsAt * 1000 })
 }
 
 function parseObject(line: string): JsonObject | undefined {

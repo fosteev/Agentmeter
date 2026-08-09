@@ -295,116 +295,84 @@
   ],
   "limits": [
     {
-      "kind": "primary",
       "usedPercent": 1,
       "windowMinutes": 300,
-      "resetsAt": 1781531144000,
-      "exact": true
+      "resetsAt": 1781531144000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 2,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     },
     {
-      "kind": "primary",
       "usedPercent": 3,
       "windowMinutes": 300,
-      "resetsAt": 1781531151000,
-      "exact": true
+      "resetsAt": 1781531151000
     },
     {
-      "kind": "secondary",
       "usedPercent": 4,
       "windowMinutes": 10080,
-      "resetsAt": 1781527537000,
-      "exact": true
+      "resetsAt": 1781527537000
     }
   ],
   "totals": {

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parseRolloutFile, readLimits } from '../../src/index.ts'
-import type { LimitWindow, ParseResult, Request, Session, ToolCall } from '../../src/index.ts'
+import type { LimitObservation, ParseResult, Request, Session, ToolCall } from '../../src/index.ts'
 
 const fixturesDir = fileURLToPath(new URL('../../../../fixtures/codex/', import.meta.url))
 const rolloutPath = join(fixturesDir, 'rollout.jsonl')
@@ -34,22 +34,22 @@ describe('Codex parser', () => {
     expect(totals.reasoning).toBe(expected.reasoning_output_tokens)
   })
 
-  it('readLimits возвращает точные окна в порядке появления', () => {
+  it('readLimits возвращает наблюдения в порядке появления', () => {
     const actual = readLimits(rolloutPath)
     const expectedResets = readLimitResets(rolloutPath)
 
     expect(actual).toHaveLength(16)
-    expect(actual.every((window) => window.exact)).toBe(true)
-    expect(actual.map((window) => window.resetsAt)).toEqual(
+    expect(actual.map((observation) => observation.resetsAt)).toEqual(
       expectedResets.map((value) => value * 1000),
     )
     expect(projectLimit(actual[0])).toEqual({
-      kind: 'primary',
       usedPercent: 1,
       windowMinutes: 300,
       resetsAt: 1781531144000,
-      exact: true,
     })
+    // Имени слота в наблюдении нет: с Codex CLI 0.145.0 `primary` стал
+    // недельным, и раскладка по слотам показала бы неделю как пять часов.
+    expect(Object.keys(actual[0])).toEqual(['ts', 'windowMinutes', 'usedPercent', 'resetsAt'])
   })
 
   it('повторный token_count с тем же итогом не удваивает запрос', () => {
@@ -202,14 +202,12 @@ function projectTool(tool: ToolCall, expected: unknown): Record<string, unknown>
   return projected
 }
 
-function projectLimit(window: LimitWindow | undefined): Record<string, unknown> {
-  if (!window) throw new Error('missing limit window')
+function projectLimit(observation: LimitObservation | undefined): Record<string, unknown> {
+  if (!observation) throw new Error('missing limit observation')
   return {
-    kind: window.kind,
-    usedPercent: window.usedPercent,
-    windowMinutes: window.windowMinutes,
-    resetsAt: window.resetsAt,
-    exact: window.exact,
+    usedPercent: observation.usedPercent,
+    windowMinutes: observation.windowMinutes,
+    resetsAt: observation.resetsAt,
   }
 }
 

@@ -1,0 +1,15 @@
+{
+  "_": "Посчитано руками. Раскладка после Codex CLI 0.145.0: primary = недельное, secondary = null. Пятичасовых окон здесь нет — разбор по имени слота дал бы fiveHour на 16%.",
+  "provider": "codex",
+  "windows": [
+    {
+      "kind": "weekly",
+      "windowMinutes": 10080,
+      "startsAt": "2026-08-03T07:00:00.000Z",
+      "resetsAt": "2026-08-10T07:00:00.000Z",
+      "usedPercent": 16,
+      "observedAt": "2026-08-09T13:00:00.000Z",
+      "exact": true
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "_": "Посчитано руками. Правило 1.4: незнакомая длина окна не роняет разбор и не приводится к знакомой.",
+  "provider": "codex",
+  "windows": [
+    {
+      "kind": "monthly",
+      "windowMinutes": 43200,
+      "startsAt": "2026-05-02T08:00:00.000Z",
+      "resetsAt": "2026-06-01T08:00:00.000Z",
+      "usedPercent": 7,
+      "observedAt": "2026-05-20T08:00:00.000Z",
+      "exact": true
+    },
+    {
+      "kind": "other",
+      "windowMinutes": 1440,
+      "startsAt": "2026-05-20T09:00:00.000Z",
+      "resetsAt": "2026-05-21T09:00:00.000Z",
+      "usedPercent": 4,
+      "observedAt": "2026-05-20T09:00:00.000Z",
+      "exact": true
+    }
+  ]
+}

@@ -213,18 +213,68 @@ export interface LiveSession {
 }
 
 /**
+ * Вид окна — выводится из его длины, а не из имени слота в логе.
+ *
+ * Имя слота использовать нельзя: до Codex CLI 0.145.0 `primary` был
+ * пятичасовым, а `secondary` недельным, с 0.145.0 `primary` стал недельным,
+ * а `secondary` исчез. Раскладка по слотам показала бы недельный расход как
+ * пятичасовой, молча и без единой ошибки в логах.
+ */
+export type LimitWindowKind = 'fiveHour' | 'weekly' | 'monthly' | 'other'
+
+/**
  * Окно лимита. У Codex приходит точным прямо в логе, у Claude считается
  * своей агрегацией и всегда помечается оценкой.
  */
 export interface LimitWindow {
   provider: Provider
-  /** `primary` у Codex — пятичасовое, `secondary` — недельное. */
-  kind: 'primary' | 'secondary'
-  usedPercent: number
+  kind: LimitWindowKind
+  /** Длина окна в минутах — как её назвал источник. Для `other` единственный признак. */
   windowMinutes: number
-  resetsAt?: number
+  /** Начало окна: `resetsAt − windowMinutes`. Совпадает с первым запросом окна. */
+  startsAt: number
+  resetsAt: number
+  /**
+   * Доля израсходованного. `null` — не восстановима: у Claude нет потолка плана
+   * в конфиге либо не откалиброван вес `cacheRead` (1.9). Ноль здесь означал бы
+   * «израсходовано ноль», а это другое утверждение.
+   */
+  usedPercent: number | null
+  /** Когда снят замер: у Codex — момент наблюдения, у Claude — последний запрос окна. */
+  observedAt: number
   /** Цифра из лога провайдера, а не наш расчёт. */
   exact: boolean
+  /** Сырой расход окна. Codex его не сообщает — у него поле опускается. */
+  usage?: LimitUsage
+}
+
+/**
+ * Одно наблюдение лимита из лога — один слот одной записи `rate_limits`.
+ *
+ * Окна из наблюдений собираются выше, в `limits/`, и намеренно не здесь: лимит
+ * общий на аккаунт, одно пятичасовое окно размазано по всем сессиям этих пяти
+ * часов, и разбор одного файла видит только его кусок.
+ */
+export interface LimitObservation {
+  /** Момент записи в логе, а не момент начала окна. */
+  ts: number
+  windowMinutes: number
+  usedPercent: number
+  resetsAt: number
+}
+
+/** Расход внутри окна. Считается только по нашим запросам, то есть у Claude. */
+export interface LimitUsage {
+  input: number
+  output: number
+  cacheWrite: number
+  cacheRead: number
+  /**
+   * `input + cacheWrite + output + cacheReadWeight · cacheRead`.
+   * `null` — вес не откалиброван (1.9), и взвешивать нечем.
+   */
+  weighted: number | null
+  requests: number
 }
 
 /** Результат разбора одного файла лога. */

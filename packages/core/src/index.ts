@@ -10,6 +10,9 @@ export type {
   ToolKind,
   LiveSession,
   LimitWindow,
+  LimitWindowKind,
+  LimitObservation,
+  LimitUsage,
   ParseResult,
   ParseDiagnostics,
 } from './sources/types.ts'
@@ -17,6 +20,7 @@ export type {
 export { emptyDiagnostics } from './sources/types.ts'
 export { attributeMarginal, attributePrefix, PREFIX_BYTES_PER_TOKEN } from './attribution/index.ts'
 export type { MarginalOptions, MarginalStats, PrefixOptions } from './attribution/index.ts'
+export { buildClaudeWindows, buildCodexWindows, currentWindows } from './limits/index.ts'
 export { listLiveSessions, parseSessionFile, parseSubagents } from './sources/claude/index.ts'
 export { parseRolloutFile, readLimits } from './sources/codex/index.ts'
 export { defaultClaudeHome, defaultCodexHome, defaultIndexPath } from './index/paths.ts'

@@ -1,0 +1,43 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Старая раскладка слотов: primary = 300, secondary = 10080.",
+  "provider": "codex",
+  "windows": [
+    {
+      "kind": "fiveHour",
+      "windowMinutes": 300,
+      "startsAt": "2026-05-01T10:00:00.000Z",
+      "resetsAt": "2026-05-01T15:00:00.000Z",
+      "usedPercent": 30,
+      "observedAt": "2026-05-01T13:00:00.000Z",
+      "exact": true
+    },
+    {
+      "kind": "fiveHour",
+      "windowMinutes": 300,
+      "startsAt": "2026-05-01T16:00:00.000Z",
+      "resetsAt": "2026-05-01T21:00:00.000Z",
+      "usedPercent": 2,
+      "observedAt": "2026-05-01T16:00:00.000Z",
+      "exact": true
+    },
+    {
+      "kind": "weekly",
+      "windowMinutes": 10080,
+      "startsAt": "2026-04-28T09:00:00.000Z",
+      "resetsAt": "2026-05-05T09:00:00.000Z",
+      "usedPercent": 24,
+      "observedAt": "2026-05-01T16:00:00.000Z",
+      "exact": true
+    }
+  ],
+  "current": {
+    "at": "2026-05-01T16:30:00.000Z",
+    "fiveHour": { "startsAt": "2026-05-01T16:00:00.000Z", "usedPercent": 2 },
+    "weekly": { "startsAt": "2026-04-28T09:00:00.000Z", "usedPercent": 24 }
+  },
+  "currentAfterExpiry": {
+    "at": "2026-05-01T22:00:00.000Z",
+    "fiveHour": null,
+    "weekly": { "startsAt": "2026-04-28T09:00:00.000Z", "usedPercent": 24 }
+  }
+}

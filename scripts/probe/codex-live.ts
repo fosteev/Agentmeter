@@ -133,7 +133,7 @@ if (asJson) {
   )
 } else {
   console.log(
-    `${files.length} роллаутов, ${requests} запросов, ${limits} окон лимитов — ${(elapsed / 1000).toFixed(1)} с`,
+    `${files.length} роллаутов, ${requests} запросов, ${limits} наблюдений лимита — ${(elapsed / 1000).toFixed(1)} с`,
   )
   console.log(`сверено с total_token_usage: ${checked}, сошлось до токена: ${exact}, без расхода: ${noUsage}`)
   console.log(`ломаных строк: ${malformed}`)
