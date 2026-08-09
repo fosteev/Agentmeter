@@ -1,0 +1,21 @@
+{
+  "name": "@agentmeter/ipc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Контракт main↔renderer: имена каналов и типы полезной нагрузки",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@agentmeter/core": "*"
+  }
+}

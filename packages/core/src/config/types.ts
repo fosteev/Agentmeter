@@ -1,0 +1,95 @@
+/**
+ * Конфиг приложения: что можно настроить и что считается по умолчанию.
+ *
+ * Правило одно: в конфиге лежат только те числа, которых нет в логах. Всё, что
+ * можно измерить, измеряется, а не спрашивается у пользователя. Потолки плана
+ * Claude здесь именно потому, что на диске их нет (см. `docs/plan.md`, раздел
+ * про честные ограничения).
+ */
+
+export interface Config {
+  /** Где искать логи. Пустой массив — использовать пути по умолчанию для ОС. */
+  sources: {
+    claudeHome: string | null
+    codexHome: string | null
+    /** Дополнительные каталоги с логами — на случай нестандартной установки. */
+    extra: string[]
+  }
+
+  limits: {
+    claude: ClaudeLimits
+    /** У Codex лимиты приходят точными прямо в логе, настраивать нечего. */
+    codex: { enabled: boolean }
+  }
+
+  alerts: {
+    /** Процент лимита, после которого предупреждаем. */
+    warnAtPercent: number
+    /** Процент, после которого тревожим всерьёз. */
+    dangerAtPercent: number
+    /** Сессия дороже этого числа токенов — уведомление. 0 — не уведомлять. */
+    sessionTokenAlert: number
+    /** Уведомлять, когда агент закончил работу или ждёт ответа. */
+    notifyOnIdle: boolean
+  }
+
+  index: {
+    /** Сколько дней хранить разобранные данные. 0 — не чистить. */
+    retentionDays: number
+    /** Следить за логами и дочитывать на лету. */
+    watch: boolean
+  }
+
+  privacy: {
+    /** Не показывать тексты промптов в интерфейсе — только метаданные. */
+    hidePrompts: boolean
+    /** Не показывать пути и имена файлов. */
+    hidePaths: boolean
+  }
+
+  ui: {
+    theme: 'system' | 'light' | 'dark'
+    /** С какого часа считать начало дня. Пятичасовое окно ходит через полночь. */
+    dayStartsAtHour: number
+    locale: string
+  }
+}
+
+export interface ClaudeLimits {
+  /** Потолок пятичасового окна в токенах. null — план не задан, показываем расход без процентов. */
+  fiveHourCap: number | null
+  /** Потолок недельного окна. */
+  weeklyCap: number | null
+  /**
+   * Сколько весит прочитанный из кэша токен в лимите подписки.
+   *
+   * Неизвестно и не выводится из логов: разница между «считать полностью» и
+   * «не считать вовсе» — два порядка (339M против 4.3M за сутки на живой
+   * машине). Калибруется вручную по `/usage` — этап 1.9.
+   *
+   * `null` означает «не откалибровано», и тогда лимиты Claude в интерфейсе
+   * помечаются оценкой, а не показываются как факт. Подставлять сюда
+   * правдоподобное число вместо признания незнания — ровно то враньё, ради
+   * борьбы с которым продукт и затевался.
+   */
+  cacheReadWeight: number | null
+  /** Название плана — только для подписи в интерфейсе. */
+  plan: string | null
+}
+
+export const DEFAULT_CONFIG: Config = {
+  sources: { claudeHome: null, codexHome: null, extra: [] },
+  limits: {
+    claude: { fiveHourCap: null, weeklyCap: null, cacheReadWeight: null, plan: null },
+    codex: { enabled: true },
+  },
+  alerts: {
+    warnAtPercent: 75,
+    dangerAtPercent: 90,
+    sessionTokenAlert: 0,
+    notifyOnIdle: true,
+  },
+  index: { retentionDays: 90, watch: true },
+  privacy: { hidePrompts: false, hidePaths: false },
+  ui: { theme: 'system', dayStartsAtHour: 0, locale: 'ru' },
+}
