@@ -13,6 +13,7 @@ import { join, resolve } from 'node:path'
 const ROOT = resolve(import.meta.dirname, '..')
 const CLAUDE = join(ROOT, 'fixtures/claude')
 const CODEX = join(ROOT, 'fixtures/codex')
+const PREFIX = join(ROOT, 'fixtures/prefix')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -158,7 +159,11 @@ check(
   const names = [...toolUsesByRequest(parsed.get('mcp') ?? []).values()].flat()
   const mcp = names.filter((n) => n.startsWith('mcp__'))
   const servers = new Set(mcp.map((n) => n.split('__')[1]))
-  check('mcp / вызовы MCP', mcp.length > 0, `${mcp.length} вызовов, серверы: ${[...servers].join(', ')}`)
+  check(
+    'mcp / вызовы MCP',
+    mcp.length > 0,
+    `${mcp.length} вызовов, серверы: ${[...servers].join(', ')}`,
+  )
 }
 
 {
@@ -254,6 +259,23 @@ check(
       )
     }
   }
+}
+
+// ─── стартовый префикс: синтетические логи рядом с ручным ответом ───────────
+
+for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
+  const jsonl = join(PREFIX, `${name}.jsonl`)
+  const expected = join(PREFIX, `${name}.expected.json`)
+  if (!existsSync(jsonl)) {
+    failures.push(`  ✗ prefix / ${name} — нет ${name}.jsonl`)
+    continue
+  }
+  if (!existsSync(expected)) failures.push(`  ✗ prefix / ${name} — нет ручного expected.json`)
+  const rows = readJsonl(jsonl)
+  check(`prefix / ${name}`, rows.length > 0, `${rows.length} записей`)
+  const text = readFileSync(jsonl, 'utf8')
+  const leak = LEAKS.find((re) => re.test(text))
+  if (leak) failures.push(`  ✗ prefix / ${name} — обезличивание не прошло, найдено ${leak}`)
 }
 
 // ─── итог ────────────────────────────────────────────────────────────────────

@@ -16,6 +16,27 @@
 
 export type Provider = 'claude' | 'codex'
 
+export type PrefixCategory =
+  | 'system'
+  | 'toolSchemas'
+  | 'deferredTools'
+  | 'mcpTools'
+  | 'mcpInstructions'
+  | 'skills'
+  | 'agents'
+  | 'memory'
+  | 'userTurn'
+
+export interface PrefixBlock {
+  category: PrefixCategory
+  /** Имя MCP-сервера, когда блок можно разложить по серверам. */
+  source?: string
+  /** Размер отрендеренного текста в UTF-8, без JSON-обвязки. */
+  bytes: number
+  tokens: number
+  basis: 'estimated' | 'residual'
+}
+
 /** Откуда взялась цифра в `marginalTokens`. */
 export type MarginalBasis =
   | 'measured' // единственный вызов запроса, дельта целиком
@@ -55,6 +76,12 @@ export interface Session {
 
   startedAt: number
   endedAt: number
+
+  /** Контекст первого записанного запроса. */
+  prefixTokens: number
+  prefixBlocks: PrefixBlock[]
+  /** В стартовом наборе был ToolSearch, поэтому схемы MCP отложены. */
+  toolsDeferred: boolean
 
   /**
    * Для транскрипта сабагента — id родительской сессии. Сабагенты лежат в

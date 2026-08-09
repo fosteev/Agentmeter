@@ -1,0 +1,29 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Пересобирать выводом реализации нельзя: фикстура станет подтверждать сама себя.",
+  "provider": "claude",
+  "constants": {
+    "bytesPerToken": {
+      "deferredTools": 2.6,
+      "mcpTools": 2.6,
+      "mcpInstructions": 3.68,
+      "skills": 4.05,
+      "agents": 4.22,
+      "memory": 4.11,
+      "userTurn": 3.02
+    }
+  },
+  "toolsDeferred": true,
+  "prefixTokens": 30000,
+  "requestCount": 12,
+  "recurrentTokens": 360000,
+  "blocks": [
+    { "category": "system", "bytes": 0, "tokens": 24000, "basis": "residual" },
+    { "category": "deferredTools", "bytes": 1295, "tokens": 500, "basis": "estimated" },
+    { "category": "mcpTools", "source": "serena", "bytes": 1296, "tokens": 500, "basis": "estimated" },
+    { "category": "mcpInstructions", "source": "serena", "bytes": 3680, "tokens": 1000, "basis": "estimated" },
+    { "category": "skills", "bytes": 4050, "tokens": 1000, "basis": "estimated" },
+    { "category": "agents", "bytes": 4220, "tokens": 1000, "basis": "estimated" },
+    { "category": "memory", "bytes": 4110, "tokens": 1000, "basis": "estimated" },
+    { "category": "userTurn", "bytes": 3020, "tokens": 1000, "basis": "estimated" }
+  ]
+}

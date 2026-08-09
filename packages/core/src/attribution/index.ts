@@ -1,0 +1,5 @@
+export { attributeMarginal } from './marginal.ts'
+export type { MarginalOptions, MarginalStats } from './marginal.ts'
+export { attributePrefix } from './prefix.ts'
+export type { PrefixOptions } from './prefix.ts'
+export { PREFIX_BYTES_PER_TOKEN } from './calibration.ts'

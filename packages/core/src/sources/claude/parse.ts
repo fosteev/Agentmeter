@@ -1,12 +1,14 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { attributeMarginal } from '../../attribution/marginal.ts'
+import { attributePrefix } from '../../attribution/prefix.ts'
 import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
 import type {
   Entrypoint,
   ParseDiagnostics,
   ParseResult,
+  PrefixBlock,
   Request,
   Session,
   ToolCall,
@@ -56,6 +58,11 @@ interface ParseState {
   drafts: Map<string, RequestDraft>
   toolResults: Map<string, ToolResult>
   lastRequestId?: string
+  prefixBlocks: PrefixBlock[]
+  prefixKeys: Set<string>
+  prefixMemoryPaths: Set<string>
+  userTurnBytes: number
+  toolsDeferred: boolean
 }
 
 const KNOWN_RECORD_TYPES = new Set([
@@ -120,6 +127,11 @@ function parseLines(path: string, lines: string[]): ParseResult {
     diagnostics: emptyDiagnostics(),
     drafts: new Map(),
     toolResults: new Map(),
+    prefixBlocks: [],
+    prefixKeys: new Set(),
+    prefixMemoryPaths: new Set(),
+    userTurnBytes: 0,
+    toolsDeferred: false,
   }
 
   for (const line of lines) {
@@ -131,6 +143,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
 
   const requests = buildRequests(state)
   const session = buildSession(state, requests)
+  attributePrefix(session, requests)
   attributeMarginal(requests, 'claude')
   return { session, requests, diagnostics: state.diagnostics }
 }
@@ -161,6 +174,9 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
       return
     case 'user':
       consumeUser(state, record)
+      return
+    case 'attachment':
+      consumeAttachment(state, record)
       return
     case 'ai-title': {
       const title = stringField(record, 'aiTitle')
@@ -276,6 +292,7 @@ function consumeUser(state: ParseState, record: JsonObject): void {
   if (!message) return
 
   const interjectedBytes = userTextBytes(message)
+  if (interjectedBytes > 0 && state.drafts.size === 0) state.userTurnBytes += interjectedBytes
   if (interjectedBytes > 0 && state.lastRequestId) {
     const draft = state.drafts.get(state.lastRequestId)
     if (draft) draft.interjectedBytes += interjectedBytes
@@ -290,6 +307,90 @@ function consumeUser(state: ParseState, record: JsonObject): void {
     const hasImage = valueHasImage(resultSource) || valueHasImage(block.content)
     state.toolResults.set(id, { resultBytes, hasImage })
   }
+}
+
+function consumeAttachment(state: ParseState, record: JsonObject): void {
+  // После первого ответа те же записи означают прирост посреди сессии. Это
+  // уже маржинальная атрибуция 1.6, а не стартовый префикс.
+  if (state.drafts.size > 0) return
+  const attachment = objectField(record, 'attachment')
+  if (!attachment) return
+
+  switch (stringField(attachment, 'type')) {
+    case 'skill_listing': {
+      const content = stringField(attachment, 'content')
+      if (content !== undefined) addPrefixBlock(state, 'skills', content)
+      return
+    }
+    case 'agent_listing_delta': {
+      const content = stringArrayField(attachment, 'addedLines').join('\n')
+      if (content !== '') addPrefixBlock(state, 'agents', content)
+      return
+    }
+    case 'deferred_tools_delta': {
+      state.toolsDeferred = true
+      for (const name of stringArrayField(attachment, 'addedNames')) {
+        const key = `tool\u0000${name}`
+        if (state.prefixKeys.has(key)) continue
+        state.prefixKeys.add(key)
+        const server = mcpServerFromName(name)
+        state.prefixBlocks.push({
+          category: server ? 'mcpTools' : 'deferredTools',
+          ...(server ? { source: server } : {}),
+          bytes: Buffer.byteLength(name, 'utf8'),
+          tokens: 0,
+          basis: 'estimated',
+        })
+      }
+      return
+    }
+    case 'mcp_instructions_delta': {
+      const names = stringArrayField(attachment, 'addedNames')
+      const blocks = stringArrayField(attachment, 'addedBlocks')
+      blocks.forEach((content, index) => {
+        const source = names[index]
+        addPrefixBlock(state, 'mcpInstructions', content, source)
+      })
+      return
+    }
+    case 'nested_memory': {
+      const path = stringField(attachment, 'path')
+      const content = nestedMemoryContent(attachment.content)
+      if (content !== undefined) addPrefixBlock(state, 'memory', content)
+      if (path !== undefined) state.prefixMemoryPaths.add(resolve(path))
+      return
+    }
+    default:
+      return
+  }
+}
+
+function addPrefixBlock(
+  state: ParseState,
+  category: PrefixBlock['category'],
+  content: string,
+  source?: string,
+): void {
+  const key = `${category}\u0000${source ?? ''}\u0000${content}`
+  if (state.prefixKeys.has(key)) return
+  state.prefixKeys.add(key)
+  state.prefixBlocks.push({
+    category,
+    ...(source ? { source } : {}),
+    bytes: Buffer.byteLength(content, 'utf8'),
+    tokens: 0,
+    basis: 'estimated',
+  })
+}
+
+function nestedMemoryContent(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  const content = asObject(value)
+  return content ? stringField(content, 'content') : undefined
+}
+
+function mcpServerFromName(name: string): string | undefined {
+  return /^mcp__(.+?)__/.exec(name)?.[1]
 }
 
 function getDraft(
@@ -407,6 +508,24 @@ function buildSession(state: ParseState, requests: Request[]): Session {
   const firstRequest = loggedRequests[0]
   const lastRequest = loggedRequests.at(-1)
   const cwd = state.cwd ?? ''
+  const prefixBlocks = [...state.prefixBlocks]
+  const rootMemory = resolve(cwd, 'CLAUDE.md')
+  if (cwd && !state.prefixMemoryPaths.has(rootMemory) && existsSync(rootMemory)) {
+    prefixBlocks.push({
+      category: 'memory',
+      bytes: Buffer.byteLength(readFileSync(rootMemory, 'utf8'), 'utf8'),
+      tokens: 0,
+      basis: 'estimated',
+    })
+  }
+  if (state.userTurnBytes > 0) {
+    prefixBlocks.push({
+      category: 'userTurn',
+      bytes: state.userTurnBytes,
+      tokens: 0,
+      basis: 'estimated',
+    })
+  }
   const session: Session = {
     id: state.sessionId ?? sessionIdFromPath(state.sourcePath),
     provider: 'claude',
@@ -415,6 +534,9 @@ function buildSession(state: ParseState, requests: Request[]): Session {
     project: projectFromCwd(cwd),
     startedAt: firstRequest?.ts ?? state.firstRecordTs ?? 0,
     endedAt: state.lastAssistantTs ?? lastRequest?.ts ?? state.lastRecordTs ?? 0,
+    prefixTokens: firstRequest?.contextTokens ?? 0,
+    prefixBlocks,
+    toolsDeferred: state.toolsDeferred,
   }
   if (state.branch !== undefined) session.branch = state.branch
   if (state.model !== undefined) session.model = state.model
@@ -569,6 +691,13 @@ function objectField(object: JsonObject, key: string): JsonObject | undefined {
 function stringField(object: JsonObject, key: string): string | undefined {
   const value = object[key]
   return typeof value === 'string' ? value : undefined
+}
+
+function stringArrayField(object: JsonObject, key: string): string[] {
+  const value = object[key]
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : []
 }
 
 function numberField(object: JsonObject, key: string): number | undefined {

@@ -1,0 +1,17 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Константы б/т у Codex не калибровались, наследуют Claude — числа здесь проверяют механику, а не точность.",
+  "provider": "codex",
+  "constants": {
+    "bytesPerToken": { "system": 4.11, "memory": 4.11, "userTurn": 3.02 }
+  },
+  "toolsDeferred": false,
+  "prefixTokens": 9000,
+  "requestCount": 5,
+  "recurrentTokens": 45000,
+  "blocks": [
+    { "category": "system", "bytes": 12330, "tokens": 3000, "basis": "estimated" },
+    { "category": "toolSchemas", "bytes": 0, "tokens": 4000, "basis": "residual" },
+    { "category": "memory", "bytes": 4110, "tokens": 1000, "basis": "estimated" },
+    { "category": "userTurn", "bytes": 3020, "tokens": 1000, "basis": "estimated" }
+  ]
+}

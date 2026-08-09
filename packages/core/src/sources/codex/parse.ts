@@ -1,11 +1,13 @@
 import { basename, extname, resolve } from 'node:path'
 import { attributeMarginal } from '../../attribution/marginal.ts'
+import { attributePrefix } from '../../attribution/prefix.ts'
 import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
 import type {
   Entrypoint,
   ParseDiagnostics,
   ParseResult,
+  PrefixBlock,
   Request,
   Session,
   ToolCall,
@@ -57,6 +59,8 @@ interface ParseState {
   compactedPending: boolean
   lastTotal?: TotalUsage
   requests: Request[]
+  prefixBlocks: PrefixBlock[]
+  prefixMessages: Array<{ role: 'user'; bytes: number }>
 }
 
 /**
@@ -113,6 +117,8 @@ function parseLines(path: string, lines: string[]): ParseResult {
     pendingOrder: 0,
     compactedPending: false,
     requests: [],
+    prefixBlocks: [],
+    prefixMessages: [],
   }
 
   for (const line of lines) {
@@ -123,6 +129,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
   }
 
   const session = buildSession(state)
+  attributePrefix(session, state.requests)
   attributeMarginal(state.requests, 'codex')
   return { session, requests: state.requests, diagnostics: state.diagnostics }
 }
@@ -182,6 +189,19 @@ function consumeSessionMeta(state: ParseState, payload: JsonObject | undefined):
 
   const startedAt = parseTimestampValue(payload.timestamp)
   if (startedAt !== undefined) state.startedAt = startedAt
+
+  const baseInstructions = textValue(payload.base_instructions)
+  if (
+    baseInstructions !== undefined &&
+    !state.prefixBlocks.some((block) => block.category === 'system')
+  ) {
+    state.prefixBlocks.push({
+      category: 'system',
+      bytes: Buffer.byteLength(baseInstructions, 'utf8'),
+      tokens: 0,
+      basis: 'estimated',
+    })
+  }
 }
 
 function consumeTurnContext(state: ParseState, payload: JsonObject | undefined): void {
@@ -254,6 +274,9 @@ function consumeEvent(
 function consumeResponseItem(state: ParseState, payload: JsonObject | undefined): void {
   if (!payload) return
   switch (stringField(payload, 'type')) {
+    case 'message':
+      consumePrefixMessage(state, payload)
+      return
     case 'function_call':
     case 'custom_tool_call':
       consumeToolCall(state, payload)
@@ -283,6 +306,17 @@ function consumeResponseItem(state: ParseState, payload: JsonObject | undefined)
     default:
       return
   }
+}
+
+function consumePrefixMessage(state: ParseState, payload: JsonObject): void {
+  if (state.requests.length > 0) return
+  const role = stringField(payload, 'role')
+  // Служебные developer-сообщения Codex меняются вместе с рантаймом и уже
+  // входят в неразложимый остаток. Из message дословно раскладываются только
+  // AGENTS/memory и настоящий первый ход пользователя.
+  if (role !== 'user') return
+  const bytes = messageBytes(payload.content)
+  if (bytes > 0) state.prefixMessages.push({ role, bytes })
 }
 
 function consumeToolCall(state: ParseState, payload: JsonObject): void {
@@ -434,6 +468,26 @@ function getOrCreatePendingTool(state: ParseState, id: string): PendingTool {
 
 function buildSession(state: ParseState): Session {
   const cwd = state.cwd ?? ''
+  const prefixBlocks = [...state.prefixBlocks]
+  const userMessages = state.prefixMessages.filter((message) => message.role === 'user')
+  const userTurn = userMessages.at(-1)
+  const memoryBytes = userMessages.slice(0, -1).reduce((sum, message) => sum + message.bytes, 0)
+  if (memoryBytes > 0) {
+    prefixBlocks.push({
+      category: 'memory',
+      bytes: memoryBytes,
+      tokens: 0,
+      basis: 'estimated',
+    })
+  }
+  if (userTurn) {
+    prefixBlocks.push({
+      category: 'userTurn',
+      bytes: userTurn.bytes,
+      tokens: 0,
+      basis: 'estimated',
+    })
+  }
   const session: Session = {
     id: state.sessionId ?? sessionIdFromPath(state.sourcePath),
     provider: 'codex',
@@ -442,6 +496,9 @@ function buildSession(state: ParseState): Session {
     project: projectFromCwd(cwd),
     startedAt: state.startedAt ?? 0,
     endedAt: state.endedAt ?? 0,
+    prefixTokens: state.requests.find((request) => request.origin === 'log')?.contextTokens ?? 0,
+    prefixBlocks,
+    toolsDeferred: false,
   }
   if (state.branch !== undefined) session.branch = state.branch
   if (state.model !== undefined) session.model = state.model
@@ -476,6 +533,22 @@ function resultBytes(value: unknown): number {
   if (typeof value === 'string') return Buffer.byteLength(value, 'utf8')
   if (value === undefined) return 0
   return Buffer.byteLength(JSON.stringify(value), 'utf8')
+}
+
+function messageBytes(value: unknown): number {
+  if (typeof value === 'string') return Buffer.byteLength(value, 'utf8')
+  if (!Array.isArray(value)) return 0
+  return value.reduce((sum, item) => {
+    const block = asObject(item)
+    const text = block ? stringField(block, 'text') : undefined
+    return sum + (text === undefined ? 0 : Buffer.byteLength(text, 'utf8'))
+  }, 0)
+}
+
+function textValue(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  const object = asObject(value)
+  return object ? stringField(object, 'text') : undefined
 }
 
 function entrypointFromOriginator(originator: string | undefined): Entrypoint {

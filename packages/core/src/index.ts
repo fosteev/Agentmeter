@@ -1,5 +1,7 @@
 export type {
   Provider,
+  PrefixCategory,
+  PrefixBlock,
   MarginalBasis,
   Entrypoint,
   Session,
@@ -13,8 +15,8 @@ export type {
 } from './sources/types.ts'
 
 export { emptyDiagnostics } from './sources/types.ts'
-export { attributeMarginal } from './attribution/marginal.ts'
-export type { MarginalOptions, MarginalStats } from './attribution/marginal.ts'
+export { attributeMarginal, attributePrefix, PREFIX_BYTES_PER_TOKEN } from './attribution/index.ts'
+export type { MarginalOptions, MarginalStats, PrefixOptions } from './attribution/index.ts'
 export { listLiveSessions, parseSessionFile, parseSubagents } from './sources/claude/index.ts'
 export { parseRolloutFile, readLimits } from './sources/codex/index.ts'
 export { defaultClaudeHome, defaultCodexHome, defaultIndexPath } from './index/paths.ts'
