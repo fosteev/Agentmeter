@@ -13,3 +13,4 @@ export type {
 
 export { emptyDiagnostics } from './sources/types.ts'
 export { listLiveSessions, parseSessionChunk, parseSessionFile, parseSubagents } from './sources/claude/index.ts'
+export { parseRolloutChunk, parseRolloutFile, readLimits } from './sources/codex/index.ts'
