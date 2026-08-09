@@ -215,6 +215,9 @@ check(
     check('codex / token_count', text.includes('total_token_usage'), 'есть total_token_usage')
     check('codex / rate_limits', text.includes('rate_limits'), 'есть rate_limits')
 
+    const leak = LEAKS.find((re) => re.test(text))
+    if (leak) failures.push(`  ✗ codex — обезличивание не прошло, найдено ${leak}`)
+
     // Формат Codex несёт собственную проверку: сумма расхода по запросам
     // обязана сойтись с накопительным итогом. Не сойдётся — фикстура порезана
     // неудачно, и парсер будет отлаживаться по кривым данным.
@@ -231,6 +234,23 @@ check(
           t.input + t.cacheRead === total.input_tokens &&
           t.reasoning === total.reasoning_output_tokens,
         `${exp.requests.length} запросов, ${exp.limits.length} окон лимитов`,
+      )
+
+      // Один вызов тула лежит в логе двумя записями: response_item/function_call
+      // и — если это MCP — event_msg/mcp_tool_call_end с тем же call_id. Считать
+      // их за два вызова значит удвоить MCP. Уникальность call_id это ловит.
+      const tools = exp.requests.flatMap((r: Record<string, any>) => r.tools ?? [])
+      const ids = new Set(tools.map((t: Record<string, any>) => t.id))
+      const mcp = tools.filter((t: Record<string, any>) => t.kind === 'mcp')
+      check(
+        'codex / вызовы тулов не задвоены',
+        tools.length === ids.size,
+        `${tools.length} вызовов на ${ids.size} call_id`,
+      )
+      check(
+        'codex / MCP размечен сервером',
+        mcp.length > 0 && mcp.every((t: Record<string, any>) => typeof t.server === 'string'),
+        `${mcp.length} вызовов MCP`,
       )
     }
   }

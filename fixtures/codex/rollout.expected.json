@@ -3,8 +3,11 @@
   "session": {
     "id": "019eca75-617f-7dd3-a42e-8e52ede19e5a",
     "cwd": "/proj/h/lorem ipsum dolo",
+    "project": "lorem ipsum dolo",
+    "branch": "feature/one",
+    "model": "gpt-5.5",
+    "entrypoint": "cli",
     "cliVersion": "0.139.0",
-    "originator": "codex-tui",
     "startedAt": "2026-06-15T08:45:50.863Z",
     "endedAt": "2026-06-15T08:47:15.924Z"
   },
@@ -17,7 +20,35 @@
       "cacheWrite": 0,
       "output": 305,
       "reasoning": 46,
-      "contextWindow": 258400
+      "contextTokens": 22457,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_ZkAeTWBhhufBDt4wlXyzZSIw",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 24968,
+          "hasImage": false
+        },
+        {
+          "id": "call_uU37toI4qkKzwSQGqeMPjCNr",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 123,
+          "hasImage": false
+        },
+        {
+          "id": "call_VbNRBkgBf97IdM9SvRxpgEqj",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 2792,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 1,
@@ -27,7 +58,35 @@
       "cacheWrite": 0,
       "output": 456,
       "reasoning": 84,
-      "contextWindow": 258400
+      "contextTokens": 29745,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_JYtQpUKCCfr4rtmvRAmkhKKv",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 7717,
+          "hasImage": false
+        },
+        {
+          "id": "call_B14HOvljreu3ljKcSODyqIjE",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 750,
+          "hasImage": false
+        },
+        {
+          "id": "call_6mjOAcNioiSqa6cas9qKACGm",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 205,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 2,
@@ -37,7 +96,35 @@
       "cacheWrite": 0,
       "output": 239,
       "reasoning": 11,
-      "contextWindow": 258400
+      "contextTokens": 32731,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_sDfMvA2Vxn9Sdurf0roxs2GN",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 2718,
+          "hasImage": false
+        },
+        {
+          "id": "call_3I115H1fIBoaUyPmJZ4589mx",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 4166,
+          "hasImage": false
+        },
+        {
+          "id": "call_VWbip4NrrbmAanymBhps7Orl",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 1389,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 3,
@@ -47,7 +134,21 @@
       "cacheWrite": 0,
       "output": 199,
       "reasoning": 47,
-      "contextWindow": 258400
+      "contextTokens": 35165,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_aaUoHBOqqx3QP88riSXuVPyW",
+          "name": "apply_patch",
+          "kind": "builtin",
+          "resultBytes": 177,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 4,
@@ -57,7 +158,28 @@
       "cacheWrite": 0,
       "output": 219,
       "reasoning": 45,
-      "contextWindow": 258400
+      "contextTokens": 35430,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_BJ9JuG8mIc0fz07QiJUex9lI",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 162,
+          "hasImage": false
+        },
+        {
+          "id": "call_B3lwVGV3wNdcGiM5aoXfdmkB",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 854,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 5,
@@ -67,7 +189,21 @@
       "cacheWrite": 0,
       "output": 149,
       "reasoning": 45,
-      "contextWindow": 258400
+      "contextTokens": 35971,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_z6tGrebMu1WDxZmN6DzGk4dz",
+          "name": "exec_command",
+          "kind": "builtin",
+          "resultBytes": 26,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 6,
@@ -77,7 +213,30 @@
       "cacheWrite": 0,
       "output": 190,
       "reasoning": 140,
-      "contextWindow": 258400
+      "contextTokens": 35913,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "call_HI2iQhxkd3BZusujC8Z31x4H",
+          "name": "list_mcp_resources",
+          "kind": "mcp",
+          "server": "codex",
+          "resultBytes": 16,
+          "hasImage": false
+        },
+        {
+          "id": "call_3KaCNQxFJr5aSOmiIEQgrf2O",
+          "name": "list_mcp_resource_templates",
+          "kind": "mcp",
+          "server": "codex",
+          "resultBytes": 24,
+          "hasImage": false
+        }
+      ]
     },
     {
       "seq": 7,
@@ -87,7 +246,13 @@
       "cacheWrite": 0,
       "output": 104,
       "reasoning": 0,
-      "contextWindow": 258400
+      "contextTokens": 36137,
+      "contextWindow": 258400,
+      "compacted": false,
+      "synthetic": false,
+      "isSidechain": false,
+      "origin": "log",
+      "tools": []
     }
   ],
   "limits": [
@@ -204,94 +369,11 @@
       "exact": true
     }
   ],
-  "tools": [
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_ZkAeTWBhhufBDt4wlXyzZSIw"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_uU37toI4qkKzwSQGqeMPjCNr"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_VbNRBkgBf97IdM9SvRxpgEqj"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_JYtQpUKCCfr4rtmvRAmkhKKv"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_B14HOvljreu3ljKcSODyqIjE"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_6mjOAcNioiSqa6cas9qKACGm"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_sDfMvA2Vxn9Sdurf0roxs2GN"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_3I115H1fIBoaUyPmJZ4589mx"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_VWbip4NrrbmAanymBhps7Orl"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_BJ9JuG8mIc0fz07QiJUex9lI"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_B3lwVGV3wNdcGiM5aoXfdmkB"
-    },
-    {
-      "name": "exec_command",
-      "kind": "builtin",
-      "callId": "call_z6tGrebMu1WDxZmN6DzGk4dz"
-    },
-    {
-      "name": "list_mcp_resources",
-      "kind": "builtin",
-      "callId": "call_HI2iQhxkd3BZusujC8Z31x4H"
-    },
-    {
-      "name": "list_mcp_resource_templates",
-      "kind": "builtin",
-      "callId": "call_3KaCNQxFJr5aSOmiIEQgrf2O"
-    },
-    {
-      "name": "codex__list_mcp_resources",
-      "kind": "mcp",
-      "server": "codex",
-      "callId": "call_HI2iQhxkd3BZusujC8Z31x4H"
-    },
-    {
-      "name": "codex__list_mcp_resource_templates",
-      "kind": "mcp",
-      "server": "codex",
-      "callId": "call_3KaCNQxFJr5aSOmiIEQgrf2O"
-    }
-  ],
   "totals": {
     "input": 48509,
     "output": 1861,
     "cacheRead": 215040,
+    "cacheWrite": 0,
     "reasoning": 418
   },
   "totalTokenUsage": {
@@ -300,5 +382,6 @@
     "output_tokens": 1861,
     "reasoning_output_tokens": 418,
     "total_tokens": 265410
-  }
+  },
+  "unknownTypes": {}
 }
