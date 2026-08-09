@@ -23,6 +23,8 @@
       "cacheRead": 20628,
       "contextTokens": 40693,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -45,6 +47,8 @@
       "cacheRead": 40691,
       "contextTokens": 41213,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -67,6 +71,8 @@
       "cacheRead": 41211,
       "contextTokens": 42223,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -89,6 +95,8 @@
       "cacheRead": 42221,
       "contextTokens": 42648,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -111,6 +119,8 @@
       "cacheRead": 42646,
       "contextTokens": 44632,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -133,6 +143,8 @@
       "cacheRead": 44630,
       "contextTokens": 45505,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -155,6 +167,8 @@
       "cacheRead": 45503,
       "contextTokens": 46394,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -177,6 +191,8 @@
       "cacheRead": 46392,
       "contextTokens": 46769,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": []
     },
@@ -191,6 +207,8 @@
       "cacheRead": 46768,
       "contextTokens": 46940,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": true,
       "origin": "reconstructed",
       "tools": []
     },
@@ -205,6 +223,8 @@
       "cacheRead": 46940,
       "contextTokens": 46966,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -227,6 +247,8 @@
       "cacheRead": 46964,
       "contextTokens": 47703,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": []
     }

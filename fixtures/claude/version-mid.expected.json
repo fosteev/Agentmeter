@@ -21,6 +21,8 @@
       "cacheRead": 18871,
       "contextTokens": 36223,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -50,6 +52,8 @@
       "cacheRead": 27903,
       "contextTokens": 37612,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -72,6 +76,8 @@
       "cacheRead": 37610,
       "contextTokens": 38771,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -94,6 +100,8 @@
       "cacheRead": 38769,
       "contextTokens": 41595,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -116,6 +124,8 @@
       "cacheRead": 41593,
       "contextTokens": 41865,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -138,6 +148,8 @@
       "cacheRead": 41863,
       "contextTokens": 42214,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -160,6 +172,8 @@
       "cacheRead": 42212,
       "contextTokens": 42541,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -182,6 +196,8 @@
       "cacheRead": 42539,
       "contextTokens": 42755,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": [
         {
@@ -204,6 +220,8 @@
       "cacheRead": 42753,
       "contextTokens": 43001,
       "isSidechain": false,
+      "compacted": false,
+      "synthetic": false,
       "origin": "log",
       "tools": []
     }

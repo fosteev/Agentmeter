@@ -177,6 +177,8 @@ interface ExpectedRequest {
   cacheRead: number
   contextTokens: number
   isSidechain: boolean
+  compacted: boolean
+  synthetic: boolean
   origin: 'log' | 'reconstructed'
   tools: {
     id: string
@@ -316,6 +318,8 @@ function buildExpected(lines: unknown[]): {
       contextTokens:
         (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
       isSidechain: Boolean(r['isSidechain']),
+      compacted: false,
+      synthetic: false,
       origin: 'log',
       tools,
     })
@@ -340,10 +344,18 @@ function buildExpected(lines: unknown[]): {
           cacheRead: last.cacheRead + last.cacheWrite,
           contextTokens: last.cacheRead + last.cacheWrite + gap,
           isSidechain: last.isSidechain,
+          compacted: false,
+          synthetic: true,
           origin: 'reconstructed',
           tools: [],
         })
       }
+    }
+    // Компакт — обвал префикса, а не любое его уменьшение: мелкая просадка
+    // бывает и без сжатия контекста. Порог тот же, что в парсере.
+    if (last) {
+      const prefix = last.cacheRead + last.cacheWrite
+      r.compacted = prefix > 10_000 && r.cacheRead < prefix * 0.6
     }
     requests.push(r)
     last = r

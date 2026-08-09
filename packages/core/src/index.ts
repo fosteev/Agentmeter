@@ -12,3 +12,4 @@ export type {
 } from './sources/types.ts'
 
 export { emptyDiagnostics } from './sources/types.ts'
+export { listLiveSessions, parseSessionChunk, parseSessionFile, parseSubagents } from './sources/claude/index.ts'
