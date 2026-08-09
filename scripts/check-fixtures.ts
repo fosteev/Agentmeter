@@ -214,6 +214,25 @@ check(
     check('codex / записи', rows.length > 0, `${rows.length} записей`)
     check('codex / token_count', text.includes('total_token_usage'), 'есть total_token_usage')
     check('codex / rate_limits', text.includes('rate_limits'), 'есть rate_limits')
+
+    // Формат Codex несёт собственную проверку: сумма расхода по запросам
+    // обязана сойтись с накопительным итогом. Не сойдётся — фикстура порезана
+    // неудачно, и парсер будет отлаживаться по кривым данным.
+    const expPath = join(CODEX, 'rollout.expected.json')
+    if (!existsSync(expPath)) {
+      failures.push('  ✗ codex — нет rollout.expected.json')
+    } else {
+      const exp = JSON.parse(readFileSync(expPath, 'utf8'))
+      const t = exp.totals
+      const total = exp.totalTokenUsage
+      check(
+        'codex / суммы сходятся с total_token_usage',
+        t.output === total.output_tokens &&
+          t.input + t.cacheRead === total.input_tokens &&
+          t.reasoning === total.reasoning_output_tokens,
+        `${exp.requests.length} запросов, ${exp.limits.length} окон лимитов`,
+      )
+    }
   }
 }
 

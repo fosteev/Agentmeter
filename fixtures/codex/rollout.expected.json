@@ -1,0 +1,304 @@
+{
+  "checks": "token_count с total_token_usage, заполненный rate_limits, вызовы MCP",
+  "session": {
+    "id": "019eca75-617f-7dd3-a42e-8e52ede19e5a",
+    "cwd": "/proj/h/lorem ipsum dolo",
+    "cliVersion": "0.139.0",
+    "originator": "codex-tui",
+    "startedAt": "2026-06-15T08:45:50.863Z",
+    "endedAt": "2026-06-15T08:47:15.924Z"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "ts": "2026-06-15T08:46:06.956Z",
+      "input": 20025,
+      "cacheRead": 2432,
+      "cacheWrite": 0,
+      "output": 305,
+      "reasoning": 46,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 1,
+      "ts": "2026-06-15T08:46:17.282Z",
+      "input": 7345,
+      "cacheRead": 22400,
+      "cacheWrite": 0,
+      "output": 456,
+      "reasoning": 84,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 2,
+      "ts": "2026-06-15T08:46:24.072Z",
+      "input": 3163,
+      "cacheRead": 29568,
+      "cacheWrite": 0,
+      "output": 239,
+      "reasoning": 11,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 3,
+      "ts": "2026-06-15T08:46:31.180Z",
+      "input": 2525,
+      "cacheRead": 32640,
+      "cacheWrite": 0,
+      "output": 199,
+      "reasoning": 47,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 4,
+      "ts": "2026-06-15T08:46:40.163Z",
+      "input": 742,
+      "cacheRead": 34688,
+      "cacheWrite": 0,
+      "output": 219,
+      "reasoning": 45,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 5,
+      "ts": "2026-06-15T08:46:49.817Z",
+      "input": 771,
+      "cacheRead": 35200,
+      "cacheWrite": 0,
+      "output": 149,
+      "reasoning": 45,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 6,
+      "ts": "2026-06-15T08:47:10.596Z",
+      "input": 13513,
+      "cacheRead": 22400,
+      "cacheWrite": 0,
+      "output": 190,
+      "reasoning": 140,
+      "contextWindow": 258400
+    },
+    {
+      "seq": 7,
+      "ts": "2026-06-15T08:47:15.868Z",
+      "input": 425,
+      "cacheRead": 35712,
+      "cacheWrite": 0,
+      "output": 104,
+      "reasoning": 0,
+      "contextWindow": 258400
+    }
+  ],
+  "limits": [
+    {
+      "kind": "primary",
+      "usedPercent": 1,
+      "windowMinutes": 300,
+      "resetsAt": 1781531144000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 2,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    },
+    {
+      "kind": "primary",
+      "usedPercent": 3,
+      "windowMinutes": 300,
+      "resetsAt": 1781531151000,
+      "exact": true
+    },
+    {
+      "kind": "secondary",
+      "usedPercent": 4,
+      "windowMinutes": 10080,
+      "resetsAt": 1781527537000,
+      "exact": true
+    }
+  ],
+  "tools": [
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_ZkAeTWBhhufBDt4wlXyzZSIw"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_uU37toI4qkKzwSQGqeMPjCNr"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_VbNRBkgBf97IdM9SvRxpgEqj"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_JYtQpUKCCfr4rtmvRAmkhKKv"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_B14HOvljreu3ljKcSODyqIjE"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_6mjOAcNioiSqa6cas9qKACGm"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_sDfMvA2Vxn9Sdurf0roxs2GN"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_3I115H1fIBoaUyPmJZ4589mx"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_VWbip4NrrbmAanymBhps7Orl"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_BJ9JuG8mIc0fz07QiJUex9lI"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_B3lwVGV3wNdcGiM5aoXfdmkB"
+    },
+    {
+      "name": "exec_command",
+      "kind": "builtin",
+      "callId": "call_z6tGrebMu1WDxZmN6DzGk4dz"
+    },
+    {
+      "name": "list_mcp_resources",
+      "kind": "builtin",
+      "callId": "call_HI2iQhxkd3BZusujC8Z31x4H"
+    },
+    {
+      "name": "list_mcp_resource_templates",
+      "kind": "builtin",
+      "callId": "call_3KaCNQxFJr5aSOmiIEQgrf2O"
+    },
+    {
+      "name": "codex__list_mcp_resources",
+      "kind": "mcp",
+      "server": "codex",
+      "callId": "call_HI2iQhxkd3BZusujC8Z31x4H"
+    },
+    {
+      "name": "codex__list_mcp_resource_templates",
+      "kind": "mcp",
+      "server": "codex",
+      "callId": "call_3KaCNQxFJr5aSOmiIEQgrf2O"
+    }
+  ],
+  "totals": {
+    "input": 48509,
+    "output": 1861,
+    "cacheRead": 215040,
+    "reasoning": 418
+  },
+  "totalTokenUsage": {
+    "input_tokens": 263549,
+    "cached_input_tokens": 215040,
+    "output_tokens": 1861,
+    "reasoning_output_tokens": 418,
+    "total_tokens": 265410
+  }
+}

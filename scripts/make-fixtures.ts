@@ -362,6 +362,97 @@ function buildExpected(lines: unknown[]): {
   return { session, requests, totals, unknownTypes }
 }
 
+/**
+ * Ожидаемый разбор роллаута Codex.
+ *
+ * Один `token_count` с непустым `info` — один запрос, и его стоимость лежит в
+ * `last_token_usage`, а не в `total_token_usage`: второе накопительное.
+ * `cached_input_tokens` — подмножество `input_tokens`, поэтому свежий ввод это
+ * их разность.
+ */
+function buildExpectedCodex(lines: unknown[]): Record<string, unknown> {
+  const session: Record<string, unknown> = {}
+  const requests: Record<string, unknown>[] = []
+  const limits: Record<string, unknown>[] = []
+  const tools: Record<string, unknown>[] = []
+  let contextWindow: number | undefined
+  let lastTotal: Record<string, number> | undefined
+
+  for (const raw of lines) {
+    const r = raw as Record<string, any>
+    const p = r['payload'] ?? {}
+    if (r['type'] === 'session_meta') {
+      session['id'] = p.id
+      session['cwd'] = p.cwd
+      session['cliVersion'] = p.cli_version
+      session['originator'] = p.originator
+      session['startedAt'] = p.timestamp
+    }
+    session['endedAt'] = r['timestamp']
+
+    if (p.type === 'task_started' && p.model_context_window) contextWindow = p.model_context_window
+    if (p.type === 'function_call') {
+      tools.push({ name: p.name, kind: 'builtin', callId: p.call_id })
+    }
+    if (p.type === 'mcp_tool_call_end') {
+      tools.push({
+        name: `${p.invocation?.server}__${p.invocation?.tool}`,
+        kind: 'mcp',
+        server: p.invocation?.server,
+        callId: p.call_id,
+      })
+    }
+    if (p.type !== 'token_count') continue
+
+    if (p.rate_limits) {
+      for (const kind of ['primary', 'secondary'] as const) {
+        const w = p.rate_limits[kind]
+        if (!w) continue
+        limits.push({
+          kind,
+          usedPercent: w.used_percent,
+          windowMinutes: w.window_minutes,
+          resetsAt: w.resets_at ? w.resets_at * 1000 : undefined,
+          exact: true,
+        })
+      }
+    }
+    if (!p.info) continue
+    const last = p.info.last_token_usage ?? {}
+    lastTotal = p.info.total_token_usage ?? lastTotal
+    requests.push({
+      seq: requests.length,
+      ts: r['timestamp'],
+      input: (last.input_tokens ?? 0) - (last.cached_input_tokens ?? 0),
+      cacheRead: last.cached_input_tokens ?? 0,
+      cacheWrite: 0,
+      output: last.output_tokens ?? 0,
+      reasoning: last.reasoning_output_tokens ?? 0,
+      contextWindow,
+    })
+  }
+
+  const totals = requests.reduce(
+    (a, r) => ({
+      input: a.input + (r['input'] as number),
+      output: a.output + (r['output'] as number),
+      cacheRead: a.cacheRead + (r['cacheRead'] as number),
+      reasoning: a.reasoning + (r['reasoning'] as number),
+    }),
+    { input: 0, output: 0, cacheRead: 0, reasoning: 0 },
+  )
+  return {
+    session,
+    requests,
+    limits,
+    tools,
+    totals,
+    // Встроенная в формат сверка: сумма по запросам обязана сойтись с
+    // накопительным итогом последнего token_count.
+    totalTokenUsage: lastTotal,
+  }
+}
+
 // ─── сборка ──────────────────────────────────────────────────────────────────
 
 function readJsonl(path: string): unknown[] {
@@ -466,7 +557,16 @@ function main(): void {
             `(восстановлено ${expected.requests.filter((r) => r.origin === 'reconstructed').length})`,
         )
       } else {
-        console.log(`  ${sc.name}: ${lines.length} записей`)
+        const expected = buildExpectedCodex(lines)
+        writeFileSync(
+          join(dir, `${sc.name}.expected.json`),
+          JSON.stringify({ checks: sc.checks, ...expected }, null, 2) + '\n',
+        )
+        console.log(
+          `  ${sc.name}: ${lines.length} записей, ` +
+            `${(expected['requests'] as unknown[]).length} запросов, ` +
+            `${(expected['limits'] as unknown[]).length} окон лимитов`,
+        )
       }
 
       if (sc.withSubagents) {
