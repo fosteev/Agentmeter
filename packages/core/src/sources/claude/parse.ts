@@ -36,6 +36,7 @@ interface ParseState {
   entrypoint?: Entrypoint
   cliVersion?: string
   title?: string
+  customTitle?: string
   firstPrompt?: string
   firstRecordTs?: number
   lastRecordTs?: number
@@ -48,6 +49,7 @@ interface ParseState {
 const KNOWN_RECORD_TYPES = new Set([
   'ai-title',
   'assistant',
+  'custom-title',
   'attachment',
   'file-history-delta',
   'file-history-snapshot',
@@ -79,13 +81,9 @@ export function parseSubagents(sessionPath: string): ParseResult[] {
 
   for (const dir of dirs) {
     if (!existsSync(dir) || !statSync(dir).isDirectory()) continue
-    const files = readdirSync(dir)
-      .filter((name) => name.endsWith('.jsonl'))
-      .sort((a, b) => a.localeCompare(b))
-    for (const file of files) {
-      const sourcePath = join(dir, file)
+    for (const sourcePath of subagentFiles(dir)) {
       const result = parseSessionFile(sourcePath)
-      const meta = readMeta(join(dir, `${basename(file, '.jsonl')}.meta.json`))
+      const meta = readMeta(`${sourcePath.slice(0, -'.jsonl'.length)}.meta.json`)
       result.session.parentSessionId = parent.id
       result.session.isSidechain = true
       if (meta.agentType) result.session.agentType = meta.agentType
@@ -191,6 +189,14 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
     case 'ai-title': {
       const title = stringField(record, 'aiTitle')
       if (title) state.title = title
+      return
+    }
+    case 'custom-title': {
+      // Название, вбитое руками. Оно всегда важнее сочинённого CLI, поэтому
+      // живёт отдельным полем и перебивает `ai-title` независимо от порядка
+      // записей в файле.
+      const title = stringField(record, 'customTitle')
+      if (title) state.customTitle = title
       return
     }
     case 'last-prompt':
@@ -417,10 +423,26 @@ function buildSession(state: ParseState, requests: Request[]): Session {
   if (state.model !== undefined) session.model = state.model
   session.entrypoint = state.entrypoint ?? 'unknown'
   if (state.cliVersion !== undefined) session.cliVersion = state.cliVersion
-  if (state.title !== undefined) session.title = state.title
+  const title = state.customTitle ?? state.title
+  if (title !== undefined) session.title = title
   if (state.firstPrompt !== undefined) session.firstPrompt = state.firstPrompt
   if (requests.length > 0 && requests.every((request) => request.isSidechain)) session.isSidechain = true
   return session
+}
+
+/**
+ * Транскрипты сабагентов лежат не только прямо в `subagents/`: у воркфлоу они
+ * уходят на уровень глубже, в `subagents/workflows/wf_<id>/agent-<id>.jsonl`.
+ * На диске таких файлов 220 против 150 обычных — половина расхода сабагентов,
+ * которую плоский `readdir` не видел вовсе. Рядом с ними лежит `journal.jsonl`,
+ * и это не транскрипт: свой словарь записей, ни одной цифры расхода. Отбор по
+ * префиксу `agent-` отсекает его без разбора содержимого.
+ */
+function subagentFiles(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.startsWith('agent-') && entry.name.endsWith('.jsonl'))
+    .map((entry) => join(entry.parentPath, entry.name))
+    .sort((a, b) => a.localeCompare(b))
 }
 
 function subagentDirs(sessionPath: string, sessionId: string): string[] {
