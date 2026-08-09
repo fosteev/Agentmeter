@@ -19,9 +19,9 @@ describe('схема индекса', () => {
   it('создаётся с нуля и сообщает, что база пустая', () => {
     const { db, rebuilt } = openDb(dbPath())
     expect(rebuilt).toBe(true)
-    expect(db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version')).toEqual(
-      { value: String(SCHEMA_VERSION) },
-    )
+    expect(
+      db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
+    ).toEqual({ value: String(SCHEMA_VERSION) })
     db.close()
   })
 
@@ -77,4 +77,79 @@ describe('схема индекса', () => {
     expect(db.all('SELECT * FROM requests')).toHaveLength(1)
     db.close()
   })
+
+  it('мигрирует версию 1 в 3 без rebuild и сохраняет данные', () => {
+    const first = openDb(dbPath())
+    seedMigrationData(first.db)
+    first.db.run('DROP INDEX sessions_source')
+    first.db.run('ALTER TABLE tool_calls DROP COLUMN marginal_basis')
+    first.db.run('ALTER TABLE requests DROP COLUMN interjected_bytes')
+    first.db.run('UPDATE meta SET value = ? WHERE key = ?', '1', 'schema_version')
+    first.db.close()
+
+    const { db, rebuilt } = openDb(dbPath())
+    expectMigratedToCurrent(db, rebuilt)
+    expect(
+      db.get<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'sessions_source'",
+      ),
+    ).toEqual({
+      name: 'sessions_source',
+    })
+    db.close()
+  })
+
+  it('мигрирует версию 2 в 3 без rebuild и сохраняет данные', () => {
+    const first = openDb(dbPath())
+    seedMigrationData(first.db)
+    first.db.run('ALTER TABLE tool_calls DROP COLUMN marginal_basis')
+    first.db.run('ALTER TABLE requests DROP COLUMN interjected_bytes')
+    first.db.run('UPDATE meta SET value = ? WHERE key = ?', '2', 'schema_version')
+    first.db.close()
+
+    const { db, rebuilt } = openDb(dbPath())
+    expectMigratedToCurrent(db, rebuilt)
+    db.close()
+  })
 })
+
+function seedMigrationData(db: ReturnType<typeof openDb>['db']): void {
+  db.run(
+    `INSERT INTO sessions (id, provider, source_path, cwd, project, started_at, ended_at)
+     VALUES ('migration-session', 'claude', '/migration.jsonl', '/proj/a', 'a', 1, 2)`,
+  )
+  db.run(
+    `INSERT INTO requests (session_id, seq, request_id, ts, model, output, interjected_bytes)
+     VALUES ('migration-session', 0, 'migration-request', 1, 'claude-opus-5', 42, 7)`,
+  )
+  db.run(
+    `INSERT INTO tool_calls (
+       session_id, seq, idx, name, kind, marginal_tokens, marginal_basis
+     ) VALUES ('migration-session', 0, 0, 'Read', 'builtin', 13, 'measured')`,
+  )
+}
+
+function expectMigratedToCurrent(db: ReturnType<typeof openDb>['db'], rebuilt: boolean): void {
+  expect(rebuilt).toBe(false)
+  expect(
+    db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
+  ).toEqual({ value: String(SCHEMA_VERSION) })
+  expect(
+    db.all<{ name: string }>('PRAGMA table_info(requests)').map((column) => column.name),
+  ).toContain('interjected_bytes')
+  expect(
+    db.all<{ name: string }>('PRAGMA table_info(tool_calls)').map((column) => column.name),
+  ).toContain('marginal_basis')
+  expect(
+    db.get(
+      'SELECT request_id, output, interjected_bytes FROM requests WHERE session_id = ?',
+      'migration-session',
+    ),
+  ).toEqual({ request_id: 'migration-request', output: 42, interjected_bytes: 0 })
+  expect(
+    db.get(
+      'SELECT name, marginal_tokens, marginal_basis FROM tool_calls WHERE session_id = ?',
+      'migration-session',
+    ),
+  ).toEqual({ name: 'Read', marginal_tokens: 13, marginal_basis: 'unknown' })
+}

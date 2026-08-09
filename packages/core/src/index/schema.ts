@@ -17,7 +17,7 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 3
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS sessions_started ON sessions (started_at);
 CREATE INDEX IF NOT EXISTS sessions_project ON sessions (project, started_at);
 CREATE INDEX IF NOT EXISTS sessions_parent  ON sessions (parent_session_id);
+CREATE UNIQUE INDEX IF NOT EXISTS sessions_source ON sessions (source_path);
 
 CREATE TABLE IF NOT EXISTS requests (
   session_id     TEXT    NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS requests (
   is_sidechain   INTEGER NOT NULL DEFAULT 0,
   compacted      INTEGER NOT NULL DEFAULT 0,
   synthetic      INTEGER NOT NULL DEFAULT 0,
+  interjected_bytes INTEGER NOT NULL DEFAULT 0,
   origin         TEXT    NOT NULL DEFAULT 'log',
   PRIMARY KEY (session_id, seq)
 ) STRICT;
@@ -103,6 +105,7 @@ CREATE TABLE IF NOT EXISTS tool_calls (
   server          TEXT,
   result_bytes    INTEGER NOT NULL DEFAULT 0,
   marginal_tokens INTEGER NOT NULL DEFAULT 0,
+  marginal_basis  TEXT    NOT NULL DEFAULT 'unknown',
   has_image       INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (session_id, seq, idx),
   FOREIGN KEY (session_id, seq) REFERENCES requests (session_id, seq) ON DELETE CASCADE
@@ -149,4 +152,14 @@ export interface Migration {
  * Миграции применяются по возрастанию версии, каждая в своей транзакции.
  * Версия 1 — начальная схема, отдельной миграцией не описывается.
  */
-export const MIGRATIONS: Migration[] = []
+export const MIGRATIONS: Migration[] = [
+  {
+    version: 2,
+    sql: 'CREATE UNIQUE INDEX IF NOT EXISTS sessions_source ON sessions (source_path);',
+  },
+  {
+    version: 3,
+    sql: `ALTER TABLE tool_calls ADD COLUMN marginal_basis TEXT NOT NULL DEFAULT 'unknown';
+ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
+  },
+]

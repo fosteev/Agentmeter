@@ -5,11 +5,11 @@
     "cwd": "/proj/h/lorem ipsum dolo",
     "project": "lorem ipsum dolo",
     "branch": "feature/one",
-    "model": "gpt-5.5",
-    "entrypoint": "cli",
     "cliVersion": "0.139.0",
+    "entrypoint": "cli",
     "startedAt": "2026-06-15T08:45:50.863Z",
-    "endedAt": "2026-06-15T08:47:15.924Z"
+    "endedAt": "2026-06-15T08:47:15.924Z",
+    "model": "gpt-5.5"
   },
   "requests": [
     {
@@ -25,6 +25,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -32,6 +33,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 24968,
+          "marginalTokens": 6253,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -39,6 +42,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 123,
+          "marginalTokens": 31,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -46,6 +51,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 2792,
+          "marginalTokens": 699,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -63,6 +70,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -70,6 +78,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 7717,
+          "marginalTokens": 2251,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -77,6 +87,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 750,
+          "marginalTokens": 219,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -84,6 +96,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 205,
+          "marginalTokens": 60,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -101,6 +115,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -108,6 +123,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 2718,
+          "marginalTokens": 721,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -115,6 +132,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 4166,
+          "marginalTokens": 1105,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -122,6 +141,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 1389,
+          "marginalTokens": 369,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -139,6 +160,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -146,6 +168,8 @@
           "name": "apply_patch",
           "kind": "builtin",
           "resultBytes": 177,
+          "marginalTokens": 66,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -163,6 +187,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -170,6 +195,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 162,
+          "marginalTokens": 51,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -177,6 +204,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 854,
+          "marginalTokens": 271,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -194,6 +223,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 28,
       "origin": "log",
       "tools": [
         {
@@ -201,6 +231,8 @@
           "name": "exec_command",
           "kind": "builtin",
           "resultBytes": 26,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown",
           "hasImage": false
         }
       ]
@@ -218,6 +250,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -226,6 +259,8 @@
           "kind": "mcp",
           "server": "codex",
           "resultBytes": 16,
+          "marginalTokens": 14,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -234,6 +269,8 @@
           "kind": "mcp",
           "server": "codex",
           "resultBytes": 24,
+          "marginalTokens": 20,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -251,6 +288,7 @@
       "compacted": false,
       "synthetic": false,
       "isSidechain": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": []
     }
@@ -372,16 +410,16 @@
   "totals": {
     "input": 48509,
     "output": 1861,
-    "cacheRead": 215040,
     "cacheWrite": 0,
+    "cacheRead": 215040,
     "reasoning": 418
   },
+  "unknownTypes": {},
   "totalTokenUsage": {
     "input_tokens": 263549,
     "cached_input_tokens": 215040,
     "output_tokens": 1861,
     "reasoning_output_tokens": 418,
     "total_tokens": 265410
-  },
-  "unknownTypes": {}
+  }
 }

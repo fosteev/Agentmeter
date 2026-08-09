@@ -25,6 +25,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -32,6 +33,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 843,
+          "marginalTokens": 349,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -39,6 +42,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 766,
+          "marginalTokens": 318,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -56,6 +61,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -63,6 +69,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 877,
+          "marginalTokens": 314,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -70,6 +78,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 2327,
+          "marginalTokens": 834,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -87,6 +97,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -94,6 +105,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 465,
+          "marginalTokens": 182,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -101,6 +114,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 1006,
+          "marginalTokens": 393,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -118,6 +133,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -125,6 +141,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 436,
+          "marginalTokens": 192,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -132,6 +150,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 1789,
+          "marginalTokens": 788,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -149,6 +169,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": []
     }

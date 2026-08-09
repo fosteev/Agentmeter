@@ -1,7 +1,17 @@
-import { existsSync, openSync, readFileSync, readSync, readdirSync, closeSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, extname, join, resolve } from 'node:path'
+import { attributeMarginal } from '../../attribution/marginal.ts'
+import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
-import type { Entrypoint, ParseDiagnostics, ParseResult, Request, Session, ToolCall, ToolKind } from '../types.ts'
+import type {
+  Entrypoint,
+  ParseDiagnostics,
+  ParseResult,
+  Request,
+  Session,
+  ToolCall,
+  ToolKind,
+} from '../types.ts'
 
 type JsonObject = Record<string, unknown>
 
@@ -19,6 +29,7 @@ interface RequestDraft {
   isSidechain: boolean
   tools: ToolCall[]
   toolIds: Set<string>
+  interjectedBytes: number
 }
 
 interface ToolResult {
@@ -44,6 +55,7 @@ interface ParseState {
   lastAssistantTs?: number
   drafts: Map<string, RequestDraft>
   toolResults: Map<string, ToolResult>
+  lastRequestId?: string
 }
 
 const KNOWN_RECORD_TYPES = new Set([
@@ -62,33 +74,39 @@ const KNOWN_RECORD_TYPES = new Set([
   'user',
 ])
 
-const ENTRYPOINTS = new Set<Entrypoint>(['cli', 'vscode', 'jetbrains', 'desktop', 'sdk', 'exec', 'unknown'])
+const ENTRYPOINTS = new Set<Entrypoint>([
+  'cli',
+  'vscode',
+  'jetbrains',
+  'desktop',
+  'sdk',
+  'exec',
+  'unknown',
+])
 
 export function parseSessionFile(path: string): ParseResult {
-  const { lines } = readJsonlLines(path, 0, true)
+  const { lines } = readJsonlLines(path, true)
   return parseLines(path, lines)
 }
 
-export function parseSessionChunk(path: string, fromOffset: number): { requests: Request[]; offset: number } {
-  const { lines, offset } = readJsonlLines(path, fromOffset, false)
-  return { requests: parseLines(path, lines).requests, offset }
+export function parseSubagentFile(
+  path: string,
+  parentSessionId = parentSessionIdFromSubagentPath(path),
+): ParseResult {
+  const result = parseSessionFile(path)
+  markSubagent(result, path, parentSessionId)
+  return result
 }
 
 export function parseSubagents(sessionPath: string): ParseResult[] {
-  const parent = parseSessionFile(sessionPath).session
-  const dirs = subagentDirs(sessionPath, parent.id)
+  const parentId = basename(sessionPath, extname(sessionPath))
+  const dirs = subagentDirs(sessionPath, parentId)
   const results: ParseResult[] = []
 
   for (const dir of dirs) {
     if (!existsSync(dir) || !statSync(dir).isDirectory()) continue
     for (const sourcePath of subagentFiles(dir)) {
-      const result = parseSessionFile(sourcePath)
-      const meta = readMeta(`${sourcePath.slice(0, -'.jsonl'.length)}.meta.json`)
-      result.session.parentSessionId = parent.id
-      result.session.isSidechain = true
-      if (meta.agentType) result.session.agentType = meta.agentType
-      if (meta.toolUseId) result.session.parentToolUseId = meta.toolUseId
-      results.push(result)
+      results.push(parseSubagentFile(sourcePath, parentId))
     }
   }
 
@@ -113,50 +131,8 @@ function parseLines(path: string, lines: string[]): ParseResult {
 
   const requests = buildRequests(state)
   const session = buildSession(state, requests)
+  attributeMarginal(requests, 'claude')
   return { session, requests, diagnostics: state.diagnostics }
-}
-
-function readJsonlLines(
-  path: string,
-  fromOffset: number,
-  includeTrailingLine: boolean,
-): { lines: string[]; offset: number } {
-  const fd = openSync(path, 'r')
-  const lines: string[] = []
-  const buffer = Buffer.allocUnsafe(64 * 1024)
-  let carry = Buffer.alloc(0)
-  let fileOffset = fromOffset
-  let completeOffset = fromOffset
-
-  try {
-    while (true) {
-      const bytesRead = readSync(fd, buffer, 0, buffer.length, fileOffset)
-      if (bytesRead === 0) break
-      const chunk = Buffer.from(buffer.subarray(0, bytesRead))
-      const data = carry.length > 0 ? Buffer.concat([carry, chunk]) : chunk
-      const dataStartOffset = fileOffset - carry.length
-      fileOffset += bytesRead
-
-      let start = 0
-      for (let i = 0; i < data.length; i += 1) {
-        if (data[i] !== 0x0a) continue
-        const end = i > start && data[i - 1] === 0x0d ? i - 1 : i
-        lines.push(data.subarray(start, end).toString('utf8'))
-        completeOffset = dataStartOffset + i + 1
-        start = i + 1
-      }
-      carry = Buffer.from(data.subarray(start))
-    }
-
-    if (includeTrailingLine && carry.length > 0) {
-      lines.push(carry.toString('utf8'))
-      completeOffset = fileOffset
-    }
-  } finally {
-    closeSync(fd)
-  }
-
-  return { lines, offset: completeOffset }
 }
 
 function parseRecord(line: string, diagnostics: ParseDiagnostics): JsonObject | undefined {
@@ -217,7 +193,8 @@ function consumeCommonSessionFields(state: ParseState, record: JsonObject): void
   const version = stringField(record, 'version')
   if (version) {
     if (!state.cliVersion) state.cliVersion = version
-    if (!state.diagnostics.cliVersions.includes(version)) state.diagnostics.cliVersions.push(version)
+    if (!state.diagnostics.cliVersions.includes(version))
+      state.diagnostics.cliVersions.push(version)
   }
 
   const entrypoint = stringField(record, 'entrypoint')
@@ -248,6 +225,7 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
   state.firstAssistantTs = minDefined(state.firstAssistantTs, ts)
   state.lastAssistantTs = maxDefined(state.lastAssistantTs, ts)
   const draft = getDraft(state, requestId, ts, model, booleanField(record, 'isSidechain') ?? false)
+  state.lastRequestId = requestId
   const skill = stringField(record, 'attributionSkill')
   if (skill) draft.skill = skill
   draft.isSidechain = draft.isSidechain || (booleanField(record, 'isSidechain') ?? false)
@@ -256,14 +234,23 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
   if (usage) {
     draft.input = Math.max(draft.input, numberField(usage, 'input_tokens') ?? 0)
     draft.output = Math.max(draft.output, numberField(usage, 'output_tokens') ?? 0)
-    draft.cacheWrite = Math.max(draft.cacheWrite, numberField(usage, 'cache_creation_input_tokens') ?? 0)
+    draft.cacheWrite = Math.max(
+      draft.cacheWrite,
+      numberField(usage, 'cache_creation_input_tokens') ?? 0,
+    )
     draft.cacheRead = Math.max(draft.cacheRead, numberField(usage, 'cache_read_input_tokens') ?? 0)
 
     const cacheCreation = objectField(usage, 'cache_creation')
-    const cacheWrite5m = cacheCreation ? numberField(cacheCreation, 'ephemeral_5m_input_tokens') : undefined
-    const cacheWrite1h = cacheCreation ? numberField(cacheCreation, 'ephemeral_1h_input_tokens') : undefined
-    if (cacheWrite5m !== undefined) draft.cacheWrite5m = Math.max(draft.cacheWrite5m ?? 0, cacheWrite5m)
-    if (cacheWrite1h !== undefined) draft.cacheWrite1h = Math.max(draft.cacheWrite1h ?? 0, cacheWrite1h)
+    const cacheWrite5m = cacheCreation
+      ? numberField(cacheCreation, 'ephemeral_5m_input_tokens')
+      : undefined
+    const cacheWrite1h = cacheCreation
+      ? numberField(cacheCreation, 'ephemeral_1h_input_tokens')
+      : undefined
+    if (cacheWrite5m !== undefined)
+      draft.cacheWrite5m = Math.max(draft.cacheWrite5m ?? 0, cacheWrite5m)
+    if (cacheWrite1h !== undefined)
+      draft.cacheWrite1h = Math.max(draft.cacheWrite1h ?? 0, cacheWrite1h)
   }
 
   for (const block of contentBlocks(message)) {
@@ -278,6 +265,7 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
       ...toolKind(name),
       resultBytes: 0,
       marginalTokens: 0,
+      marginalBasis: 'unknown',
       hasImage: false,
     })
   }
@@ -286,6 +274,12 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
 function consumeUser(state: ParseState, record: JsonObject): void {
   const message = objectField(record, 'message')
   if (!message) return
+
+  const interjectedBytes = userTextBytes(message)
+  if (interjectedBytes > 0 && state.lastRequestId) {
+    const draft = state.drafts.get(state.lastRequestId)
+    if (draft) draft.interjectedBytes += interjectedBytes
+  }
 
   for (const block of contentBlocks(message)) {
     if (stringField(block, 'type') !== 'tool_result') continue
@@ -318,6 +312,7 @@ function getDraft(
     isSidechain,
     tools: [],
     toolIds: new Set(),
+    interjectedBytes: 0,
   }
   state.drafts.set(requestId, draft)
   return draft
@@ -347,6 +342,7 @@ function buildRequests(state: ParseState): Request[] {
           isSidechain: previous.isSidechain,
           compacted: false,
           synthetic: true,
+          interjectedBytes: 0,
           tools: [],
         })
       }
@@ -397,6 +393,7 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
     isSidechain: draft.isSidechain,
     compacted: false,
     synthetic: false,
+    interjectedBytes: draft.interjectedBytes,
     tools,
   }
   if (draft.cacheWrite5m !== undefined) request.cacheWrite5m = draft.cacheWrite5m
@@ -426,7 +423,8 @@ function buildSession(state: ParseState, requests: Request[]): Session {
   const title = state.customTitle ?? state.title
   if (title !== undefined) session.title = title
   if (state.firstPrompt !== undefined) session.firstPrompt = state.firstPrompt
-  if (requests.length > 0 && requests.every((request) => request.isSidechain)) session.isSidechain = true
+  if (requests.length > 0 && requests.every((request) => request.isSidechain))
+    session.isSidechain = true
   return session
 }
 
@@ -440,7 +438,9 @@ function buildSession(state: ParseState, requests: Request[]): Session {
  */
 function subagentFiles(dir: string): string[] {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.startsWith('agent-') && entry.name.endsWith('.jsonl'))
+    .filter(
+      (entry) => entry.isFile() && entry.name.startsWith('agent-') && entry.name.endsWith('.jsonl'),
+    )
     .map((entry) => join(entry.parentPath, entry.name))
     .sort((a, b) => a.localeCompare(b))
 }
@@ -449,6 +449,38 @@ function subagentDirs(sessionPath: string, sessionId: string): string[] {
   const dir = dirname(sessionPath)
   const stem = basename(sessionPath, extname(sessionPath))
   return [join(dir, `${stem}.subagents`), join(dir, sessionId, 'subagents')]
+}
+
+function markSubagent(result: ParseResult, path: string, parentSessionId: string): void {
+  const id = agentIdFromPath(path)
+  if (id) result.session.id = id
+  result.session.parentSessionId = parentSessionId
+  result.session.isSidechain = true
+
+  const meta = readMeta(`${path.slice(0, -'.jsonl'.length)}.meta.json`)
+  if (meta.agentType) result.session.agentType = meta.agentType
+  if (meta.toolUseId) result.session.parentToolUseId = meta.toolUseId
+
+  for (const request of result.requests) {
+    request.sessionId = result.session.id
+    request.isSidechain = true
+  }
+}
+
+function agentIdFromPath(path: string): string | undefined {
+  const stem = basename(path, extname(path))
+  return stem.startsWith('agent-') ? stem.slice('agent-'.length) : undefined
+}
+
+function parentSessionIdFromSubagentPath(path: string): string {
+  const parts = resolve(path).split(/[\\/]/)
+  const subagents = parts.lastIndexOf('subagents')
+  const beforeSubagents = subagents > 0 ? parts[subagents - 1] : undefined
+  if (beforeSubagents) return beforeSubagents
+
+  const subagentRoot = parts.find((part) => part.endsWith('.subagents'))
+  if (subagentRoot) return subagentRoot.slice(0, -'.subagents'.length)
+  return basename(dirname(path)).replace(/\.subagents$/, '')
 }
 
 function readMeta(path: string): { agentType?: string; toolUseId?: string } {
@@ -485,6 +517,15 @@ function contentBlocks(message: JsonObject): JsonObject[] {
     const object = asObject(block)
     return object ? [object] : []
   })
+}
+
+function userTextBytes(message: JsonObject): number {
+  if (typeof message.content === 'string') return Buffer.byteLength(message.content, 'utf8')
+  return contentBlocks(message).reduce((bytes, block) => {
+    if (stringField(block, 'type') !== 'text') return bytes
+    const text = stringField(block, 'text') ?? stringField(block, 'content')
+    return bytes + (text === undefined ? 0 : Buffer.byteLength(text, 'utf8'))
+  }, 0)
 }
 
 function valueHasImage(value: unknown): boolean {

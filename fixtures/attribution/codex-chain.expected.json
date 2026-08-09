@@ -1,0 +1,161 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Числа даны для исправленного парсера: результат вызова обязан лежать на том запросе, который этот вызов сделал.",
+  "provider": "codex",
+  "constants": { "bytesPerToken": 3.7, "imageTokens": 400 },
+  "requests": [
+    {
+      "seq": 0,
+      "origin": "log",
+      "contextTokens": 10000,
+      "output": 200,
+      "residual": 2300,
+      "tools": [
+        {
+          "id": "call_P",
+          "name": "exec_command",
+          "resultBytes": 2700,
+          "marginalTokens": 2300,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "origin": "log",
+      "contextTokens": 12500,
+      "output": 300,
+      "residual": 2200,
+      "tools": [
+        {
+          "id": "call_Q",
+          "name": "exec_command",
+          "resultBytes": 5400,
+          "marginalTokens": 1760,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "call_R",
+          "name": "exec_command",
+          "resultBytes": 1350,
+          "marginalTokens": 440,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "origin": "log",
+      "contextTokens": 15000,
+      "output": 400,
+      "residual": 1600,
+      "note": "оба результата пустые — весов нет, делим поровну",
+      "tools": [
+        {
+          "id": "call_S",
+          "name": "exec_command",
+          "resultBytes": 0,
+          "marginalTokens": 800,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "call_T",
+          "name": "exec_command",
+          "resultBytes": 0,
+          "marginalTokens": 800,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "origin": "log",
+      "contextTokens": 17000,
+      "output": 500,
+      "residual": 1500,
+      "tools": [
+        {
+          "id": "call_U",
+          "name": "view_image",
+          "resultBytes": 0,
+          "hasImage": true,
+          "marginalTokens": 531,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "call_V",
+          "name": "exec_command",
+          "resultBytes": 2700,
+          "marginalTokens": 969,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "origin": "log",
+      "contextTokens": 19000,
+      "output": 600,
+      "residual": null,
+      "note": "следующий запрос сжат; здесь же записан дубль token_count — дедуп 1.2 обязан его съесть",
+      "tools": [
+        {
+          "id": "call_W",
+          "name": "exec_command",
+          "resultBytes": 2700,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown"
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "origin": "log",
+      "contextTokens": 6000,
+      "output": 700,
+      "residual": 1300,
+      "compacted": true,
+      "tools": [
+        {
+          "id": "call_X",
+          "name": "exec_command",
+          "resultBytes": 2700,
+          "marginalTokens": 1300,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "origin": "log",
+      "contextTokens": 8000,
+      "output": 800,
+      "residual": 200,
+      "note": "тулов нет — 200 токенов это ход пользователя",
+      "tools": []
+    },
+    {
+      "seq": 7,
+      "origin": "log",
+      "contextTokens": 9000,
+      "output": 900,
+      "residual": null,
+      "note": "последний запрос сессии",
+      "tools": [
+        {
+          "id": "call_Y",
+          "name": "exec_command",
+          "resultBytes": 800,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "attributedTokens": 8900,
+    "calls": 10,
+    "measured": 2,
+    "split": 6,
+    "unknown": 2
+  }
+}

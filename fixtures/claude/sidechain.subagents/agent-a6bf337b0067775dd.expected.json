@@ -22,6 +22,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -29,6 +30,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 388,
+          "marginalTokens": 273,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -36,6 +39,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 652,
+          "marginalTokens": 459,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -43,6 +48,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 2760,
+          "marginalTokens": 1944,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -60,6 +67,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -67,6 +75,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 139,
+          "marginalTokens": 49,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -74,6 +84,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4344,
+          "marginalTokens": 1528,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -81,6 +93,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 568,
+          "marginalTokens": 200,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -88,6 +102,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 969,
+          "marginalTokens": 341,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -105,6 +121,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -112,6 +129,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 24,
+          "marginalTokens": 15,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -119,6 +138,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 131,
+          "marginalTokens": 80,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -126,6 +147,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 246,
+          "marginalTokens": 150,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -133,6 +156,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 251,
+          "marginalTokens": 153,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -140,6 +165,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 293,
+          "marginalTokens": 178,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -157,6 +184,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -164,6 +192,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3372,
+          "marginalTokens": 1145,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -171,6 +201,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 12628,
+          "marginalTokens": 4289,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -178,6 +210,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 1058,
+          "marginalTokens": 359,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -185,6 +219,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 1461,
+          "marginalTokens": 496,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -202,6 +238,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -209,6 +246,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2368,
+          "marginalTokens": 777,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -216,6 +255,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 1751,
+          "marginalTokens": 575,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -223,6 +264,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 822,
+          "marginalTokens": 270,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -230,6 +273,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 1667,
+          "marginalTokens": 547,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -247,6 +292,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -254,6 +300,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 213,
+          "marginalTokens": 72,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -261,6 +309,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 5513,
+          "marginalTokens": 1872,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -278,6 +328,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -285,6 +336,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3951,
+          "marginalTokens": 1465,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -292,6 +345,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2057,
+          "marginalTokens": 763,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -299,6 +354,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2688,
+          "marginalTokens": 996,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -306,6 +363,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 101,
+          "marginalTokens": 37,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -323,6 +382,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -330,6 +390,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 181,
+          "marginalTokens": 175,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -337,6 +399,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 51,
+          "marginalTokens": 50,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -344,6 +408,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 25,
+          "marginalTokens": 24,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -351,6 +417,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 24,
+          "marginalTokens": 23,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -358,6 +426,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 421,
+          "marginalTokens": 408,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -375,6 +445,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -382,6 +453,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 576,
+          "marginalTokens": 245,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -389,6 +462,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 425,
+          "marginalTokens": 180,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -396,6 +471,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 516,
+          "marginalTokens": 219,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -403,6 +480,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 430,
+          "marginalTokens": 183,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -420,6 +499,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -427,6 +507,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4717,
+          "marginalTokens": 1480,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -434,6 +516,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3555,
+          "marginalTokens": 1115,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -451,6 +535,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -458,6 +543,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 5907,
+          "marginalTokens": 1856,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -465,6 +552,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4637,
+          "marginalTokens": 1457,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -482,6 +571,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -489,6 +579,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3461,
+          "marginalTokens": 1188,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -496,6 +588,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 6774,
+          "marginalTokens": 2324,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -503,6 +597,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4109,
+          "marginalTokens": 1410,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -520,6 +616,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -527,6 +624,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 1927,
+          "marginalTokens": 692,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -534,6 +633,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3028,
+          "marginalTokens": 1088,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -541,6 +642,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3168,
+          "marginalTokens": 1138,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -558,6 +661,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -565,6 +669,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 69,
+          "marginalTokens": 29,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -572,6 +678,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 72,
+          "marginalTokens": 30,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -579,6 +687,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 657,
+          "marginalTokens": 272,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -586,6 +696,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 947,
+          "marginalTokens": 392,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -593,6 +705,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 1033,
+          "marginalTokens": 428,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -610,6 +724,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -617,6 +732,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3352,
+          "marginalTokens": 1098,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -624,6 +741,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4529,
+          "marginalTokens": 1483,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -631,6 +750,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 913,
+          "marginalTokens": 299,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -648,6 +769,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -655,6 +777,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3333,
+          "marginalTokens": 1213,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -662,6 +786,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 5417,
+          "marginalTokens": 1971,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -669,6 +795,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3066,
+          "marginalTokens": 1115,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -686,6 +814,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -693,6 +822,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 111,
+          "marginalTokens": 37,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -700,6 +831,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 1809,
+          "marginalTokens": 602,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -707,6 +840,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2245,
+          "marginalTokens": 747,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -714,6 +849,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3410,
+          "marginalTokens": 1134,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -731,6 +868,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -738,6 +876,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 61,
+          "marginalTokens": 20,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -745,6 +885,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2603,
+          "marginalTokens": 868,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -752,6 +894,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3146,
+          "marginalTokens": 1048,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -769,6 +913,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -776,6 +921,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 15384,
+          "marginalTokens": 5058,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -783,6 +930,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 421,
+          "marginalTokens": 138,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -790,6 +939,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 616,
+          "marginalTokens": 203,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -807,6 +958,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -814,6 +966,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 158,
+          "marginalTokens": 75,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -821,6 +975,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 965,
+          "marginalTokens": 460,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -828,6 +984,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 2284,
+          "marginalTokens": 1088,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -845,6 +1003,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -852,6 +1011,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 2530,
+          "marginalTokens": 846,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -859,6 +1020,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 2453,
+          "marginalTokens": 820,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -866,6 +1029,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3188,
+          "marginalTokens": 1066,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -883,6 +1048,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -890,6 +1056,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3331,
+          "marginalTokens": 1170,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -897,6 +1065,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2841,
+          "marginalTokens": 998,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -904,6 +1074,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 5817,
+          "marginalTokens": 2044,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -921,6 +1093,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -928,6 +1101,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3007,
+          "marginalTokens": 1033,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -935,6 +1110,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4146,
+          "marginalTokens": 1424,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -952,6 +1129,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -959,6 +1137,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 65,
+          "marginalTokens": 22,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -966,6 +1146,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 4144,
+          "marginalTokens": 1400,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -973,6 +1155,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3139,
+          "marginalTokens": 1061,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -990,6 +1174,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -997,6 +1182,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 33,
+          "marginalTokens": 13,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -1004,6 +1191,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 2937,
+          "marginalTokens": 1192,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -1011,6 +1200,8 @@
           "name": "Grep",
           "kind": "builtin",
           "resultBytes": 74,
+          "marginalTokens": 30,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -1028,6 +1219,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -1035,6 +1227,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 5232,
+          "marginalTokens": 1768,
+          "marginalBasis": "split",
           "hasImage": false
         },
         {
@@ -1042,6 +1236,8 @@
           "name": "Read",
           "kind": "builtin",
           "resultBytes": 3325,
+          "marginalTokens": 1124,
+          "marginalBasis": "split",
           "hasImage": false
         }
       ]
@@ -1059,6 +1255,7 @@
       "isSidechain": true,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": []
     }

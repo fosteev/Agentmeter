@@ -25,6 +25,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -32,6 +33,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 742,
+          "marginalTokens": 346,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -49,6 +52,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -56,6 +60,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 2068,
+          "marginalTokens": 881,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -73,6 +79,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -80,6 +87,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 484,
+          "marginalTokens": 207,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -97,6 +106,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -104,6 +114,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 3867,
+          "marginalTokens": 1827,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -121,6 +133,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -128,6 +141,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 111,
+          "marginalTokens": 21,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -145,6 +160,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -152,6 +168,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 894,
+          "marginalTokens": 514,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -169,6 +187,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -176,6 +195,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 131,
+          "marginalTokens": 155,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -193,6 +214,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 56,
       "origin": "log",
       "tools": []
     },
@@ -209,6 +231,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": true,
+      "interjectedBytes": 0,
       "origin": "reconstructed",
       "tools": []
     },
@@ -225,6 +248,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": [
         {
@@ -232,6 +256,8 @@
           "name": "Bash",
           "kind": "builtin",
           "resultBytes": 147,
+          "marginalTokens": 37,
+          "marginalBasis": "measured",
           "hasImage": false
         }
       ]
@@ -249,6 +275,7 @@
       "isSidechain": false,
       "compacted": false,
       "synthetic": false,
+      "interjectedBytes": 0,
       "origin": "log",
       "tools": []
     }

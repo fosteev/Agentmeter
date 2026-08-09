@@ -16,6 +16,12 @@
 
 export type Provider = 'claude' | 'codex'
 
+/** Откуда взялась цифра в `marginalTokens`. */
+export type MarginalBasis =
+  | 'measured' // единственный вызов запроса, дельта целиком
+  | 'split' // доля дельты, поделённой между параллельными вызовами
+  | 'unknown' // дельта неизмерима: компакт, хвост сессии, перебивка
+
 /** Откуда запущен агент. `unknown` — живой сессии на диске не нашлось. */
 export type Entrypoint = 'cli' | 'vscode' | 'jetbrains' | 'desktop' | 'sdk' | 'exec' | 'unknown'
 
@@ -124,6 +130,13 @@ export interface Request {
    */
   synthetic: boolean
 
+  /**
+   * Байт текста, который пользователь дописал после этого запроса и до
+   * следующего. Не ноль — значит, дельта кэша несёт не только результаты
+   * тулов, и атрибутировать её нельзя.
+   */
+  interjectedBytes: number
+
   tools: ToolCall[]
 }
 
@@ -147,6 +160,8 @@ export interface ToolCall {
    * дельты кэша, а не из размера результата. До неё — 0.
    */
   marginalTokens: number
+  /** Чем эта цифра является: измерением, долей или признанием незнания. */
+  marginalBasis: MarginalBasis
   /** Результат содержит картинку. У скриншотов base64 в лог не пишется вовсе. */
   hasImage: boolean
 }

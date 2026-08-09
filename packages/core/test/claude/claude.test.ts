@@ -3,12 +3,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  listLiveSessions,
-  parseSessionChunk,
-  parseSessionFile,
-  parseSubagents,
-} from '../../src/index.ts'
+import { listLiveSessions, parseSessionFile, parseSubagents } from '../../src/index.ts'
 import type { ParseResult, Request, Session, ToolCall } from '../../src/index.ts'
 
 const fixturesDir = fileURLToPath(new URL('../../../../fixtures/claude/', import.meta.url))
@@ -43,30 +38,20 @@ describe('Claude Code parser', () => {
         `${basename(result.session.sourcePath, '.jsonl')}.expected.json`,
       )
       const expected = readExpected(expectedPath)
-      return projectResult(result, expected)
+      const projected = projectResult(result, expected)
+      projected.session['id'] = result.session.id
+      return projected
     })
     const expected = readdirSync(join(fixturesDir, 'sidechain.subagents'))
       .filter((name) => name.endsWith('.expected.json'))
       .sort()
-      .map((name) => readExpected(join(fixturesDir, 'sidechain.subagents', name)))
+      .map((name) => {
+        const item = readExpected(join(fixturesDir, 'sidechain.subagents', name))
+        item.session['id'] = name.replace(/^agent-/, '').replace(/\.expected\.json$/, '')
+        return item
+      })
 
     expect(actual).toEqual(expected)
-  })
-
-  it('parseSessionChunk не проглатывает оборванную последнюю строку', () => {
-    tmp = mkdtempSync(join(tmpdir(), 'agentmeter-claude-'))
-    const path = join(tmp, 'chunk.jsonl')
-    const first = readFileSync(join(fixturesDir, 'plain.jsonl'), 'utf8').split('\n')[0]
-    if (first === undefined) throw new Error('empty fixture')
-    writeFileSync(path, `${first}\n{"type":"assistant"`)
-
-    const result = parseSessionChunk(path, 0)
-    expect(result.requests).toHaveLength(0)
-    expect(result.offset).toBe(Buffer.byteLength(`${first}\n`))
-
-    writeFileSync(path, `${first}\n{"type":"assistant"}\n`)
-    const next = parseSessionChunk(path, result.offset)
-    expect(next.offset).toBe(Buffer.byteLength(`${first}\n{"type":"assistant"}\n`))
   })
 
   it('listLiveSessions читает только живые pid', () => {
@@ -124,17 +109,23 @@ function projectResult(actual: ParseResult, expected: ExpectedResult): ExpectedR
   return {
     ...(expected.checks === undefined ? {} : { checks: expected.checks }),
     session: projectSession(actual.session, expected.session),
-    requests: actual.requests.map((request, index) => projectRequest(request, expected.requests[index])),
+    requests: actual.requests.map((request, index) =>
+      projectRequest(request, expected.requests[index]),
+    ),
     totals: sumTotals(actual.requests),
     unknownTypes: actual.diagnostics.unknownRecordTypes,
   }
 }
 
-function projectSession(session: Session, expected: Record<string, unknown>): Record<string, unknown> {
+function projectSession(
+  session: Session,
+  expected: Record<string, unknown>,
+): Record<string, unknown> {
   const projected: Record<string, unknown> = {}
   for (const key of Object.keys(expected)) {
     const value = session[key as keyof Session]
-    projected[key] = key === 'startedAt' || key === 'endedAt' ? new Date(value as number).toISOString() : value
+    projected[key] =
+      key === 'startedAt' || key === 'endedAt' ? new Date(value as number).toISOString() : value
   }
   return projected
 }

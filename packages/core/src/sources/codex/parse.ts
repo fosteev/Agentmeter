@@ -1,7 +1,16 @@
-import { closeSync, openSync, readSync } from 'node:fs'
 import { basename, extname, resolve } from 'node:path'
+import { attributeMarginal } from '../../attribution/marginal.ts'
+import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
-import type { Entrypoint, ParseDiagnostics, ParseResult, Request, Session, ToolCall, ToolKind } from '../types.ts'
+import type {
+  Entrypoint,
+  ParseDiagnostics,
+  ParseResult,
+  Request,
+  Session,
+  ToolCall,
+  ToolKind,
+} from '../types.ts'
 
 type JsonObject = Record<string, unknown>
 
@@ -41,6 +50,8 @@ interface ParseState {
   endedAt?: number
   contextWindow?: number
   pendingTools: Map<string, PendingTool>
+  /** Уже выпущенные вызовы: результат часто приходит после `token_count`. */
+  emittedTools: Map<string, ToolCall>
   pendingOrder: number
   /** Между прошлым запросом и следующим контекст сжали. */
   compactedPending: boolean
@@ -87,13 +98,8 @@ const KNOWN_RECORD_TYPES = new Set([
 ])
 
 export function parseRolloutFile(path: string): ParseResult {
-  const { lines } = readJsonlLines(path, 0, true)
+  const { lines } = readJsonlLines(path, true)
   return parseLines(path, lines)
-}
-
-export function parseRolloutChunk(path: string, fromOffset: number): { requests: Request[]; offset: number } {
-  const { lines, offset } = readJsonlLines(path, fromOffset, false)
-  return { requests: parseLines(path, lines).requests, offset }
 }
 
 function parseLines(path: string, lines: string[]): ParseResult {
@@ -103,6 +109,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
     diagnostics: emptyDiagnostics(),
     entrypoint: 'unknown',
     pendingTools: new Map(),
+    emittedTools: new Map(),
     pendingOrder: 0,
     compactedPending: false,
     requests: [],
@@ -115,50 +122,9 @@ function parseLines(path: string, lines: string[]): ParseResult {
     consumeRecord(state, record)
   }
 
-  return { session: buildSession(state), requests: state.requests, diagnostics: state.diagnostics }
-}
-
-function readJsonlLines(
-  path: string,
-  fromOffset: number,
-  includeTrailingLine: boolean,
-): { lines: string[]; offset: number } {
-  const fd = openSync(path, 'r')
-  const lines: string[] = []
-  const buffer = Buffer.allocUnsafe(64 * 1024)
-  let carry = Buffer.alloc(0)
-  let fileOffset = fromOffset
-  let completeOffset = fromOffset
-
-  try {
-    while (true) {
-      const bytesRead = readSync(fd, buffer, 0, buffer.length, fileOffset)
-      if (bytesRead === 0) break
-      const chunk = Buffer.from(buffer.subarray(0, bytesRead))
-      const data = carry.length > 0 ? Buffer.concat([carry, chunk]) : chunk
-      const dataStartOffset = fileOffset - carry.length
-      fileOffset += bytesRead
-
-      let start = 0
-      for (let i = 0; i < data.length; i += 1) {
-        if (data[i] !== 0x0a) continue
-        const end = i > start && data[i - 1] === 0x0d ? i - 1 : i
-        lines.push(data.subarray(start, end).toString('utf8'))
-        completeOffset = dataStartOffset + i + 1
-        start = i + 1
-      }
-      carry = Buffer.from(data.subarray(start))
-    }
-
-    if (includeTrailingLine && carry.length > 0) {
-      lines.push(carry.toString('utf8'))
-      completeOffset = fileOffset
-    }
-  } finally {
-    closeSync(fd)
-  }
-
-  return { lines, offset: completeOffset }
+  const session = buildSession(state)
+  attributeMarginal(state.requests, 'codex')
+  return { session, requests: state.requests, diagnostics: state.diagnostics }
 }
 
 function consumeRecord(state: ParseState, record: JsonObject): void {
@@ -208,7 +174,8 @@ function consumeSessionMeta(state: ParseState, payload: JsonObject | undefined):
   const cliVersion = stringField(payload, 'cli_version')
   if (cliVersion) {
     state.cliVersion = cliVersion
-    if (!state.diagnostics.cliVersions.includes(cliVersion)) state.diagnostics.cliVersions.push(cliVersion)
+    if (!state.diagnostics.cliVersions.includes(cliVersion))
+      state.diagnostics.cliVersions.push(cliVersion)
   }
 
   state.entrypoint = entrypointFromOriginator(stringField(payload, 'originator'))
@@ -228,7 +195,11 @@ function consumeTurnContext(state: ParseState, payload: JsonObject | undefined):
   if (!state.model) state.model = model
 }
 
-function consumeEvent(state: ParseState, payload: JsonObject | undefined, ts: number | undefined): void {
+function consumeEvent(
+  state: ParseState,
+  payload: JsonObject | undefined,
+  ts: number | undefined,
+): void {
   if (!payload) return
   switch (stringField(payload, 'type')) {
     case 'task_started': {
@@ -247,6 +218,12 @@ function consumeEvent(state: ParseState, payload: JsonObject | undefined, ts: nu
       // `call_id` несёт всегда. Результат в лог не попадает: resultBytes = 0.
       const id = stringField(payload, 'call_id')
       if (!id) return
+      const emitted = state.emittedTools.get(id)
+      if (emitted) {
+        emitted.name = 'web_search'
+        emitted.kind = 'web'
+        return
+      }
       const tool = getOrCreatePendingTool(state, id)
       tool.name ??= 'web_search'
       tool.kind = 'web'
@@ -258,6 +235,12 @@ function consumeEvent(state: ParseState, payload: JsonObject | undefined, ts: nu
     case 'thread_name_updated': {
       const name = stringField(payload, 'thread_name')
       if (name) state.title = name
+      return
+    }
+    case 'user_message': {
+      const message = stringField(payload, 'message')
+      const previous = state.requests.at(-1)
+      if (message && previous) previous.interjectedBytes += Buffer.byteLength(message, 'utf8')
       return
     }
     case 'token_count':
@@ -289,6 +272,11 @@ function consumeResponseItem(state: ParseState, payload: JsonObject | undefined)
     case 'tool_search_output': {
       const id = stringField(payload, 'call_id')
       if (!id) return
+      const emitted = state.emittedTools.get(id)
+      if (emitted) {
+        emitted.resultBytes = resultBytes(payload.tools)
+        return
+      }
       getOrCreatePendingTool(state, id).resultBytes = resultBytes(payload.tools)
       return
     }
@@ -308,6 +296,12 @@ function consumeToolCall(state: ParseState, payload: JsonObject): void {
 function consumeToolOutput(state: ParseState, payload: JsonObject): void {
   const id = stringField(payload, 'call_id')
   if (!id) return
+  const emitted = state.emittedTools.get(id)
+  if (emitted) {
+    emitted.resultBytes = resultBytes(payload.output)
+    if (emitted.name === 'view_image') emitted.hasImage = true
+    return
+  }
   const tool = getOrCreatePendingTool(state, id)
   tool.resultBytes = resultBytes(payload.output)
 }
@@ -316,9 +310,16 @@ function consumeMcpToolCallEnd(state: ParseState, payload: JsonObject): void {
   const id = stringField(payload, 'call_id')
   const invocation = objectField(payload, 'invocation')
   if (!id || !invocation) return
-  const tool = getOrCreatePendingTool(state, id)
   const server = stringField(invocation, 'server')
   const name = stringField(invocation, 'tool')
+  const emitted = state.emittedTools.get(id)
+  if (emitted) {
+    if (server) emitted.server = server
+    if (name) emitted.name = name
+    emitted.kind = 'mcp'
+    return
+  }
+  const tool = getOrCreatePendingTool(state, id)
   if (server) tool.mcpServer = server
   if (name) tool.mcpTool = name
 }
@@ -364,6 +365,7 @@ function consumeTokenCount(state: ParseState, payload: JsonObject, ts: number | 
     isSidechain: false,
     compacted: state.compactedPending,
     synthetic: false,
+    interjectedBytes: 0,
     tools: pendingTools(state),
   }
   if (contextWindow !== undefined) request.contextWindow = contextWindow
@@ -384,21 +386,29 @@ function totalUsage(usage: JsonObject | undefined): TotalUsage | undefined {
 }
 
 function sameUsage(a: TotalUsage, b: TotalUsage): boolean {
-  return a.input === b.input && a.cached === b.cached && a.output === b.output && a.reasoning === b.reasoning
+  return (
+    a.input === b.input &&
+    a.cached === b.cached &&
+    a.output === b.output &&
+    a.reasoning === b.reasoning
+  )
 }
 
 function pendingTools(state: ParseState): ToolCall[] {
-  return [...state.pendingTools.values()]
+  const tools: ToolCall[] = [...state.pendingTools.values()]
     .sort((a, b) => a.order - b.order)
-    .map((tool) => ({
+    .map((tool): ToolCall => ({
       id: tool.id,
       name: tool.mcpTool ?? tool.name ?? 'unknown',
       kind: toolKind(tool),
       ...(tool.mcpServer ? { server: tool.mcpServer } : {}),
       resultBytes: tool.resultBytes,
       marginalTokens: 0,
-      hasImage: false,
+      marginalBasis: 'unknown',
+      hasImage: tool.name === 'view_image' && tool.resultBytes > 0,
     }))
+  for (const tool of tools) state.emittedTools.set(tool.id, tool)
+  return tools
 }
 
 function toolKind(tool: PendingTool): ToolKind {
@@ -453,7 +463,8 @@ function parseRecord(line: string, diagnostics: ParseDiagnostics): JsonObject | 
 
 function recordTypeKey(type: string | undefined, payload: JsonObject | undefined): string {
   if (!type) return '<missing>'
-  if (type === 'event_msg' || type === 'response_item') return `${type}/${stringField(payload ?? {}, 'type') ?? '<missing>'}`
+  if (type === 'event_msg' || type === 'response_item')
+    return `${type}/${stringField(payload ?? {}, 'type') ?? '<missing>'}`
   return type
 }
 

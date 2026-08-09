@@ -1,0 +1,222 @@
+{
+  "_": "Посчитано руками, разложение — в README.md рядом. Пересобирать выводом реализации нельзя: фикстура станет подтверждать сама себя.",
+  "provider": "claude",
+  "constants": { "bytesPerToken": 2.7, "imageTokens": 400 },
+  "requests": [
+    {
+      "seq": 0,
+      "origin": "log",
+      "contextTokens": 20010,
+      "output": 100,
+      "residual": 2000,
+      "tools": [
+        {
+          "id": "toolu_A",
+          "name": "Read",
+          "resultBytes": 5400,
+          "marginalTokens": 2000,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "origin": "log",
+      "contextTokens": 22110,
+      "output": 200,
+      "residual": 4000,
+      "tools": [
+        {
+          "id": "toolu_B",
+          "name": "Bash",
+          "resultBytes": 2700,
+          "marginalTokens": 1009,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "toolu_C",
+          "name": "Bash",
+          "resultBytes": 8000,
+          "marginalTokens": 2991,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "origin": "log",
+      "contextTokens": 26310,
+      "output": 300,
+      "residual": 2100,
+      "tools": [
+        {
+          "id": "toolu_D",
+          "name": "Read",
+          "resultBytes": 27000,
+          "hasImage": true,
+          "marginalTokens": 600,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "toolu_E",
+          "name": "Bash",
+          "resultBytes": 2700,
+          "marginalTokens": 1500,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "origin": "log",
+      "contextTokens": 28710,
+      "output": 400,
+      "residual": 501,
+      "tools": [
+        {
+          "id": "toolu_F",
+          "name": "Bash",
+          "resultBytes": 1350,
+          "marginalTokens": 251,
+          "marginalBasis": "split"
+        },
+        {
+          "id": "toolu_G",
+          "name": "Bash",
+          "resultBytes": 1350,
+          "marginalTokens": 250,
+          "marginalBasis": "split"
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "origin": "log",
+      "contextTokens": 29611,
+      "output": 500,
+      "residual": 900,
+      "note": "преемник — запрос 6, реконструированный 5 соседом не считается",
+      "tools": [
+        {
+          "id": "toolu_H",
+          "name": "Agent",
+          "resultBytes": 1200,
+          "marginalTokens": 900,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "origin": "reconstructed",
+      "contextTokens": 30101,
+      "output": 0,
+      "residual": null,
+      "note": "восстановленный запрос: тулов нет, атрибуции не получает",
+      "tools": []
+    },
+    {
+      "seq": 6,
+      "origin": "log",
+      "contextTokens": 31011,
+      "output": 600,
+      "residual": null,
+      "note": "после запроса пользователь дописал текст — дельта несёт не только результат тула",
+      "interjectedBytes": 300,
+      "tools": [
+        {
+          "id": "toolu_I",
+          "name": "Bash",
+          "resultBytes": 1350,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown"
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "origin": "log",
+      "contextTokens": 32411,
+      "output": 700,
+      "residual": null,
+      "note": "следующий запрос сжат — разность префиксов не значит ничего",
+      "tools": [
+        {
+          "id": "toolu_J",
+          "name": "Bash",
+          "resultBytes": 2700,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown"
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "origin": "log",
+      "contextTokens": 20010,
+      "output": 800,
+      "residual": 2000,
+      "compacted": true,
+      "note": "сам сжат, но его собственная дельта считается как обычно",
+      "tools": [
+        {
+          "id": "toolu_K",
+          "name": "Bash",
+          "resultBytes": 5400,
+          "marginalTokens": 2000,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "origin": "log",
+      "contextTokens": 22810,
+      "output": 900,
+      "residual": -50,
+      "note": "остаток отрицательный — шум учёта кэша, обрезается по нулю, но остаётся измеренным",
+      "tools": [
+        {
+          "id": "toolu_L",
+          "name": "Bash",
+          "resultBytes": 200,
+          "marginalTokens": 0,
+          "marginalBasis": "measured"
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "origin": "log",
+      "contextTokens": 23660,
+      "output": 1000,
+      "residual": 60,
+      "note": "тулов нет: 60 токенов — это ход пользователя, к инструментам отношения не имеет",
+      "tools": []
+    },
+    {
+      "seq": 11,
+      "origin": "log",
+      "contextTokens": 24720,
+      "output": 1100,
+      "residual": null,
+      "note": "последний запрос сессии — мерить не с чем",
+      "tools": [
+        {
+          "id": "toolu_M",
+          "name": "Bash",
+          "resultBytes": 800,
+          "marginalTokens": 0,
+          "marginalBasis": "unknown"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "attributedTokens": 11501,
+    "calls": 13,
+    "measured": 4,
+    "split": 6,
+    "unknown": 3
+  }
+}

@@ -29,4 +29,8 @@
 | [`design-implementation.md`](design-implementation.md) | 2.4–2.8, 3.1–3.6, 4.2 | карта макета для всех, кто верстает |
 | [`0.6-fixtures.md`](0.6-fixtures.md) | 0.6 | сам |
 | [`1.1-claude-parser.md`](1.1-claude-parser.md) | 1.1 | Codex |
+| [`1.2-codex-parser.md`](1.2-codex-parser.md) | 1.2 | Codex |
 | [`1.3-verify.md`](1.3-verify.md) | 1.3 | сам |
+| [`1.4-drift.md`](1.4-drift.md) | 1.4 | сам |
+| [`1.5-index.md`](1.5-index.md) | 1.5 | Codex |
+| [`1.6-attribution.md`](1.6-attribution.md) | 1.6 | модель — сам, реализация — Codex |

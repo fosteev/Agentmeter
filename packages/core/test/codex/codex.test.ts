@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { parseRolloutChunk, parseRolloutFile, readLimits } from '../../src/index.ts'
+import { parseRolloutFile, readLimits } from '../../src/index.ts'
 import type { LimitWindow, ParseResult, Request, Session, ToolCall } from '../../src/index.ts'
 
 const fixturesDir = fileURLToPath(new URL('../../../../fixtures/codex/', import.meta.url))
@@ -40,7 +40,9 @@ describe('Codex parser', () => {
 
     expect(actual).toHaveLength(16)
     expect(actual.every((window) => window.exact)).toBe(true)
-    expect(actual.map((window) => window.resetsAt)).toEqual(expectedResets.map((value) => value * 1000))
+    expect(actual.map((window) => window.resetsAt)).toEqual(
+      expectedResets.map((value) => value * 1000),
+    )
     expect(projectLimit(actual[0])).toEqual({
       kind: 'primary',
       usedPercent: 1,
@@ -48,22 +50,6 @@ describe('Codex parser', () => {
       resetsAt: 1781531144000,
       exact: true,
     })
-  })
-
-  it('parseRolloutChunk не проглатывает оборванную последнюю строку', () => {
-    tmp = mkdtempSync(join(tmpdir(), 'agentmeter-codex-'))
-    const path = join(tmp, 'chunk.jsonl')
-    const full = readFileSync(rolloutPath, 'utf8')
-    const lastLineOffset = full.lastIndexOf('\n', full.endsWith('\n') ? full.length - 2 : full.length - 1) + 1
-    const cut = lastLineOffset + Math.floor((full.length - lastLineOffset) / 2)
-
-    writeFileSync(path, full.slice(0, cut))
-    const first = parseRolloutChunk(path, 0)
-    expect(first.offset).toBe(lastLineOffset)
-
-    writeFileSync(path, full)
-    const second = parseRolloutChunk(path, first.offset)
-    expect(first.requests.length + second.requests.length).toBe(parseRolloutFile(rolloutPath).requests.length)
   })
 
   it('повторный token_count с тем же итогом не удваивает запрос', () => {
@@ -80,14 +66,25 @@ describe('Codex parser', () => {
       total_tokens: input + output,
     })
     const tokenCount = (ts: string, last: object, total: object) =>
-      JSON.stringify({ timestamp: ts, type: 'event_msg', payload: { type: 'token_count', info: { last_token_usage: last, total_token_usage: total } } })
+      JSON.stringify({
+        timestamp: ts,
+        type: 'event_msg',
+        payload: {
+          type: 'token_count',
+          info: { last_token_usage: last, total_token_usage: total },
+        },
+      })
 
     writeFileSync(
       path,
       [
         tokenCount('2026-06-15T08:00:01.000Z', usage(100, 10), usage(100, 10)),
         tokenCount('2026-06-15T08:00:02.000Z', usage(100, 10), usage(100, 10)),
-        JSON.stringify({ timestamp: '2026-06-15T08:00:03.000Z', type: 'compacted', payload: { message: '' } }),
+        JSON.stringify({
+          timestamp: '2026-06-15T08:00:03.000Z',
+          type: 'compacted',
+          payload: { message: '' },
+        }),
         tokenCount('2026-06-15T08:00:04.000Z', usage(50, 5), usage(150, 15)),
       ].join('\n'),
     )
@@ -146,19 +143,29 @@ function projectResult(actual: ParseResult, expected: ExpectedResult): ExpectedR
   return {
     ...(expected.checks === undefined ? {} : { checks: expected.checks }),
     session: projectSession(actual.session, expected.session),
-    requests: actual.requests.map((request, index) => projectRequest(request, expected.requests[index])),
+    requests: actual.requests.map((request, index) =>
+      projectRequest(request, expected.requests[index]),
+    ),
     totals: sumTotals(actual.requests),
-    ...(expected.totalTokenUsage === undefined ? {} : { totalTokenUsage: readLastTotalTokenUsage(actual.session.sourcePath) }),
+    ...(expected.totalTokenUsage === undefined
+      ? {}
+      : { totalTokenUsage: readLastTotalTokenUsage(actual.session.sourcePath) }),
     unknownTypes: actual.diagnostics.unknownRecordTypes,
-    ...(expected.limits === undefined ? {} : { limits: readLimits(actual.session.sourcePath).map(projectLimit) }),
+    ...(expected.limits === undefined
+      ? {}
+      : { limits: readLimits(actual.session.sourcePath).map(projectLimit) }),
   }
 }
 
-function projectSession(session: Session, expected: Record<string, unknown>): Record<string, unknown> {
+function projectSession(
+  session: Session,
+  expected: Record<string, unknown>,
+): Record<string, unknown> {
   const projected: Record<string, unknown> = {}
   for (const key of Object.keys(expected)) {
     const value = session[key as keyof Session]
-    projected[key] = key === 'startedAt' || key === 'endedAt' ? new Date(value as number).toISOString() : value
+    projected[key] =
+      key === 'startedAt' || key === 'endedAt' ? new Date(value as number).toISOString() : value
   }
   return projected
 }
@@ -261,7 +268,10 @@ function readLimitResets(path: string): number[] {
   return resets
 }
 
-function objectField(object: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+function objectField(
+  object: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | undefined {
   return isObject(object[key]) ? object[key] : undefined
 }
 

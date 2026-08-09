@@ -151,7 +151,9 @@ function anonymize(value: unknown, key?: string): unknown {
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = k === 'usage' ? v : anonymize(v, k)
+      const outKey =
+        key === 'changes' && (k.startsWith('/') || k.startsWith('~')) ? anonymizePath(k) : k
+      out[outKey] = k === 'usage' ? v : anonymize(v, k)
     }
     return out
   }
@@ -166,7 +168,30 @@ function anonymize(value: unknown, key?: string): unknown {
 
 // ─── ожидаемый разбор ────────────────────────────────────────────────────────
 
-interface ExpectedRequest {
+type ExpectedMarginalBasis = 'measured' | 'split' | 'unknown'
+
+interface ExpectedTool {
+  id: string
+  name: string
+  kind: string
+  server?: string
+  resultBytes: number
+  marginalTokens: number
+  marginalBasis: ExpectedMarginalBasis
+  hasImage: boolean
+}
+
+interface AttributableRequest {
+  seq: number
+  output: number
+  contextTokens: number
+  compacted: boolean
+  interjectedBytes: number
+  origin: 'log' | 'reconstructed'
+  tools: ExpectedTool[]
+}
+
+interface ExpectedRequest extends AttributableRequest {
   seq: number
   requestId: string
   ts: string
@@ -177,17 +202,7 @@ interface ExpectedRequest {
   cacheRead: number
   contextTokens: number
   isSidechain: boolean
-  compacted: boolean
   synthetic: boolean
-  origin: 'log' | 'reconstructed'
-  tools: {
-    id: string
-    name: string
-    kind: string
-    server?: string
-    resultBytes: number
-    hasImage: boolean
-  }[]
 }
 
 interface Usage {
@@ -206,6 +221,63 @@ function toolKind(name: string): { kind: string; server?: string } {
   if (name === 'Skill') return { kind: 'skill' }
   if (name === 'WebSearch' || name === 'WebFetch') return { kind: 'web' }
   return { kind: 'builtin' }
+}
+
+function attributeExpected(requests: AttributableRequest[], bytesPerToken: number): void {
+  let nextLogged: AttributableRequest | undefined
+  for (let index = requests.length - 1; index >= 0; index -= 1) {
+    const request = requests[index]!
+    for (const tool of request.tools) {
+      tool.marginalTokens = 0
+      tool.marginalBasis = 'unknown'
+    }
+
+    if (
+      request.tools.length > 0 &&
+      nextLogged !== undefined &&
+      !nextLogged.compacted &&
+      request.interjectedBytes === 0
+    ) {
+      const residual = Math.max(
+        0,
+        nextLogged.contextTokens - request.contextTokens - request.output,
+      )
+      if (request.tools.length === 1) {
+        request.tools[0]!.marginalTokens = residual
+        request.tools[0]!.marginalBasis = 'measured'
+      } else {
+        splitExpected(request.tools, residual, bytesPerToken)
+      }
+    }
+
+    if (request.origin === 'log') nextLogged = request
+  }
+}
+
+function splitExpected(tools: ExpectedTool[], residual: number, bytesPerToken: number): void {
+  let weights = tools.map((tool) => (tool.hasImage ? 400 : tool.resultBytes / bytesPerToken))
+  let total = weights.reduce((sum, weight) => sum + weight, 0)
+  if (total === 0) {
+    weights = tools.map(() => 1)
+    total = tools.length
+  }
+
+  const shares = weights.map((weight, index) => {
+    const exact = (residual * weight) / total
+    const tokens = Math.floor(exact)
+    return { index, tokens, remainder: exact - tokens }
+  })
+  let missing = residual - shares.reduce((sum, share) => sum + share.tokens, 0)
+  const order = [...shares].sort(
+    (left, right) => right.remainder - left.remainder || left.index - right.index,
+  )
+  for (let index = 0; missing > 0; index += 1, missing -= 1) order[index]!.tokens += 1
+
+  for (const share of shares) {
+    const tool = tools[share.index]!
+    tool.marginalTokens = share.tokens
+    tool.marginalBasis = 'split'
+  }
 }
 
 /**
@@ -238,6 +310,7 @@ function buildExpected(lines: unknown[]): {
     'summary',
   ])
   const session: Record<string, unknown> = {}
+  let lastRequestId: string | undefined
 
   // Результаты тулов лежат ниже вызова, поэтому собираем их отдельным проходом.
   // Размер берём по сериализованному toolUseResult — он же лежит в логе, — но
@@ -269,9 +342,14 @@ function buildExpected(lines: unknown[]): {
     if (type === 'last-prompt' && r['lastPrompt'] && !session['firstPrompt']) {
       session['firstPrompt'] = r['lastPrompt']
     }
+    if (type === 'user' && lastRequestId) {
+      const request = byRequest.get(lastRequestId)
+      if (request) request.interjectedBytes += claudeUserTextBytes(r['message'])
+    }
     if (type !== 'assistant') continue
 
     const rid = r['requestId'] as string
+    lastRequestId = rid
     const u = (r['message']?.usage ?? {}) as Usage
     const tools = ((r['message']?.content ?? []) as any[])
       .filter((c) => c?.type === 'tool_use')
@@ -282,6 +360,8 @@ function buildExpected(lines: unknown[]): {
           name: c.name as string,
           ...toolKind(c.name as string),
           resultBytes: res?.bytes ?? 0,
+          marginalTokens: 0,
+          marginalBasis: 'unknown' as const,
           hasImage: res?.hasImage ?? false,
         }
       })
@@ -302,7 +382,8 @@ function buildExpected(lines: unknown[]): {
       prev.cacheWrite = Math.max(prev.cacheWrite, u.cache_creation_input_tokens ?? 0)
       prev.cacheRead = Math.max(prev.cacheRead, u.cache_read_input_tokens ?? 0)
       prev.contextTokens = prev.input + prev.cacheRead + prev.cacheWrite
-      prev.tools.push(...tools)
+      const knownToolIds = new Set(prev.tools.map((tool) => tool.id))
+      prev.tools.push(...tools.filter((tool) => !knownToolIds.has(tool.id)))
       continue
     }
     order.push(rid)
@@ -316,10 +397,13 @@ function buildExpected(lines: unknown[]): {
       cacheWrite: u.cache_creation_input_tokens ?? 0,
       cacheRead: u.cache_read_input_tokens ?? 0,
       contextTokens:
-        (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
+        (u.input_tokens ?? 0) +
+        (u.cache_read_input_tokens ?? 0) +
+        (u.cache_creation_input_tokens ?? 0),
       isSidechain: Boolean(r['isSidechain']),
       compacted: false,
       synthetic: false,
+      interjectedBytes: 0,
       origin: 'log',
       tools,
     })
@@ -346,6 +430,7 @@ function buildExpected(lines: unknown[]): {
           isSidechain: last.isSidechain,
           compacted: false,
           synthetic: true,
+          interjectedBytes: 0,
           origin: 'reconstructed',
           tools: [],
         })
@@ -361,6 +446,7 @@ function buildExpected(lines: unknown[]): {
     last = r
   }
   requests.forEach((r, i) => (r.seq = i))
+  attributeExpected(requests, 2.7)
 
   const totals = requests.reduce(
     (acc, r) => ({
@@ -374,6 +460,20 @@ function buildExpected(lines: unknown[]): {
   return { session, requests, totals, unknownTypes }
 }
 
+function claudeUserTextBytes(message: unknown): number {
+  if (!message || typeof message !== 'object' || Array.isArray(message)) return 0
+  const content = (message as Record<string, unknown>)['content']
+  if (typeof content === 'string') return Buffer.byteLength(content, 'utf8')
+  if (!Array.isArray(content)) return 0
+  return content.reduce((bytes, block) => {
+    if (!block || typeof block !== 'object' || Array.isArray(block)) return bytes
+    const value = block as Record<string, unknown>
+    if (value['type'] !== 'text') return bytes
+    const text = typeof value['text'] === 'string' ? value['text'] : value['content']
+    return bytes + (typeof text === 'string' ? Buffer.byteLength(text, 'utf8') : 0)
+  }, 0)
+}
+
 /**
  * Ожидаемый разбор роллаута Codex.
  *
@@ -382,37 +482,164 @@ function buildExpected(lines: unknown[]): {
  * `cached_input_tokens` — подмножество `input_tokens`, поэтому свежий ввод это
  * их разность.
  */
+interface CodexExpectedRequest extends AttributableRequest {
+  ts: string
+  input: number
+  cacheRead: number
+  cacheWrite: number
+  reasoning: number
+  contextWindow?: number
+  synthetic: boolean
+  isSidechain: boolean
+}
+
+interface ExpectedPendingTool {
+  id: string
+  name?: string
+  kind?: string
+  server?: string
+  resultBytes: number
+  hasImage: boolean
+  order: number
+}
+
 function buildExpectedCodex(lines: unknown[]): Record<string, unknown> {
   const session: Record<string, unknown> = {}
-  const requests: Record<string, unknown>[] = []
+  const requests: CodexExpectedRequest[] = []
   const limits: Record<string, unknown>[] = []
-  const tools: Record<string, unknown>[] = []
+  const unknownTypes: Record<string, number> = {}
+  const pending = new Map<string, ExpectedPendingTool>()
+  const emitted = new Map<string, ExpectedTool>()
+  const knownTypes = new Set([
+    'compacted',
+    'session_meta',
+    'turn_context',
+    'world_state',
+    'event_msg/agent_message',
+    'event_msg/agent_reasoning',
+    'event_msg/context_compacted',
+    'event_msg/entered_review_mode',
+    'event_msg/error',
+    'event_msg/exec_command_end',
+    'event_msg/exited_review_mode',
+    'event_msg/item_completed',
+    'event_msg/mcp_tool_call_end',
+    'event_msg/patch_apply_end',
+    'event_msg/task_complete',
+    'event_msg/task_started',
+    'event_msg/thread_name_updated',
+    'event_msg/token_count',
+    'event_msg/turn_aborted',
+    'event_msg/user_message',
+    'event_msg/web_search_end',
+    'response_item/custom_tool_call',
+    'response_item/custom_tool_call_output',
+    'response_item/function_call',
+    'response_item/function_call_output',
+    'response_item/message',
+    'response_item/reasoning',
+    'response_item/tool_search_call',
+    'response_item/tool_search_output',
+    'response_item/web_search_call',
+  ])
   let contextWindow: number | undefined
+  let model: string | undefined
+  let compactedPending = false
+  let pendingOrder = 0
+  let previousTotal: Record<string, number> | undefined
   let lastTotal: Record<string, number> | undefined
+
+  const getPending = (id: string): ExpectedPendingTool => {
+    let tool = pending.get(id)
+    if (!tool) {
+      tool = { id, resultBytes: 0, hasImage: false, order: pendingOrder }
+      pendingOrder += 1
+      pending.set(id, tool)
+    }
+    return tool
+  }
 
   for (const raw of lines) {
     const r = raw as Record<string, any>
     const p = r['payload'] ?? {}
+    const recordKey =
+      r['type'] === 'event_msg' || r['type'] === 'response_item'
+        ? `${r['type']}/${p.type ?? '<missing>'}`
+        : (r['type'] ?? '<missing>')
+    if (!knownTypes.has(recordKey)) unknownTypes[recordKey] = (unknownTypes[recordKey] ?? 0) + 1
+
     if (r['type'] === 'session_meta') {
       session['id'] = p.id
       session['cwd'] = p.cwd
+      session['project'] = typeof p.cwd === 'string' ? basename(p.cwd) : ''
+      if (p.git?.branch) session['branch'] = p.git.branch
       session['cliVersion'] = p.cli_version
-      session['originator'] = p.originator
+      session['entrypoint'] =
+        p.originator === 'codex-tui' ? 'cli' : p.originator === 'codex-exec' ? 'exec' : 'unknown'
       session['startedAt'] = p.timestamp
     }
     session['endedAt'] = r['timestamp']
 
-    if (p.type === 'task_started' && p.model_context_window) contextWindow = p.model_context_window
-    if (p.type === 'function_call') {
-      tools.push({ name: p.name, kind: 'builtin', callId: p.call_id })
+    if (r['type'] === 'turn_context') {
+      if (typeof p.model === 'string') {
+        model = p.model
+        session['model'] ??= model
+      }
+      continue
     }
-    if (p.type === 'mcp_tool_call_end') {
-      tools.push({
-        name: `${p.invocation?.server}__${p.invocation?.tool}`,
-        kind: 'mcp',
-        server: p.invocation?.server,
-        callId: p.call_id,
-      })
+    if (r['type'] === 'compacted') {
+      compactedPending = true
+      continue
+    }
+    if (r['type'] === 'response_item') {
+      if (p.type === 'function_call' || p.type === 'custom_tool_call') {
+        if (p.call_id && p.name) getPending(p.call_id).name ??= p.name
+      } else if (p.type === 'function_call_output' || p.type === 'custom_tool_call_output') {
+        if (!p.call_id) continue
+        const tool = emitted.get(p.call_id) ?? getPending(p.call_id)
+        tool.resultBytes = codexResultBytes(p.output)
+        if (tool.name === 'view_image') tool.hasImage = true
+      } else if (p.type === 'tool_search_call' && p.call_id) {
+        getPending(p.call_id).name ??= 'tool_search'
+      } else if (p.type === 'tool_search_output' && p.call_id) {
+        const tool = emitted.get(p.call_id) ?? getPending(p.call_id)
+        tool.resultBytes = codexResultBytes(p.tools)
+      }
+      continue
+    }
+    if (r['type'] !== 'event_msg') continue
+
+    if (p.type === 'task_started' && p.model_context_window) {
+      contextWindow = p.model_context_window
+      continue
+    }
+    if (p.type === 'context_compacted') {
+      compactedPending = true
+      continue
+    }
+    if (p.type === 'thread_name_updated' && p.thread_name) {
+      session['title'] = p.thread_name
+      continue
+    }
+    if (p.type === 'user_message') {
+      const previous = requests.at(-1)
+      if (previous && typeof p.message === 'string') {
+        previous.interjectedBytes += Buffer.byteLength(p.message, 'utf8')
+      }
+      continue
+    }
+    if (p.type === 'mcp_tool_call_end' && p.call_id) {
+      const tool = emitted.get(p.call_id) ?? getPending(p.call_id)
+      if (p.invocation?.tool) tool.name = p.invocation.tool
+      if (p.invocation?.server) tool.server = p.invocation.server
+      tool.kind = 'mcp'
+      continue
+    }
+    if (p.type === 'web_search_end' && p.call_id) {
+      const tool = emitted.get(p.call_id) ?? getPending(p.call_id)
+      tool.name = 'web_search'
+      tool.kind = 'web'
+      continue
     }
     if (p.type !== 'token_count') continue
 
@@ -432,6 +659,21 @@ function buildExpectedCodex(lines: unknown[]): Record<string, unknown> {
     if (!p.info) continue
     const last = p.info.last_token_usage ?? {}
     lastTotal = p.info.total_token_usage ?? lastTotal
+    if (previousTotal && sameExpectedUsage(previousTotal, p.info.total_token_usage)) continue
+    previousTotal = p.info.total_token_usage
+    contextWindow = p.info.model_context_window ?? contextWindow
+    const requestTools = [...pending.values()]
+      .sort((left, right) => left.order - right.order)
+      .map((tool): ExpectedTool => ({
+        id: tool.id,
+        name: tool.name ?? 'unknown',
+        kind: tool.kind ?? (tool.name === undefined ? 'unknown' : 'builtin'),
+        ...(tool.server ? { server: tool.server } : {}),
+        resultBytes: tool.resultBytes,
+        marginalTokens: 0,
+        marginalBasis: 'unknown',
+        hasImage: tool.hasImage,
+      }))
     requests.push({
       seq: requests.length,
       ts: r['timestamp'],
@@ -440,29 +682,61 @@ function buildExpectedCodex(lines: unknown[]): Record<string, unknown> {
       cacheWrite: 0,
       output: last.output_tokens ?? 0,
       reasoning: last.reasoning_output_tokens ?? 0,
+      contextTokens: last.input_tokens ?? 0,
       contextWindow,
+      compacted: compactedPending,
+      synthetic: false,
+      isSidechain: false,
+      interjectedBytes: 0,
+      origin: 'log',
+      tools: requestTools,
     })
+    for (const tool of requestTools) emitted.set(tool.id, tool)
+    pending.clear()
+    compactedPending = false
   }
+
+  attributeExpected(requests, 3.7)
 
   const totals = requests.reduce(
     (a, r) => ({
       input: a.input + (r['input'] as number),
       output: a.output + (r['output'] as number),
+      cacheWrite: a.cacheWrite + (r['cacheWrite'] as number),
       cacheRead: a.cacheRead + (r['cacheRead'] as number),
       reasoning: a.reasoning + (r['reasoning'] as number),
     }),
-    { input: 0, output: 0, cacheRead: 0, reasoning: 0 },
+    { input: 0, output: 0, cacheWrite: 0, cacheRead: 0, reasoning: 0 },
   )
   return {
     session,
     requests,
     limits,
-    tools,
     totals,
+    unknownTypes,
     // Встроенная в формат сверка: сумма по запросам обязана сойтись с
     // накопительным итогом последнего token_count.
     totalTokenUsage: lastTotal,
   }
+}
+
+function codexResultBytes(value: unknown): number {
+  if (typeof value === 'string') return Buffer.byteLength(value, 'utf8')
+  if (value === undefined) return 0
+  return Buffer.byteLength(JSON.stringify(value), 'utf8')
+}
+
+function sameExpectedUsage(
+  left: Record<string, number>,
+  right: Record<string, number> | undefined,
+): boolean {
+  if (!right) return false
+  return (
+    left.input_tokens === right.input_tokens &&
+    left.cached_input_tokens === right.cached_input_tokens &&
+    left.output_tokens === right.output_tokens &&
+    left.reasoning_output_tokens === right.reasoning_output_tokens
+  )
 }
 
 // ─── сборка ──────────────────────────────────────────────────────────────────
