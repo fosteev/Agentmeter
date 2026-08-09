@@ -3,7 +3,7 @@ import type { FSWatcher } from 'node:fs'
 import { join } from 'node:path'
 import type { DiscoverOpts } from './discover.ts'
 import { defaultClaudeHome, defaultCodexHome } from './paths.ts'
-import { ingestAll, type IngestStats } from './ingest.ts'
+import { ingestAll, type IngestOptions, type IngestStats } from './ingest.ts'
 import type { Db } from './db.ts'
 
 export interface Watcher {
@@ -12,7 +12,11 @@ export interface Watcher {
 
 export function watchSources(
   db: Db,
-  opts: DiscoverOpts & {
+  // Не `DiscoverOpts`: вотчер зовёт тот же `ingestAll`, а тот пересобирает окна
+  // лимита. Потеряй он здесь `claudeLimits` — первое же изменение файла молча
+  // заменило бы посчитанный процент Claude на «неизвестно», и в трее он просто
+  // исчез бы после сохранения любого лога.
+  opts: IngestOptions & {
     debounceMs?: number
     rediscoverMs?: number
     onBatch?: (paths: string[], stats: IngestStats) => void

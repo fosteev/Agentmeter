@@ -216,7 +216,11 @@ function sumRequests(
 }
 
 async function waitFor(ok: () => boolean): Promise<void> {
-  const until = Date.now() + 2_000
+  // Потолок щедрый нарочно: условие проверяется каждые 25 мс и выходит сразу,
+  // как только сойдётся, поэтому ожидание ничего не стоит на здоровой машине.
+  // При двух секундах тест мигал примерно раз на три полных прогона — не из-за
+  // индекса, а из-за задержки fs.watch на загруженной macOS.
+  const until = Date.now() + 15_000
   while (Date.now() < until) {
     if (ok()) return
     await new Promise((resolve) => setTimeout(resolve, 25))

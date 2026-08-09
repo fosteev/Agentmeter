@@ -1,6 +1,7 @@
 import type { Db } from './db.ts'
 import type { SourceFile } from './discover.ts'
 import type { ParseDiagnostics, ParseResult, Request, Session, ToolCall } from '../sources/types.ts'
+import { putLimitObservations } from './limits.ts'
 
 export interface SourceStat {
   inode: number
@@ -40,9 +41,11 @@ export function putSession(db: Db, result: ParseResult, file: SourceFile, stat?:
   db.transaction(() => {
     db.run('DELETE FROM sessions WHERE source_path = ?', file.path)
     db.run('DELETE FROM diagnostics WHERE source_path = ?', file.path)
+    db.run('DELETE FROM limit_observations WHERE source_path = ?', file.path)
     insertSession(db, result.session)
     for (const request of result.requests) insertRequest(db, request)
     insertDiagnostics(db, file.path, result.diagnostics, result.session.cliVersion)
+    putLimitObservations(db, file.path, result.session.provider, result.limits ?? [])
     if (stat) putSource(db, file, stat)
     db.run('UPDATE sources SET session_id = ? WHERE path = ?', result.session.id, file.path)
   })
@@ -52,6 +55,7 @@ export function forgetSource(db: Db, path: string): void {
   db.transaction(() => {
     db.run('DELETE FROM sessions WHERE source_path = ?', path)
     db.run('DELETE FROM diagnostics WHERE source_path = ?', path)
+    db.run('DELETE FROM limit_observations WHERE source_path = ?', path)
     db.run('DELETE FROM sources WHERE path = ?', path)
   })
 }

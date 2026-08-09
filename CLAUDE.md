@@ -34,14 +34,16 @@ MCP-серверам, скиллам и сабагентам. Всё счита�
 окон). Схема индекса поднята до версии 4: `limit_windows` переписана под якорь
 окна и расход, рядом появилась `limit_observations` — окно живёт поперёк
 файлов, поэтому в базу кладётся вход сборки, а результат пересобирается целиком
-после ingest. Бриф 1.10 (CLI) написан и ждёт исполнителя —
-[`docs/roadmap/1.10-cli.md`](docs/roadmap/1.10-cli.md). Дальше 1.9 — ручная
-калибровка веса `cache_read` по `/usage`, её не делегируем. Статусы этапов —
-только в [`docs/roadmap.md`](docs/roadmap.md).
+после ingest. 1.10 закрыт: агрегаты живут в `packages/core/src/query/`, пять
+команд — в `apps/cli/`, проба `scripts/probe/cli-live.ts` даёт шесть зелёных
+проверок на 899 живых файлах. Дальше 1.9 — ручная калибровка веса `cache_read`
+по `/usage`, её не делегируем. Статусы этапов — только в
+[`docs/roadmap.md`](docs/roadmap.md).
 
 Команды: `npm run check` (линт, сборка, тесты) · `npm run fixtures:check`.
 Прогон по живым логам: `scripts/probe/verify-live.ts` (сверка с эталоном),
-`drift-scan.ts` (Claude), `codex-live.ts` (Codex) — все через
+`drift-scan.ts` (Claude), `codex-live.ts` (Codex), `limits-live.ts` (окна),
+`cli-live.ts` (агрегаты и команды) — все через
 `node --experimental-strip-types`.
 
 ## Что важно знать до первой строки кода

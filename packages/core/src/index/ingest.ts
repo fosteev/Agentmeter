@@ -7,6 +7,8 @@ import { parseSubagentFile } from '../sources/claude/parse.ts'
 import { parseSessionFile } from '../sources/claude/index.ts'
 import { parseRolloutFile } from '../sources/codex/index.ts'
 import type { ParseResult } from '../sources/types.ts'
+import { DEFAULT_CONFIG, type ClaudeLimits } from '../config/types.ts'
+import { rebuildLimitWindows } from './limits.ts'
 
 export type { DiscoverOpts } from './discover.ts'
 
@@ -19,6 +21,10 @@ export interface IngestStats {
   sessions: number
   requests: number
   ms: number
+}
+
+export interface IngestOptions extends DiscoverOpts {
+  claudeLimits?: ClaudeLimits
 }
 
 interface SourceRow {
@@ -34,7 +40,7 @@ interface FileIngestResult {
   failed: boolean
 }
 
-export function ingestAll(db: Db, opts: DiscoverOpts = {}): IngestStats {
+export function ingestAll(db: Db, opts: IngestOptions = {}): IngestStats {
   const started = performance.now()
   const files = discoverSources(opts)
   const seen = new Set(files.map((file) => file.path))
@@ -55,6 +61,8 @@ export function ingestAll(db: Db, opts: DiscoverOpts = {}): IngestStats {
     forgetSource(db, row.path)
     removed += 1
   }
+
+  rebuildLimitWindows(db, opts.claudeLimits ?? DEFAULT_CONFIG.limits.claude)
 
   return {
     scanned: files.length,

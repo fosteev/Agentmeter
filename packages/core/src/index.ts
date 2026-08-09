@@ -29,8 +29,23 @@ export { discoverSources } from './index/discover.ts'
 export type { SourceFile } from './index/discover.ts'
 export { putSource, putSession, forgetSource } from './index/store.ts'
 export { ingestAll, ingestFile } from './index/ingest.ts'
-export type { DiscoverOpts, IngestStats } from './index/ingest.ts'
+export type { DiscoverOpts, IngestOptions, IngestStats } from './index/ingest.ts'
+export { putLimitObservations, readLimitWindows, rebuildLimitWindows } from './index/limits.ts'
+export type { LimitWindowStats } from './index/limits.ts'
 export { watchSources } from './index/watch.ts'
 export type { Watcher } from './index/watch.ts'
 export { openDb } from './index/db.ts'
 export type { Db } from './index/db.ts'
+export {
+  claudeHome,
+  codexHome,
+  configDir,
+  configPath,
+  indexPath,
+  loadConfig,
+  saveConfig,
+} from './config/load.ts'
+export { DEFAULT_CONFIG } from './config/types.ts'
+export type { ClaudeLimits, Config } from './config/types.ts'
+export type { LoadResult } from './config/load.ts'
+export * from './query/index.ts'

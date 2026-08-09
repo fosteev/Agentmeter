@@ -1,6 +1,7 @@
 import { basename, extname, resolve } from 'node:path'
 import { attributeMarginal } from '../../attribution/marginal.ts'
 import { attributePrefix } from '../../attribution/prefix.ts'
+import { appendLimitObservations } from './limits.ts'
 import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
 import type {
@@ -12,6 +13,7 @@ import type {
   Session,
   ToolCall,
   ToolKind,
+  LimitObservation,
 } from '../types.ts'
 
 type JsonObject = Record<string, unknown>
@@ -61,6 +63,7 @@ interface ParseState {
   requests: Request[]
   prefixBlocks: PrefixBlock[]
   prefixMessages: Array<{ role: 'user'; bytes: number }>
+  limits: LimitObservation[]
 }
 
 /**
@@ -119,6 +122,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
     requests: [],
     prefixBlocks: [],
     prefixMessages: [],
+    limits: [],
   }
 
   for (const line of lines) {
@@ -131,10 +135,16 @@ function parseLines(path: string, lines: string[]): ParseResult {
   const session = buildSession(state)
   attributePrefix(session, state.requests)
   attributeMarginal(state.requests, 'codex')
-  return { session, requests: state.requests, diagnostics: state.diagnostics }
+  return {
+    session,
+    requests: state.requests,
+    diagnostics: state.diagnostics,
+    limits: state.limits,
+  }
 }
 
 function consumeRecord(state: ParseState, record: JsonObject): void {
+  appendLimitObservations(state.limits, record)
   const type = stringField(record, 'type')
   const payload = objectField(record, 'payload')
   const key = recordTypeKey(type, payload)

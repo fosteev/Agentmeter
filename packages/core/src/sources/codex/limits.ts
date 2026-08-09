@@ -16,22 +16,43 @@ export function readLimits(path: string): LimitObservation[] {
   for (const line of readFileSync(path, 'utf8').split('\n')) {
     if (line.trim() === '') continue
     const record = parseObject(line)
-    if (!record) continue
-    const payload = objectField(record, 'payload')
-    if (stringField(record, 'type') !== 'event_msg' || stringField(payload ?? {}, 'type') !== 'token_count') continue
-
-    const rateLimits = objectField(payload ?? {}, 'rate_limits')
-    if (!rateLimits) continue
-    const ts = Date.parse(stringField(record, 'timestamp') ?? '')
-    for (const slot of ['primary', 'secondary'] as const) {
-      append(observations, ts, objectField(rateLimits, slot))
-    }
+    if (record) appendLimitObservations(observations, record)
   }
 
   return observations
 }
 
-function append(observations: LimitObservation[], ts: number, payload: JsonObject | undefined): void {
+/**
+ * Разбирает `rate_limits` уже прочитанной записи роллаута.
+ *
+ * Парсер сессии и отдельная проба лимитов обязаны идти одним путём: второе
+ * чтение растущего файла способно дать другой набор наблюдений.
+ */
+export function appendLimitObservations(
+  observations: LimitObservation[],
+  record: Record<string, unknown>,
+): void {
+  const payload = objectField(record, 'payload')
+  if (
+    stringField(record, 'type') !== 'event_msg' ||
+    stringField(payload ?? {}, 'type') !== 'token_count'
+  ) {
+    return
+  }
+
+  const rateLimits = objectField(payload ?? {}, 'rate_limits')
+  if (!rateLimits) return
+  const ts = Date.parse(stringField(record, 'timestamp') ?? '')
+  for (const slot of ['primary', 'secondary'] as const) {
+    append(observations, ts, objectField(rateLimits, slot))
+  }
+}
+
+function append(
+  observations: LimitObservation[],
+  ts: number,
+  payload: JsonObject | undefined,
+): void {
   if (!payload) return
   const usedPercent = numberField(payload, 'used_percent')
   const windowMinutes = numberField(payload, 'window_minutes')
