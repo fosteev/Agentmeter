@@ -18,7 +18,7 @@ MCP-серверам, скиллам и сабагентам. Всё счита�
 | [`docs/roadmap/design-implementation.md`](docs/roadmap/design-implementation.md) | карта макета по строкам, порядок вёрстки |
 | [`design/Agentmeter.dc.html`](design/Agentmeter.dc.html) | макет, 9 разделов, все экраны |
 
-**Состояние:** M0 закрыт, парсер Claude (1.1) готов и проверен на живых логах.
+Сейчас: M0 закрыт, парсер Claude (1.1) готов и проверен на живых логах.
 Следующее — 1.2 (бриф написан, можно делегировать) и добивание 1.3.
 Статусы этапов — только в [`docs/roadmap.md`](docs/roadmap.md).
 
