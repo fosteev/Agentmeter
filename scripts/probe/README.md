@@ -11,11 +11,17 @@
 | `daily-usage.py` | расход за сутки по сессиям, с названиями задач из `ai-title` | `agentmeter today` (1.10) |
 | `marginal-attribution.py` | стоимость каждого тул-колла через дельту кэша | модуль атрибуции (1.6) |
 | `ground-truth-check.py` | сверка с эталоном самого Claude Code | `agentmeter verify` (1.3) |
+| `verify-live.ts` | та же сверка, но нашим парсером из `packages/core` | `agentmeter verify` (1.3) |
 
 ```bash
-python3 scripts/probe/ground-truth-check.py   # сейчас падает — это ожидаемо
+python3 scripts/probe/ground-truth-check.py            # сейчас падает — это ожидаемо
+node --experimental-strip-types scripts/probe/verify-live.ts
 ```
 
-`ground-truth-check.py` возвращает ненулевой код: расхождение с эталоном пока
-не устранено. Это и есть открытая задача [1.3](../../docs/roadmap/1.3-verify.md),
-а не поломанный скрипт.
+Оба возвращают ненулевой код: расхождение с эталоном пока не устранено. Это и
+есть открытая задача [1.3](../../docs/roadmap/1.3-verify.md), а не поломанный
+скрипт.
+
+Скрипты намеренно дублируют друг друга: python-версия и `packages/core` — две
+независимые реализации одной модели. Совпадают до токена — значит модель понята
+верно; разойдутся — поломку видно сразу, а не через месяц в интерфейсе.
