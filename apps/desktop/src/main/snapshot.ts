@@ -14,6 +14,7 @@ import {
   todayReport,
   type Config,
   type ContextFill as CoreContextFill,
+  type SourceIssue,
   type Db,
   type LiveAgent as CoreLiveAgent,
   type LiveLayer,
@@ -25,15 +26,23 @@ import type {
   LastAgent,
   LiveAgent,
   Measured,
+  SourceProblem,
   TraySnapshot,
 } from '@agentmeter/ipc'
+
+export interface SnapshotInput {
+  /** Источники, до которых не добрались на последнем обходе. */
+  issues?: readonly SourceIssue[]
+  at?: number
+}
 
 export function buildSnapshot(
   db: Db,
   live: LiveLayer,
   config: Config,
-  at: number = Date.now(),
+  input: SnapshotInput = {},
 ): TraySnapshot {
+  const at = input.at ?? Date.now()
   const liveSnapshot = live.snapshot(at)
   const limits = limitsReport(db, at, config.limits.claude).windows
   const today = todayReport(db, dayRange(at, config.ui.dayStartsAtHour))
@@ -44,8 +53,7 @@ export function buildSnapshot(
     limits,
     today: toDayTotals(today.totals, today.approximate, today.sessions, today.projects.length),
     // Пустой список — это утверждение «источники прочитаны», а не молчание.
-    // Настоящий сбор проблем чтения приезжает вместе с 2.8.
-    problems: [],
+    problems: toProblems(input.issues ?? []),
   }
 
   // Кого видели последним — только когда сейчас никого нет: попапу это нужно
@@ -65,6 +73,45 @@ export function buildSnapshot(
   if (known.length > 0) snapshot.nearestLimitPercent = Math.max(...known)
 
   return snapshot
+}
+
+const PROVIDER_NAME: Record<SourceIssue['provider'], string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+}
+
+/**
+ * Недоступные источники → то, что покажет попап (2.8).
+ *
+ * Схлопывается до одной строки на провайдера: `EACCES` на корневом каталоге
+ * даёт по проблеме на каждый вложенный, и вываливать их в попап списком значит
+ * прятать единственную важную мысль — «цифры этого провайдера неполные» — за
+ * сотней одинаковых строк.
+ *
+ * Последствие пишется здесь, а не в окне: оно зависит от того, кто ещё
+ * прочитался. Окно этого не знает, а сочинённое им «наверное, что-то неполное»
+ * однажды успокоит там, где успокаивать нельзя.
+ */
+export function toProblems(issues: readonly SourceIssue[]): SourceProblem[] {
+  const byProvider = new Map<SourceIssue['provider'], SourceIssue>()
+  for (const issue of issues) {
+    if (!byProvider.has(issue.provider)) byProvider.set(issue.provider, issue)
+  }
+  const broken = [...byProvider.keys()]
+  return broken.map((provider) => {
+    const issue = byProvider.get(provider)!
+    const others = (['claude', 'codex'] as const).filter((name) => !broken.includes(name))
+    const intact =
+      others.length === 0
+        ? ''
+        : `Данные ${others.map((name) => PROVIDER_NAME[name]).join(' и ')} показываются как обычно, `
+    return {
+      provider,
+      path: issue.path,
+      code: issue.code,
+      consequence: `${intact}цифры ${PROVIDER_NAME[provider]} за сегодня — неполные.`,
+    }
+  })
 }
 
 /**

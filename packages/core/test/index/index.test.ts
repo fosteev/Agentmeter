@@ -15,6 +15,7 @@ import {
   discoverSources,
   ingestAll,
   ingestFile,
+  ingestSteps,
   parseSessionFile,
   putSession,
   putSource,
@@ -233,3 +234,78 @@ async function waitFor(ok: () => boolean): Promise<void> {
   }
   throw new Error('condition timeout')
 }
+
+describe('проход кусками (2.8)', () => {
+  /** Источники с настоящими файлами: на пустом каталоге проверять нечего. */
+  function homesWithFiles(): { claudeHome: string; codexHome: string } {
+    const homes = makeHomes()
+    const project = join(homes.claudeHome, 'projects', '-proj')
+    mkdirSync(project, { recursive: true })
+    for (const name of ['plain', 'mcp', 'parallel']) {
+      copyFileSync(
+        join(claudeFixtures, `${name}.jsonl`),
+        join(project, `1111111${name.length}-1111-4111-8111-11111111111${name.length}.jsonl`),
+      )
+    }
+    const codexDay = join(homes.codexHome, 'sessions', '2026', '06', '15')
+    mkdirSync(codexDay, { recursive: true })
+    copyFileSync(join(codexFixtures, 'rollout.jsonl'), join(codexDay, 'rollout-test.jsonl'))
+    return homes
+  }
+
+  /**
+   * Ловит две ошибки разом. Первая: прогресс, который не двигается, — полоса
+   * индексирования тогда честно показывает ноль до самого конца. Вторая, важнее:
+   * проход с остановками, индексирующий не то же самое, что проход разом. Он
+   * существует только ради того, чтобы окно успевало рисоваться, и разойдись
+   * они в цифрах — расхождение было бы видно один раз при первом запуске и
+   * больше никогда.
+   */
+  it('даёт растущий прогресс в байтах и тот же индекс, что и разом', () => {
+    const sources = homesWithFiles()
+
+    const steps: Array<{ bytesDone: number; bytesTotal: number; filesDone: number }> = []
+    const run = ingestSteps(db, { ...sources, progress: true })
+    let step = run.next()
+    while (!step.done) {
+      steps.push(step.value)
+      step = run.next()
+    }
+    const sliced = step.value
+
+    expect(steps.length).toBe(sliced.scanned)
+    expect(steps.length).toBeGreaterThan(1)
+    const last = steps.at(-1)!
+    expect(last.filesDone).toBe(sliced.scanned)
+    expect(last.bytesTotal).toBeGreaterThan(0)
+    expect(last.bytesDone).toBe(last.bytesTotal)
+    for (let i = 1; i < steps.length; i += 1) {
+      expect(steps[i]!.bytesDone).toBeGreaterThan(steps[i - 1]!.bytesDone)
+    }
+
+    const other = openDb(join(dir, 'whole.sqlite')).db
+    const whole = ingestAll(other, sources)
+    expect({ sessions: sliced.sessions, requests: sliced.requests }).toEqual({
+      sessions: whole.sessions,
+      requests: whole.requests,
+    })
+    other.close()
+  })
+
+  /**
+   * Ловит лишнюю работу на каждом событии вотчера: `ingestAll` зовётся вотчером
+   * на каждое движение файла, и обход `stat` по всем источникам ради прогресса,
+   * которого никто не спрашивал, — это то же самое, что пересборка окон лимита
+   * из читающего пути (долг 1.10), только тише.
+   *
+   * Источники здесь непустые нарочно: на пустом каталоге шагов не будет ни при
+   * каком коде, и проверка зеленела бы всегда — так она и была написана
+   * сначала.
+   */
+  it('без запроса прогресса шагов нет вовсе', () => {
+    const run = ingestSteps(db, homesWithFiles())
+    const first = run.next()
+    expect(first.done).toBe(true)
+    expect(first.value).toMatchObject({ scanned: 4 })
+  })
+})

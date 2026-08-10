@@ -1,6 +1,6 @@
 import { statSync, type Stats } from 'node:fs'
 import { performance } from 'node:perf_hooks'
-import { discoverSources, type DiscoverOpts, type SourceFile } from './discover.ts'
+import { discoverSources, type DiscoverOpts, type SourceFile, type SourceIssue } from './discover.ts'
 import { putFailure, putSession, forgetSource } from './store.ts'
 import type { Db } from './db.ts'
 import { parseSubagentFile } from '../sources/claude/parse.ts'
@@ -10,7 +10,7 @@ import type { ParseResult } from '../sources/types.ts'
 import { DEFAULT_CONFIG, type ClaudeLimits } from '../config/types.ts'
 import { ensureLimitWindows, rebuildLimitWindows } from './limits.ts'
 
-export type { DiscoverOpts } from './discover.ts'
+export type { DiscoverOpts, SourceIssue } from './discover.ts'
 
 export interface IngestStats {
   scanned: number
@@ -21,10 +21,29 @@ export interface IngestStats {
   sessions: number
   requests: number
   ms: number
+  /**
+   * Источники, до которых не добрались. Пустой список — утверждение
+   * «всё прочитано», и попап показывает его как норму; непустой уезжает в
+   * экран ошибки (2.8). Раньше такой каталог просто ронял обход целиком.
+   */
+  issues: SourceIssue[]
 }
 
 export interface IngestOptions extends DiscoverOpts {
   claudeLimits?: ClaudeLimits
+}
+
+/**
+ * Ход первого прохода — вход экрана индексирования (2.8).
+ *
+ * Байты, а не файлы: транскрипты различаются по размеру на три порядка, и
+ * полоса, посчитанная по числу файлов, стоит на месте, а потом прыгает.
+ */
+export interface IngestProgress {
+  filesDone: number
+  filesTotal: number
+  bytesDone: number
+  bytesTotal: number
 }
 
 interface SourceRow {
@@ -41,18 +60,53 @@ interface FileIngestResult {
 }
 
 export function ingestAll(db: Db, opts: IngestOptions = {}): IngestStats {
+  const run = ingestSteps(db, opts)
+  let step = run.next()
+  while (!step.done) step = run.next()
+  return step.value
+}
+
+/**
+ * Тот же проход, но с остановками.
+ *
+ * Нужен ровно затем, чтобы окно успевало рисоваться: main — однопоточный, и
+ * синхронный проход по девятистам файлам держит и цикл событий, и попап. Код
+ * прохода при этом один: разойдись «быстрый» и «с прогрессом», и однажды они
+ * разошлись бы в цифрах, а не в скорости.
+ *
+ * Размеры файлов считаются только когда прогресс кому-то нужен: лишний обход
+ * `stat` по всем источникам на каждое событие вотчера не нужен никому.
+ */
+export function* ingestSteps(
+  db: Db,
+  opts: IngestOptions & { progress?: boolean } = {},
+): Generator<IngestProgress, IngestStats> {
   const started = performance.now()
-  const files = discoverSources(opts)
+  const issues: SourceIssue[] = []
+  const files = discoverSources({
+    ...opts,
+    onIssue: (issue) => {
+      issues.push(issue)
+      opts.onIssue?.(issue)
+    },
+  })
   const seen = new Set(files.map((file) => file.path))
   let parsed = 0
   let skipped = 0
   let failed = 0
 
-  for (const file of files) {
+  const sizes = opts.progress === true ? files.map((file) => statFile(file.path)?.size ?? 0) : []
+  const bytesTotal = sizes.reduce((sum, size) => sum + size, 0)
+  let bytesDone = 0
+
+  for (const [index, file] of files.entries()) {
     const result = ingestOne(db, file)
     if (result.failed) failed += 1
     else if (result.parsed) parsed += 1
     else skipped += 1
+    if (opts.progress !== true) continue
+    bytesDone += sizes[index] ?? 0
+    yield { filesDone: index + 1, filesTotal: files.length, bytesDone, bytesTotal }
   }
 
   let removed = 0
@@ -80,6 +134,7 @@ export function ingestAll(db: Db, opts: IngestOptions = {}): IngestStats {
     sessions: db.get<{ count: number }>('SELECT count(*) AS count FROM sessions')?.count ?? 0,
     requests: db.get<{ count: number }>('SELECT count(*) AS count FROM requests')?.count ?? 0,
     ms: Math.round(performance.now() - started),
+    issues,
   }
 }
 

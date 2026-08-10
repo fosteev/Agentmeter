@@ -93,6 +93,10 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
     [355, 355],
     [415, 415],
   ],
+  'PopupEmpty.tsx': [[1203, 1211]],
+  'PopupIndexing.tsx': [[1213, 1224]],
+  'PopupProblem.tsx': [[1226, 1235]],
+  'PopupIdle.tsx': [[1237, 1252]],
 }
 
 /**

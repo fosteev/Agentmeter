@@ -1,7 +1,16 @@
+/// <reference types="vite/client" />
+
 import type { CSSProperties, ReactNode } from 'react'
 import type { Provider, TaskRow as TaskRowData } from '@agentmeter/core'
+import type { TraySnapshot } from '@agentmeter/ipc'
+import emptyRaw from '../../../../fixtures/popup/empty.json?raw'
+import errorRaw from '../../../../fixtures/popup/error.json?raw'
+import indexingRaw from '../../../../fixtures/popup/indexing.json?raw'
+import nobodyRaw from '../../../../fixtures/popup/nobody.json?raw'
+import snapshotRaw from '../../../../fixtures/popup/snapshot.json?raw'
 import './tokens.css'
 import { AgentRow } from './components/AgentRow.tsx'
+import { Popup } from './components/Popup.tsx'
 import { LimitBar } from './components/LimitBar.tsx'
 import { TaskRow } from './components/TaskRow.tsx'
 import { BreakdownRow } from './components/BreakdownRow.tsx'
@@ -464,6 +473,30 @@ function ThemeBlock({ theme }: { theme: 'dark' | 'light' }) {
   )
 }
 
+const POPUPS: Array<{ title: string; snapshot: TraySnapshot }> = [
+  { title: 'Обычный попап', snapshot: JSON.parse(snapshotRaw) as TraySnapshot },
+  { title: 'Агенты ещё не запускались', snapshot: JSON.parse(emptyRaw) as TraySnapshot },
+  { title: 'Первичное индексирование', snapshot: JSON.parse(indexingRaw) as TraySnapshot },
+  { title: 'Ошибка чтения', snapshot: JSON.parse(errorRaw) as TraySnapshot },
+  { title: 'Нет активных агентов', snapshot: JSON.parse(nobodyRaw) as TraySnapshot },
+]
+
+function PopupCards() {
+  return (
+    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      {POPUPS.map(({ title, snapshot }) => (
+        <div
+          key={title}
+          style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 600 }}>{title}</div>
+          <Popup snapshot={snapshot} now={snapshot.at + 2000} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function Gallery() {
   return (
     <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -486,6 +519,32 @@ export function Gallery() {
 
       <ThemeBlock theme="dark" />
       <ThemeBlock theme="light" />
+
+      <div
+        data-theme="dark"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          padding: 20,
+          border: '1px solid var(--line)',
+          borderRadius: 12,
+          background: 'var(--bg)',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 11,
+            letterSpacing: '.14em',
+            textTransform: 'uppercase',
+            color: 'var(--tx3)',
+          }}
+        >
+          Попап · обычный и четыре состояния
+        </div>
+        <PopupCards />
+      </div>
     </div>
   )
 }

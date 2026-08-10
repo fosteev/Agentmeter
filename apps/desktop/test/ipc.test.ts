@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { IPC_CALLS, IPC_EVENTS } from '@agentmeter/ipc'
 import { registerIpc, type IpcHandlers } from '../src/main/ipc.ts'
-import { toContext } from '../src/main/snapshot.ts'
+import { toContext, toProblems } from '../src/main/snapshot.ts'
 import { createClient } from '../src/preload/client.ts'
 
 // Проводка контракта 0.4. Проверки названы по поломке, которую ловят.
@@ -85,5 +85,45 @@ describe('происхождение размера контекстного о�
     expect(guessed.confidence).toBe('estimate')
     // Пометка без объяснения заставляет гадать, что именно неточно.
     expect(guessed.caveat).toBeTruthy()
+  })
+})
+
+describe('недоступный источник доезжает до окна словами', () => {
+  /**
+   * Ловит две ошибки разом (2.8). Первая: неполные данные, показанные как
+   * полные, — попапу нужен и код, и путь, и последствие, иначе сказать нечего.
+   * Вторая: `EACCES` на корне даёт проблему на каждый вложенный каталог, и
+   * список из сотни одинаковых строк прячет единственную важную мысль.
+   */
+  it('на провайдера одна строка, и в ней сказано, что уцелело', () => {
+    const problems = toProblems([
+      { provider: 'codex', path: '~/.codex/sessions', code: 'EACCES', message: 'permission denied' },
+      { provider: 'codex', path: '~/.codex/sessions/2026', code: 'EACCES', message: 'denied' },
+    ])
+    expect(problems).toHaveLength(1)
+    expect(problems[0]!.code).toBe('EACCES')
+    expect(problems[0]!.path).toBe('~/.codex/sessions')
+    expect(problems[0]!.consequence).toContain('Claude')
+    expect(problems[0]!.consequence).toContain('Codex')
+  })
+
+  /**
+   * Ловит утешение, которого не заслужили: когда не читается ничего, фразы
+   * «данные второго показываются как обычно» быть не должно.
+   */
+  it('когда не прочитан никто, уцелевших не обещаем', () => {
+    const problems = toProblems([
+      { provider: 'codex', path: '~/.codex', code: 'EACCES', message: 'denied' },
+      { provider: 'claude', path: '~/.claude', code: 'ENOENT', message: 'no such file' },
+    ])
+    expect(problems).toHaveLength(2)
+    for (const problem of problems) {
+      expect(problem.consequence).not.toContain('как обычно')
+    }
+  })
+
+  /** Ловит пустой список, ставший «проблемой»: всё прочитано — это норма. */
+  it('без проблем список пуст', () => {
+    expect(toProblems([])).toEqual([])
   })
 })

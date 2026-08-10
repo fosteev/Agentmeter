@@ -5,7 +5,11 @@ import { ago, span } from '../time.ts'
 import { AgentRow, type AgentStatus } from './AgentRow.tsx'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
+import { PopupEmpty } from './PopupEmpty.tsx'
+import { PopupIdle } from './PopupIdle.tsx'
+import { PopupIndexing } from './PopupIndexing.tsx'
 import { PopupLimit } from './PopupLimit.tsx'
+import { PopupProblem } from './PopupProblem.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
 
 // Попап целиком — строки 332–452 макета (тёмный) и 459–554 (светлый). Сборка:
@@ -55,6 +59,26 @@ const ENTRYPOINT: Record<Entrypoint, string> = {
 }
 
 export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) {
+  if (snapshot.problems.length > 0) {
+    return <PopupProblem snapshot={snapshot} onOpenWindow={onOpenWindow} />
+  }
+  if (snapshot.indexing !== undefined && snapshot.indexing.phase !== 'done') {
+    return (
+      <PopupIndexing
+        snapshot={snapshot}
+        progress={snapshot.indexing}
+        now={now}
+        onOpenWindow={onOpenWindow}
+      />
+    )
+  }
+  if (snapshot.agents.length === 0 && snapshot.lastAgent === undefined) {
+    return <PopupEmpty snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} />
+  }
+  if (snapshot.agents.length === 0) {
+    return <PopupIdle snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} />
+  }
+
   const { at, agents, limits, today } = snapshot
 
   return (
@@ -158,7 +182,9 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
  * логе. Причина дописывается текстом, как у окна лимита без процента: пометка
  * без объяснения заставляет гадать, что именно неточно.
  */
-function context(agent: LiveAgent): { fill: number; approximate: boolean; hint: string } | undefined {
+function context(
+  agent: LiveAgent,
+): { fill: number; approximate: boolean; hint: string } | undefined {
   const usage = agent.context
   if (usage === undefined) return undefined
   const estimate = usage.confidence !== 'exact'

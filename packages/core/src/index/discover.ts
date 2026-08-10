@@ -11,10 +11,29 @@ export interface SourceFile {
   parentPath?: string
 }
 
+/**
+ * До чего не удалось добраться при обходе (2.8).
+ *
+ * Раньше такого не было вовсе, и это была не мелочь: `readdirSync` на каталоге
+ * без прав бросал, `ingestAll` падал целиком, а вместе с ним и запуск
+ * приложения. Молчать здесь тоже нельзя — половина логов, показанная как целое,
+ * это ровно та ошибка, ради которой продукт написан.
+ */
+export interface SourceIssue {
+  provider: Provider
+  /** Каталог или файл, до которого не добрались. */
+  path: string
+  /** Код как его отдала ОС: `EACCES`, `ENOENT`, `ELOOP`. */
+  code: string
+  message: string
+}
+
 export interface DiscoverOpts {
   claudeHome?: string
   codexHome?: string
   extra?: readonly string[]
+  /** Куда сообщать о недоступном источнике. Без него ошибки просто глотаются. */
+  onIssue?: (issue: SourceIssue) => void
 }
 
 const UUID_JSONL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jsonl$/i
@@ -24,37 +43,82 @@ export function discoverSources(opts: DiscoverOpts = {}): SourceFile[] {
 
   for (const file of discoverClaudeProjects(
     join(opts.claudeHome ?? defaultClaudeHome(), 'projects'),
+    opts.onIssue,
   )) {
     found.set(file.path, file)
   }
   for (const file of discoverCodexSessions(
     join(opts.codexHome ?? defaultCodexHome(), 'sessions'),
+    opts.onIssue,
   )) {
     found.set(file.path, file)
   }
 
   for (const root of opts.extra ?? []) {
-    for (const file of discoverExtraRoot(root)) found.set(file.path, file)
+    for (const file of discoverExtraRoot(root, opts.onIssue)) found.set(file.path, file)
   }
 
   return [...found.values()].sort(compareSources)
 }
 
-export function discoverClaudeProjects(root: string): SourceFile[] {
+/**
+ * Обход, который не бросает.
+ *
+ * Недоступный каталог — не исключение из правил, а обычное дело: у Codex
+ * каталог может лежать на внешнем диске, у Claude — под другим пользователем.
+ * Уронить весь обход из-за одного `EACCES` значит потерять и второго
+ * провайдера, который прочитался бы прекрасно.
+ */
+function safely<T>(
+  provider: Provider,
+  path: string,
+  onIssue: ((issue: SourceIssue) => void) | undefined,
+  read: () => T,
+  fallback: T,
+): T {
+  try {
+    return read()
+  } catch (error) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code: unknown }).code)
+        : 'EUNKNOWN'
+    onIssue?.({
+      provider,
+      path,
+      code,
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return fallback
+  }
+}
+
+export function discoverClaudeProjects(
+  root: string,
+  onIssue?: (issue: SourceIssue) => void,
+): SourceFile[] {
   if (!existsSync(root) || !statSync(root).isDirectory()) return []
   const files: SourceFile[] = []
 
-  for (const entry of readdirSync(root, { withFileTypes: true })) {
+  const roots = safely('claude', root, onIssue, () => readdirSync(root, { withFileTypes: true }), [])
+  for (const entry of roots) {
     if (!entry.isDirectory() || !entry.name.startsWith('-')) continue
     const projectDir = join(root, entry.name)
-    for (const child of readdirSync(projectDir, { withFileTypes: true })) {
+    const children = safely(
+      'claude',
+      projectDir,
+      onIssue,
+      () => readdirSync(projectDir, { withFileTypes: true }),
+      [],
+    )
+    for (const child of children) {
       if (child.isFile() && UUID_JSONL.test(child.name)) {
         files.push({ path: resolve(projectDir, child.name), provider: 'claude', kind: 'session' })
       }
     }
   }
 
-  for (const file of walkJsonl(root)) {
+  for (const file of walkJsonl(root, 'claude', onIssue)) {
     if (!isClaudeSubagentTranscript(file)) continue
     const parentPath = parentPathForSubagent(file)
     files.push({ path: resolve(file), provider: 'claude', kind: 'subagent', parentPath })
@@ -63,18 +127,21 @@ export function discoverClaudeProjects(root: string): SourceFile[] {
   return files.sort(compareSources)
 }
 
-export function discoverCodexSessions(root: string): SourceFile[] {
+export function discoverCodexSessions(
+  root: string,
+  onIssue?: (issue: SourceIssue) => void,
+): SourceFile[] {
   if (!existsSync(root) || !statSync(root).isDirectory()) return []
-  return walkJsonl(root)
+  return walkJsonl(root, 'codex', onIssue)
     .filter(isCodexRollout)
     .map((path) => ({ path: resolve(path), provider: 'codex' as const, kind: 'session' as const }))
     .sort(compareSources)
 }
 
-function discoverExtraRoot(root: string): SourceFile[] {
+function discoverExtraRoot(root: string, onIssue?: (issue: SourceIssue) => void): SourceFile[] {
   if (!existsSync(root)) return []
   const stat = statSync(root)
-  const paths = stat.isFile() ? [root] : walkJsonl(root)
+  const paths = stat.isFile() ? [root] : walkJsonl(root, 'claude', onIssue)
   const files: SourceFile[] = []
 
   for (const path of paths) {
@@ -96,8 +163,12 @@ function discoverExtraRoot(root: string): SourceFile[] {
   return files
 }
 
-function walkJsonl(root: string): string[] {
-  return readdirSync(root, { recursive: true, withFileTypes: true })
+function walkJsonl(
+  root: string,
+  provider: Provider,
+  onIssue?: (issue: SourceIssue) => void,
+): string[] {
+  return safely(provider, root, onIssue, () => readdirSync(root, { recursive: true, withFileTypes: true }), [])
     .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
     .map((entry) => join(entry.parentPath, entry.name))
     .sort((a, b) => a.localeCompare(b))

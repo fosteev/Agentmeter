@@ -163,4 +163,29 @@ report(
   asNode.status !== 0,
 )
 
+// 7. Ловит: иконку трея, которую `nativeImage` не принял, потерянные
+//    представления @2x/@3x (на retina иконка тянется из шестнадцати пикселей в
+//    мыло) и цветную иконку на macOS. Последнее — тихая ошибка: цветная иконка
+//    в menu bar выглядит рабочей и просто не переключается вместе с темой,
+//    оказываясь тёмной на тёмной панели. Растр проверяют юнит-тесты, а это —
+//    единственное место, где виден настоящий `nativeImage`.
+const tray = payload.tray as
+  | { size?: string; scales?: number[]; template?: boolean; empty?: boolean }
+  | undefined
+const trayOk =
+  tray !== undefined &&
+  tray.empty === false &&
+  tray.size === '16×16' &&
+  Array.isArray(tray.scales) &&
+  tray.scales.length === 3 &&
+  (process.platform !== 'darwin' || tray.template === true)
+report(
+  7,
+  'иконка трея собрана, с плотностями и template на macOS',
+  tray === undefined
+    ? 'приложение не отчиталось об иконке'
+    : `${tray.size}, плотности ${tray.scales?.join('/')}, template=${tray.template}, пустая=${tray.empty}`,
+  trayOk,
+)
+
 process.exit(failed ? 1 : 0)

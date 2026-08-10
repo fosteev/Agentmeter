@@ -26,10 +26,10 @@ export { listLiveSessions, parseSessionFile, parseSubagents } from './sources/cl
 export { parseRolloutFile, readLimits } from './sources/codex/index.ts'
 export { defaultClaudeHome, defaultCodexHome, defaultIndexPath } from './index/paths.ts'
 export { discoverSources } from './index/discover.ts'
-export type { SourceFile } from './index/discover.ts'
+export type { SourceFile, SourceIssue } from './index/discover.ts'
 export { putSource, putSession, forgetSource } from './index/store.ts'
-export { ingestAll, ingestFile } from './index/ingest.ts'
-export type { DiscoverOpts, IngestOptions, IngestStats } from './index/ingest.ts'
+export { ingestSteps, ingestAll, ingestFile } from './index/ingest.ts'
+export type { DiscoverOpts, IngestOptions, IngestProgress, IngestStats } from './index/ingest.ts'
 export {
   ensureLimitWindows,
   putLimitObservations,

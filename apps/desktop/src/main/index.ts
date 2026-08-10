@@ -7,8 +7,8 @@
  * запускается той нодой, что несёт Electron, без флагов вроде
  * `--experimental-strip-types`: в Electron их не передашь.
  *
- * Чего здесь намеренно нет: автообновления, меню, вторых окон, настроек и
- * пяти состояний иконки трея. Это M3, M5 и этап 2.7.
+ * Чего здесь намеренно нет: автообновления, меню, вторых окон и настроек.
+ * Это M3 и M5.
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +20,7 @@ import {
   nativeImage,
   nativeTheme,
   screen,
+  type NativeImage,
   type Rectangle,
 } from 'electron'
 import {
@@ -29,6 +30,7 @@ import {
   createLiveLayer,
   defaultIndexPath,
   ingestAll,
+  ingestSteps,
   lifetimesPath,
   limitsReport,
   loadConfig,
@@ -36,12 +38,15 @@ import {
   watchSources,
   type Config,
   type Db,
+  type IngestProgress as CoreIngestProgress,
+  type SourceIssue,
   type LiveLayer,
   type Watcher,
 } from '@agentmeter/core'
-import type { IpcEventName, IpcEvents, TraySnapshot } from '@agentmeter/ipc'
+import type { IndexProgress, IpcEventName, IpcEvents, TraySnapshot } from '@agentmeter/ipc'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { buildSnapshot } from './snapshot.ts'
+import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 
 const here = fileURLToPath(new URL('./', import.meta.url))
 /**
@@ -58,6 +63,13 @@ const PRELOAD = join(here, '../preload/index.cjs')
 const POPUP_WIDTH = 400
 const POPUP_HEIGHT = 600
 /**
+ * Логический размер иконки трея. Растр рисуется ещё в двойном и тройном
+ * размере: menu bar на retina берёт представление @2x, и без него иконка
+ * растягивается из шестнадцати пикселей в мыло.
+ */
+const TRAY_SIZE = 16
+const TRAY_SCALES = [1, 2, 3] as const
+/**
  * Во сколько раз реже опрашивать при закрытом попапе. Число живёт здесь, а не в
  * конфиге: пока никто не просил его крутить, настройка была бы догадкой о
  * потребности. `live.pollMs` трогать нельзя — на нём держится критерий 2.1
@@ -70,6 +82,18 @@ interface Runtime {
   live: LiveLayer
   config: Config
   watcher?: Watcher
+  /**
+   * До чего не добрались на последнем обходе. Держится здесь, а не пересчитыва-
+   * ется в снимке: обход каталогов на каждый опрос трея — это то, ради чего в
+   * 2.1 выкидывали `ps`, только дороже.
+   */
+  issues: SourceIssue[]
+  /** Ход первого прохода. `undefined` — индекс собран, экрана прогресса нет. */
+  indexing?: IndexProgress | undefined
+  /** Незавершённый первый проход: гоняется по кусочкам, чтобы окно рисовалось. */
+  pending?: Generator<CoreIngestProgress, unknown> | undefined
+  /** Когда начался отложенный проход — из него считается оставшееся время. */
+  startedIngestAt?: number
 }
 
 /**
@@ -90,7 +114,15 @@ function assertElectron(): void {
   }
 }
 
-function openRuntime(withWatcher: boolean): Runtime {
+/**
+ * Открыть индекс и живой слой.
+ *
+ * `defer` откладывает первый проход: он идёт кусками уже после того, как окно
+ * поднялось, и попап всё это время показывает экран индексирования (2.8).
+ * Синхронный проход длиной в секунды держит однопоточный main целиком — окна
+ * не будет вовсе, а не «окно с полосой».
+ */
+function openRuntime(withWatcher: boolean, defer = false): Runtime {
   const loaded = loadConfig(configPath())
   const config = loaded.config
   const { db } = openDb(defaultIndexPath())
@@ -100,7 +132,7 @@ function openRuntime(withWatcher: boolean): Runtime {
     extra: config.sources.extra,
     claudeLimits: config.limits.claude,
   }
-  ingestAll(db, sources)
+  const ingested = defer ? undefined : ingestAll(db, sources)
   const live = createLiveLayer(db, {
     claudeHome: sources.claudeHome,
     codexHome: sources.codexHome,
@@ -111,8 +143,24 @@ function openRuntime(withWatcher: boolean): Runtime {
     // оно одно видит и рождение, и смерть процесса.
     lifetimesPath: lifetimesPath(),
   })
-  const runtime: Runtime = { db, live, config }
-  if (withWatcher && config.index.watch) runtime.watcher = watchSources(db, sources)
+  const runtime: Runtime = { db, live, config, issues: ingested?.issues ?? [] }
+  if (defer) {
+    runtime.pending = ingestSteps(db, { ...sources, progress: true })
+    runtime.indexing = { phase: 'scanning', filesDone: 0, filesTotal: 0, bytesDone: 0, bytesTotal: 0, etaMs: null }
+  }
+  // При отложенном проходе вотчер поднимается после него: иначе первое же
+  // событие файловой системы дёрнет второй полный `ingestAll` поверх текущего.
+  if (withWatcher && !defer && config.index.watch) {
+    runtime.watcher = watchSources(db, {
+      ...sources,
+      // Недоступный источник может появиться и исчезнуть на ходу: внешний диск
+      // отмонтировали, права поправили. Снимок обязан догонять, а не помнить
+      // первое впечатление.
+      onBatch: (_paths, stats) => {
+        runtime.issues = stats.issues
+      },
+    })
+  }
   return runtime
 }
 
@@ -136,8 +184,9 @@ async function runSmoke(): Promise<void> {
   const runtime = openRuntime(false)
   const problems: string[] = []
   let snapshot: TraySnapshot | undefined
+  let trayReport: unknown
   try {
-    snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config)
+    snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     registerIpc(
       ipcMain,
       createHandlers(() => runtime),
@@ -163,6 +212,30 @@ async function runSmoke(): Promise<void> {
       'typeof window.agentmeter === "object" && typeof window.agentmeter["snapshot:get"] === "function"',
     )
     if (bridge !== true) problems.push('в окне нет моста window.agentmeter')
+
+    // Иконка трея (2.7). Растр проверяется юнит-тестами без Electron, а здесь
+    // единственное, чего те увидеть не могут: что `nativeImage` этот буфер
+    // принял, что представления @2x и @3x доехали и что на macOS иконка
+    // объявлена template. Последнее — тихая ошибка: цветная иконка выглядит
+    // рабочей и просто не переключается вместе с темой menu bar.
+    const icon = trayIcon(trayState(snapshot, runtime.config))
+    const size = icon.getSize()
+    const scales = icon.getScaleFactors()
+    trayReport = {
+      size: `${size.width}×${size.height}`,
+      scales,
+      template: icon.isTemplateImage(),
+      empty: icon.isEmpty(),
+    }
+    if (icon.isEmpty()) problems.push('иконка трея пустая')
+    if (size.width !== TRAY_SIZE) problems.push(`иконка трея ${size.width} точек вместо ${TRAY_SIZE}`)
+    if (scales.length !== TRAY_SCALES.length) {
+      problems.push(`у иконки ${scales.length} представлений вместо ${TRAY_SCALES.length}`)
+    }
+    if (process.platform === 'darwin' && !icon.isTemplateImage()) {
+      problems.push('иконка трея на macOS не template image')
+    }
+
     window.destroy()
   } catch (error) {
     problems.push(error instanceof Error ? error.message : String(error))
@@ -176,6 +249,7 @@ async function runSmoke(): Promise<void> {
       node: process.versions.node,
       chrome: process.versions.chrome,
       problems,
+      tray: trayReport,
       snapshot,
     }),
   )
@@ -192,7 +266,7 @@ async function runSmoke(): Promise<void> {
  */
 function createHandlers(runtime: () => Runtime): IpcHandlers {
   return {
-    'snapshot:get': () => buildSnapshot(runtime().db, runtime().live, runtime().config),
+    'snapshot:get': () => withIndexing(runtime(), buildSnapshot(runtime().db, runtime().live, runtime().config, { issues: runtime().issues })),
     'limits:get': () =>
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
     'config:get': () => ({ config: runtime().config, problems: [] }),
@@ -214,19 +288,157 @@ function createHandlers(runtime: () => Runtime): IpcHandlers {
   }
 }
 
-function trayIcon() {
-  // Временный квадрат 16×16 цвета `--claude`. Пять состояний, template image
-  // для macOS и цветная для Windows — этап 2.7; попапу нужно лишь откуда
-  // открываться. Буфер сырой, BGRA.
-  const size = 16
-  const buffer = Buffer.alloc(size * size * 4)
-  for (let index = 0; index < size * size; index += 1) {
-    buffer[index * 4] = 0x3c
-    buffer[index * 4 + 1] = 0x9e
-    buffer[index * 4 + 2] = 0xe0
-    buffer[index * 4 + 3] = 0xff
+/**
+ * Дописать в снимок ход первого прохода (2.8).
+ *
+ * Отдельной функцией, а не полем внутри `buildSnapshot`: тот собирает то, что
+ * прочитано из индекса, а прогресс — состояние процесса, который в этот индекс
+ * пишет. Смешать их значит завести в сборщике снимка знание о том, кто и когда
+ * его вызвал.
+ */
+function withIndexing(runtime: Runtime, snapshot: TraySnapshot): TraySnapshot {
+  if (runtime.indexing === undefined) return snapshot
+  return { ...snapshot, indexing: runtime.indexing }
+}
+
+/**
+ * Гнать отложенный проход кусками, отдавая цикл событий окну между ними.
+ *
+ * Кусок меряется временем, а не числом файлов: файлы различаются по размеру на
+ * три порядка, и «двадцать файлов за раз» — это то миллисекунда, то полсекунды
+ * с замершим окном.
+ */
+const INGEST_SLICE_MS = 60
+
+function driveIngest(runtime: Runtime, onProgress: (progress: IndexProgress) => void): void {
+  const pending = runtime.pending
+  if (pending === undefined) return
+  const started = Date.now()
+  let done = false
+  let last: CoreIngestProgress | undefined
+
+  while (Date.now() - started < INGEST_SLICE_MS) {
+    const step = pending.next()
+    if (step.done) {
+      done = true
+      break
+    }
+    last = step.value
   }
-  return nativeImage.createFromBuffer(buffer, { width: size, height: size })
+
+  if (last !== undefined) {
+    // Оставшееся время считается по уже пройденным байтам. Пока не пройдено
+    // ничего, честнее `null`, чем бодрое «≈ 0 с»: попап такую оценку не рисует
+    // вовсе.
+    const elapsed = runtime.startedIngestAt === undefined ? 0 : Date.now() - runtime.startedIngestAt
+    const etaMs =
+      last.bytesDone > 0 && elapsed > 0
+        ? Math.round((elapsed / last.bytesDone) * (last.bytesTotal - last.bytesDone))
+        : null
+    runtime.indexing = {
+      phase: 'parsing',
+      filesDone: last.filesDone,
+      filesTotal: last.filesTotal,
+      bytesDone: last.bytesDone,
+      bytesTotal: last.bytesTotal,
+      etaMs,
+    }
+    onProgress(runtime.indexing)
+  }
+
+  if (done) {
+    runtime.pending = undefined
+    runtime.indexing = undefined
+    if (runtime.watcher === undefined && runtime.config.index.watch) {
+      runtime.watcher = watchSources(runtime.db, {
+        claudeHome: claudeHome(runtime.config),
+        codexHome: codexHome(runtime.config),
+        extra: runtime.config.sources.extra,
+        claudeLimits: runtime.config.limits.claude,
+        onBatch: (_paths, stats) => {
+          runtime.issues = stats.issues
+        },
+      })
+    }
+    return
+  }
+  setImmediate(() => {
+    driveIngest(runtime, onProgress)
+  })
+}
+
+/**
+ * Иконка трея из состояния (2.7). Рисование — в `tray-icon.ts`, здесь только
+ * упаковка в `nativeImage` и один платформенный выбор.
+ *
+ * На macOS иконка обязана быть template image: система красит её сама под тему
+ * menu bar и под выделение. Ошибка здесь тихая — цветная иконка выглядит
+ * рабочей и просто не переключается вместе с темой, а на тёмной панели
+ * оказывается тёмной.
+ */
+function trayIcon(state: TrayState): NativeImage {
+  const template = process.platform === 'darwin'
+  const base = trayBitmap(state, TRAY_SIZE, template)
+  const image = nativeImage.createFromBitmap(base.data, {
+    width: base.width,
+    height: base.height,
+    scaleFactor: 1,
+  })
+  for (const scale of TRAY_SCALES) {
+    if (scale === 1) continue
+    const rep = trayBitmap(state, TRAY_SIZE * scale, template)
+    image.addRepresentation({
+      scaleFactor: scale,
+      width: rep.width,
+      height: rep.height,
+      buffer: rep.data,
+    })
+  }
+  if (template) image.setTemplateImage(true)
+  return image
+}
+
+/**
+ * Что показывает иконка: работающие агенты и ближайший к потолку процент.
+ *
+ * Завершившиеся не в счёт. Они висят в снимке ещё `doneGraceMs` ради гашеной
+ * строки в попапе, но столбик в трее — это «работает прямо сейчас», и держать
+ * его пять минут после смерти процесса значит врать самой заметной частью
+ * интерфейса. Порядок столбиков — по расходу, чтобы первый был самым дорогим;
+ * высоты при этом остаются ритмом макета, а не величиной.
+ */
+function trayState(snapshot: TraySnapshot, config: Config): TrayState {
+  const working = snapshot.agents
+    .filter((agent) => agent.state !== 'done')
+    .sort((a, b) => b.tokens - a.tokens)
+  const state: TrayState = {
+    agents: working.map((agent) => agent.provider),
+    warnAt: config.alerts.warnAtPercent,
+    dangerAt: config.alerts.dangerAtPercent,
+  }
+  if (snapshot.nearestLimitPercent !== undefined) {
+    state.limitPercent = snapshot.nearestLimitPercent
+  }
+  return state
+}
+
+/**
+ * Подпись под курсором. Здесь и живёт то, чего иконка сказать не может:
+ * сколько именно агентов, когда их больше трёх, и какой процент нарисован
+ * полосой. Незнание названо словами — у Claude процента нет до калибровки 1.9,
+ * и «лимит 0%» было бы неправдой.
+ */
+function trayTooltip(state: TrayState): string {
+  const count = state.agents.length
+  const agents =
+    count === 0
+      ? 'никто не работает'
+      : `${count} ${count === 1 ? 'агент' : count < 5 ? 'агента' : 'агентов'}`
+  const limit =
+    state.limitPercent === undefined
+      ? 'лимит неизвестен'
+      : `лимит ${Math.round(state.limitPercent)}%`
+  return `Agentmeter · ${agents} · ${limit}`
 }
 
 function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWindow {
@@ -310,6 +522,10 @@ function main(): void {
   let tray: Tray | undefined
   let timer: NodeJS.Timeout | undefined
   let tick = 0
+  // Прошлое состояние иконки. Перерисовывать её раз в секунду незачем: растр
+  // меняется только когда меняется число агентов или уровень тревоги, а
+  // `setImage` на каждый опрос — это мигание в menu bar на ровном месте.
+  let painted = ''
 
   const visible = (): boolean => window !== undefined && !window.isDestroyed() && window.isVisible()
 
@@ -318,7 +534,11 @@ function main(): void {
     window?.webContents.send(channel, payload)
   }
 
-  const snapshot = (): TraySnapshot => buildSnapshot(runtime!.db, runtime!.live, runtime!.config)
+  const snapshot = (): TraySnapshot =>
+    withIndexing(
+      runtime!,
+      buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
+    )
 
   const poll = (): void => {
     tick += 1
@@ -330,7 +550,23 @@ function main(): void {
     // наблюдения останется «не знаем», а это единственные данные проекта,
     // которые задним числом не восстановить.
     const current = snapshot()
+    paintTray(current)
     if (shown) emit('live:update', current)
+  }
+
+  const paintTray = (current: TraySnapshot): void => {
+    if (tray === undefined || tray.isDestroyed()) return
+    const state = trayState(current, runtime!.config)
+    // Отпечаток — ровно то, что видно на иконке. Процент округляется до целого:
+    // полоса в 16 точек дробей не показывает, а перерисовка на каждый десятый
+    // процента — это та же лишняя работа, только незаметная.
+    const key = `${state.agents.join(',')}|${levelFor(state)}|${
+      state.limitPercent === undefined ? '—' : Math.round(state.limitPercent)
+    }`
+    if (key === painted) return
+    painted = key
+    tray.setImage(trayIcon(state))
+    tray.setToolTip(trayTooltip(state))
   }
 
   const toggle = (): void => {
@@ -346,7 +582,8 @@ function main(): void {
   }
 
   void app.whenReady().then(() => {
-    runtime = openRuntime(true)
+    runtime = openRuntime(true, true)
+    runtime.startedIngestAt = Date.now()
     // Тема окна следует конфигу: при `system` Electron сам отдаёт рендереру
     // системный `prefers-color-scheme`, поэтому отдельного канала темы не нужно
     // и переключение работает без перезапуска.
@@ -368,12 +605,18 @@ function main(): void {
     }
 
     if (!gallery) {
-      tray = new Tray(trayIcon())
-      tray.setToolTip('Agentmeter')
+      const first = snapshot()
+      tray = new Tray(trayIcon(trayState(first, runtime.config)))
+      tray.setToolTip(trayTooltip(trayState(first, runtime.config)))
       tray.on('click', toggle)
       // На macOS иконка в доке приложению без окон не нужна.
       if (process.platform === 'darwin') app.dock?.hide()
     }
+
+    driveIngest(runtime, (progress) => {
+      emit('index:progress', progress)
+      if (visible()) emit('live:update', snapshot())
+    })
 
     timer = setInterval(poll, runtime.config.live.pollMs)
   })

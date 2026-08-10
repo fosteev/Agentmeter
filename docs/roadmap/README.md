@@ -37,4 +37,3 @@
 | [`1.7-prefix.md`](1.7-prefix.md) | 1.7 | модель — сам, реализация — Codex |
 | [`1.8-limits.md`](1.8-limits.md) | 1.8 | модель — сам, реализация — Codex |
 | [`1.10-cli.md`](1.10-cli.md) | 1.10 | Codex |
-| [`2.5-popup.md`](2.5-popup.md) | 2.5 | Codex |
