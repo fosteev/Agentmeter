@@ -30,8 +30,17 @@ export type { SourceFile } from './index/discover.ts'
 export { putSource, putSession, forgetSource } from './index/store.ts'
 export { ingestAll, ingestFile } from './index/ingest.ts'
 export type { DiscoverOpts, IngestOptions, IngestStats } from './index/ingest.ts'
-export { putLimitObservations, readLimitWindows, rebuildLimitWindows } from './index/limits.ts'
+export {
+  ensureLimitWindows,
+  putLimitObservations,
+  readLimitWindows,
+  rebuildLimitWindows,
+} from './index/limits.ts'
 export type { LimitWindowStats } from './index/limits.ts'
+export { createLiveLayer } from './live/index.ts'
+export type { LiveLayer, LiveLayerOptions, LiveOptions } from './live/index.ts'
+export { DEFAULT_LIVE_OPTIONS, appendLifetimes, loadLifetimes, processState } from './live/index.ts'
+export type { LiveAgent, LiveSnapshot, LiveState, SessionLifetime } from './live/index.ts'
 export { watchSources } from './index/watch.ts'
 export type { Watcher } from './index/watch.ts'
 export { openDb } from './index/db.ts'
@@ -42,6 +51,7 @@ export {
   configDir,
   configPath,
   indexPath,
+  lifetimesPath,
   loadConfig,
   saveConfig,
 } from './config/load.ts'

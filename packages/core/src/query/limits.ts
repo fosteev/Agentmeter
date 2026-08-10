@@ -1,12 +1,19 @@
 import type { ClaudeLimits } from '../config/types.ts'
 import type { Db } from '../index/db.ts'
-import { readLimitWindows, rebuildLimitWindows } from '../index/limits.ts'
+import { readLimitWindows } from '../index/limits.ts'
 import type { LimitWindow } from '../sources/types.ts'
 import { sourceCount } from './today.ts'
 import type { LimitReportRow, LimitsReport } from './types.ts'
 
+/**
+ * Отчёт только читает. Пересборку окон делает тот, кто менял вход: `ingestAll`
+ * после прохода и живой слой при смене конфига (`ensureLimitWindows`).
+ *
+ * Раньше пересборка стояла прямо здесь, и это был полный проход по всем
+ * запросам Claude на каждый опрос трея плюс скрытая запись из читающего
+ * модуля — известный долг 1.10.
+ */
 export function limitsReport(db: Db, at: number, limits: ClaudeLimits): LimitsReport {
-  rebuildLimitWindows(db, limits)
   const windows = readLimitWindows(db)
   return {
     emptyIndex: sourceCount(db) === 0,

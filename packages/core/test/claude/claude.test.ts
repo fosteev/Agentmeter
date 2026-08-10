@@ -4,6 +4,7 @@ import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { listLiveSessions, parseSessionFile, parseSubagents } from '../../src/index.ts'
+import { parseProcStart } from '../../src/sources/claude/live.ts'
 import type { ParseResult, Request, Session, ToolCall } from '../../src/index.ts'
 
 const fixturesDir = fileURLToPath(new URL('../../../../fixtures/claude/', import.meta.url))
@@ -57,13 +58,14 @@ describe('Claude Code parser', () => {
   it('listLiveSessions читает только живые pid', () => {
     tmp = mkdtempSync(join(tmpdir(), 'agentmeter-live-'))
     mkdirSync(tmp, { recursive: true })
+    const startedAt = Date.now()
     writeFileSync(
       join(tmp, `${process.pid}.json`),
       JSON.stringify({
         sessionId: 'live-session',
         cwd: '/proj/live',
-        startedAt: '2026-07-28T12:06:55.122Z',
-        entrypoint: 'cli',
+        startedAt,
+        entrypoint: 'claude-vscode',
         version: '2.1.220',
         name: 'Claude Code',
       }),
@@ -73,7 +75,7 @@ describe('Claude Code parser', () => {
       JSON.stringify({
         sessionId: 'dead-session',
         cwd: '/proj/dead',
-        startedAt: 1,
+        startedAt,
         entrypoint: 'cli',
       }),
     )
@@ -84,12 +86,44 @@ describe('Claude Code parser', () => {
         sessionId: 'live-session',
         provider: 'claude',
         cwd: '/proj/live',
-        startedAt: Date.parse('2026-07-28T12:06:55.122Z'),
-        entrypoint: 'cli',
+        startedAt,
+        // На диске лежит `claude-vscode`, в контракте 0.2 — `vscode`. Без
+        // нормализации 8 живых сессий из 9 схлопывались в `unknown`.
+        entrypoint: 'vscode',
         cliVersion: '2.1.220',
         name: 'Claude Code',
       },
     ])
+  })
+
+  // Ловит вечного агента в трее: файл сессии остаётся после падения процесса,
+  // а система рано или поздно выдаёт тот же pid другому. `kill(pid, 0)` тогда
+  // честно отвечает «жив» — про чужого.
+  it('listLiveSessions отбрасывает переиспользованный pid', () => {
+    if (process.platform === 'win32') return
+    tmp = mkdtempSync(join(tmpdir(), 'agentmeter-live-'))
+    mkdirSync(tmp, { recursive: true })
+    writeFileSync(
+      join(tmp, `${process.pid}.json`),
+      JSON.stringify({
+        sessionId: 'stale-session',
+        cwd: '/proj/stale',
+        startedAt: Date.now() - 48 * 60 * 60 * 1000,
+        entrypoint: 'cli',
+      }),
+    )
+
+    expect(listLiveSessions(tmp)).toEqual([])
+  })
+
+  // Ловит разбор `procStart` как локального времени: поле выглядит локальным,
+  // а написано в UTC, и на зоне +3 промах в три часа объявляет переиспользо-
+  // ванным каждый живой pid.
+  it('procStart разбирается как UTC', () => {
+    expect(parseProcStart('Mon Aug 10 07:11:48 2026')).toBe(
+      Date.parse('2026-08-10T07:11:48.000Z'),
+    )
+    expect(parseProcStart('что-то другое')).toBeUndefined()
   })
 })
 

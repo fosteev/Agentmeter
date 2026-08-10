@@ -31,6 +31,38 @@ export function putLimitObservations(
   }
 }
 
+/**
+ * Пересобрать окна, если изменился **вход** сборки.
+ *
+ * Вход у сборки два: наблюдения с запросами в индексе (меняются при ingest) и
+ * потолки с весом `cache_read` из конфига. Отпечаток последней сборки лежит в
+ * `meta`, и несовпадение — единственный повод пересчитать без ingest.
+ *
+ * Нужно это ровно затем, чтобы `limitsReport` перестал пересобирать окна на
+ * каждом чтении: при опросе трея раз в секунду это полный проход по всем
+ * запросам Claude плюс скрытая запись из читающего модуля (долг 1.10). Просто
+ * убрать вызов нельзя — тогда после правки потолка плана в конфиге проценты
+ * замёрзли бы на `null`, и устаревший ответ выглядел бы как честное «план не
+ * задан».
+ */
+export function ensureLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowStats | null {
+  const fingerprint = limitsFingerprint(limits)
+  const stored = db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', LIMITS_INPUT_KEY)
+  if (stored?.value === fingerprint) return null
+  return rebuildLimitWindows(db, limits)
+}
+
+const LIMITS_INPUT_KEY = 'limits_input'
+
+function limitsFingerprint(limits: ClaudeLimits): string {
+  return JSON.stringify([
+    limits.fiveHourCap,
+    limits.weeklyCap,
+    limits.cacheReadWeight,
+    limits.plan,
+  ])
+}
+
 /** Полностью пересобирает окна: частичный результат здесь неизбежно врёт. */
 export function rebuildLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowStats {
   const observations = db.all<ObservationRow>(
@@ -50,6 +82,11 @@ export function rebuildLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowSt
   db.transaction(() => {
     db.run('DELETE FROM limit_windows')
     for (const window of [...codex, ...claude]) insertWindow(db, window)
+    db.run(
+      'INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value',
+      LIMITS_INPUT_KEY,
+      limitsFingerprint(limits),
+    )
   })
 
   return { observations: observations.length, codex: codex.length, claude: claude.length }

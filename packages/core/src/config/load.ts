@@ -35,6 +35,15 @@ export function indexPath(): string {
   return join(configDir(), 'index.sqlite')
 }
 
+/**
+ * Журнал времени жизни сессий — единственное в проекте, что не производно от
+ * логов. Поэтому он лежит **рядом** с индексом, а не внутри: пересборка базы
+ * («снести и перечитать», правило 3 в `schema.ts`) не должна его касаться.
+ */
+export function lifetimesPath(): string {
+  return join(configDir(), 'lifetimes.jsonl')
+}
+
 export function claudeHome(cfg: Config): string {
   return cfg.sources.claudeHome ?? join(homedir(), '.claude')
 }

@@ -7,6 +7,7 @@ import {
   DEFAULT_CONFIG,
   breakdownReport,
   doctorReport,
+  ensureLimitWindows,
   ingestFile,
   limitsReport,
   taskRows,
@@ -117,6 +118,10 @@ describe('query reports', () => {
     ingestFixtures()
     const config = structuredClone(DEFAULT_CONFIG)
 
+    // Отчёт с 2.1 только читает: собирает окна тот, кто менял вход. В приложении
+    // это `ingestAll` и живой слой, здесь — явный вызов вместо скрытой записи,
+    // которая раньше пряталась внутри `limitsReport`.
+    ensureLimitWindows(db, config.limits.claude)
     const report = limitsReport(db, Date.parse('2026-07-28T13:00:00.000Z'), config.limits.claude)
     const claude = report.windows.filter((window) => window.provider === 'claude')
 

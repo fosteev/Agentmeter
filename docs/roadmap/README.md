@@ -34,3 +34,8 @@
 | [`1.4-drift.md`](1.4-drift.md) | 1.4 | сам |
 | [`1.5-index.md`](1.5-index.md) | 1.5 | Codex |
 | [`1.6-attribution.md`](1.6-attribution.md) | 1.6 | модель — сам, реализация — Codex |
+| [`1.7-prefix.md`](1.7-prefix.md) | 1.7 | модель — сам, реализация — Codex |
+| [`1.8-limits.md`](1.8-limits.md) | 1.8 | модель — сам, реализация — Codex |
+| [`1.10-cli.md`](1.10-cli.md) | 1.10 | Codex |
+| [`2.1-live.md`](2.1-live.md) | 2.1 | сам · этап закрыт, файл удаляется по правилу 4 |
+| [`2.5-popup.md`](2.5-popup.md) | 2.5 | Codex |

@@ -6,9 +6,11 @@ import {
   claudeHome,
   codexHome,
   configPath as defaultConfigPath,
+  createLiveLayer,
   dayRange,
   defaultIndexPath,
   doctorReport,
+  ensureLimitWindows,
   ingestAll,
   limitsReport,
   loadConfig,
@@ -22,10 +24,20 @@ import {
 import { renderBreakdown, type BreakdownAxis } from './commands/breakdown.ts'
 import { renderDoctor } from './commands/doctor.ts'
 import { renderLimits } from './commands/limits.ts'
+import { renderLive } from './commands/live.ts'
 import { renderTasks } from './commands/tasks.ts'
 import { renderToday } from './commands/today.ts'
 
-const COMMANDS = ['today', 'tasks', 'breakdown', 'limits', 'doctor', 'verify', 'index'] as const
+const COMMANDS = [
+  'today',
+  'tasks',
+  'breakdown',
+  'limits',
+  'live',
+  'doctor',
+  'verify',
+  'index',
+] as const
 type Command = (typeof COMMANDS)[number]
 
 interface CommonOptions {
@@ -47,6 +59,7 @@ function usage(): string {
     'tasks     [--day YYYY-MM-DD] [--limit N]',
     'breakdown [--day YYYY-MM-DD] [--session <id>] [--by tool|server|skill|agent|model]',
     'limits',
+    'live',
     'doctor',
     'index     [--rebuild]',
   ].join('\n')
@@ -85,6 +98,8 @@ export function run(argv: readonly string[]): number {
           return runBreakdown(db, common, loaded.config)
         case 'limits':
           return runLimits(db, common, loaded.config)
+        case 'live':
+          return runLive(db, common, loaded.config)
         case 'doctor':
           return runDoctor(db, common, loaded.config, loaded.problems)
         default:
@@ -174,8 +189,33 @@ function runLimits(
   config: Config,
 ): number {
   ensureNoArgs(common.rest)
+  // Отчёт только читает (2.1). Пересборку по смене потолков плана делает
+  // `ensureLimitWindows`: без неё `--no-ingest` показывал бы старые `null`,
+  // то есть выдавал устаревший ответ за честное «план не задан».
+  ensureLimitWindows(db, config.limits.claude)
   const report = limitsReport(db, Date.now(), config.limits.claude)
   output(common.json ? report : renderLimits(report, config.ui.locale), common.json)
+  return 0
+}
+
+function runLive(
+  db: Parameters<typeof createLiveLayer>[0],
+  common: CommonOptions,
+  config: Config,
+): number {
+  ensureNoArgs(common.rest)
+  // Журнал замера из CLI не ведётся: одиночный вызов видит сессию один раз и
+  // смерти процесса не наблюдает никогда, а запись «увидел и потерял» на
+  // каждый запуск команды засорила бы замер выдумкой.
+  const live = createLiveLayer(db, {
+    claudeHome: claudeHome(config),
+    codexHome: codexHome(config),
+    idleMs: config.live.idleMs,
+    codexSilenceMs: config.live.codexSilenceMs,
+    claudeLimits: config.limits.claude,
+  })
+  const snapshot = live.snapshot()
+  output(common.json ? snapshot : renderLive(snapshot, config.ui.locale), common.json)
   return 0
 }
 

@@ -40,6 +40,27 @@ export interface Config {
     watch: boolean
   }
 
+  live: {
+    /**
+     * Как часто трей пересобирает снимок, мс.
+     *
+     * Критерий 2.1 — «новая сессия видна < 2 с» — держится именно на этом
+     * числе: снимок мгновенный, задержка целиком равна периоду опроса плюс
+     * стоимость самого снимка. Ставить сюда 2000 значит промахнуться мимо
+     * критерия ровно на цену снимка.
+     */
+    pollMs: number
+    /** Тишина, после которой агент считается простаивающим, мс. */
+    idleMs: number
+    /**
+     * Тишина, после которой сессия Codex перестаёт считаться живой, мс.
+     *
+     * У Codex реестра процессов нет вовсе, и «жив» там означает «писал
+     * недавно». Отсюда отдельный порог: у Claude смерть — факт, здесь догадка.
+     */
+    codexSilenceMs: number
+  }
+
   privacy: {
     /** Не показывать тексты промптов в интерфейсе — только метаданные. */
     hidePrompts: boolean
@@ -90,6 +111,7 @@ export const DEFAULT_CONFIG: Config = {
     notifyOnIdle: true,
   },
   index: { retentionDays: 90, watch: true },
+  live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },
   privacy: { hidePrompts: false, hidePaths: false },
   ui: { theme: 'system', dayStartsAtHour: 0, locale: 'ru' },
 }

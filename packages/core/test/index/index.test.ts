@@ -144,7 +144,13 @@ describe('индекс логов', () => {
     })
   })
 
-  it('watchSources ловит дописанный файл', async () => {
+  // Потолок теста задан явно: у vitest он по умолчанию 5 с, и щедрые 15 с
+  // внутри waitFor до сих пор были недостижимы — тест умирал раньше, чем
+  // успевал дождаться. Проверяется контракт «вотчер дочитает изменившийся
+  // файл», а каким путём — событием fs.watch или запасным переобходом —
+  // деталь реализации: на сетевой файловой системе события не приходят вовсе,
+  // ради чего переобход и существует.
+  it('watchSources ловит дописанный файл', { timeout: 20_000 }, async () => {
     const { claudeHome, codexHome } = makeHomes()
     const project = join(claudeHome, 'projects', '-proj')
     mkdirSync(project, { recursive: true })
@@ -158,7 +164,7 @@ describe('индекс логов', () => {
       claudeHome,
       codexHome,
       debounceMs: 30,
-      rediscoverMs: 10_000,
+      rediscoverMs: 1_000,
       onBatch: () => {
         batches += 1
       },

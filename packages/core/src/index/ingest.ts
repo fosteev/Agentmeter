@@ -8,7 +8,7 @@ import { parseSessionFile } from '../sources/claude/index.ts'
 import { parseRolloutFile } from '../sources/codex/index.ts'
 import type { ParseResult } from '../sources/types.ts'
 import { DEFAULT_CONFIG, type ClaudeLimits } from '../config/types.ts'
-import { rebuildLimitWindows } from './limits.ts'
+import { ensureLimitWindows, rebuildLimitWindows } from './limits.ts'
 
 export type { DiscoverOpts } from './discover.ts'
 
@@ -62,7 +62,14 @@ export function ingestAll(db: Db, opts: IngestOptions = {}): IngestStats {
     removed += 1
   }
 
-  rebuildLimitWindows(db, opts.claudeLimits ?? DEFAULT_CONFIG.limits.claude)
+  // Пересборка — только когда индекс действительно изменился. Вотчер зовёт
+  // `ingestAll` на каждое событие файловой системы, включая чужие файлы, и
+  // безусловный проход по всем запросам Claude на каждое такое событие — это
+  // тот же долг 1.10, только с другой стороны. Смену конфига ловит отпечаток
+  // входа внутри `ensureLimitWindows`.
+  const limits = opts.claudeLimits ?? DEFAULT_CONFIG.limits.claude
+  if (parsed > 0 || removed > 0 || failed > 0) rebuildLimitWindows(db, limits)
+  else ensureLimitWindows(db, limits)
 
   return {
     scanned: files.length,
