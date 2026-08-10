@@ -111,7 +111,7 @@ export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): 
  * подгонять надо не её. При нулевом итоге долей не существует вовсе, и блока
  * нет: ноль процентов — это ответ, которого мы не давали.
  */
-function toSpendSplit(
+export function toSpendSplit(
   split: SpendSplitReport,
   approximate: boolean,
 ): { split: SpendSplit } | Record<string, never> {

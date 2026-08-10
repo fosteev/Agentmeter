@@ -2,15 +2,18 @@
   "_": "Посчитано руками, разложение — в README.md рядом. Пересобирать выводом реализации нельзя.",
   "provider": "claude",
   "constants": {
-    "bytesPerToken": { "skills": 4.05, "userTurn": 3.02 }
+    "bytesPerToken": {
+      "skills": 4.05,
+      "userTurn": 3.02
+    }
   },
   "toolsDeferred": false,
   "prefixTokens": 36000,
   "requestCount": 4,
   "recurrentTokens": 144000,
   "blocks": [
-    { "category": "system", "bytes": 0, "tokens": 34000, "basis": "residual" },
-    { "category": "skills", "bytes": 4050, "tokens": 1000, "basis": "estimated" },
-    { "category": "userTurn", "bytes": 3020, "tokens": 1000, "basis": "estimated" }
+    { "category": "system", "bytes": 0, "tokens": 34000, "basis": "residual", "items": 0 },
+    { "category": "skills", "bytes": 4050, "tokens": 1000, "basis": "estimated", "items": 5 },
+    { "category": "userTurn", "bytes": 3020, "tokens": 1000, "basis": "estimated", "items": 1 }
   ]
 }

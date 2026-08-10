@@ -56,6 +56,7 @@ import type {
   WindowTab,
 } from '@agentmeter/ipc'
 import { configReport, setConfig } from './config.ts'
+import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
@@ -414,7 +415,7 @@ function createHandlers(
     'config:get': () => configReport(runtime()),
     'today:get': (filter) => buildDayReport(runtime().db, filter, runtime().config.privacy),
     'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
-    'breakdown:get': () => [],
+    'breakdown:get': (filter) => buildSpendScreen(runtime().db, filter),
     'config:set': ({ patch }) => changeConfig(patch),
     'index:rebuild': () => undefined,
     'doctor:get': () => ({

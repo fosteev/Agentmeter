@@ -340,12 +340,12 @@ function consumeAttachment(state: ParseState, record: JsonObject): void {
   switch (stringField(attachment, 'type')) {
     case 'skill_listing': {
       const content = stringField(attachment, 'content')
-      if (content !== undefined) addPrefixBlock(state, 'skills', content)
+      if (content !== undefined) addPrefixBlock(state, 'skills', content, undefined, entries(content))
       return
     }
     case 'agent_listing_delta': {
       const content = stringArrayField(attachment, 'addedLines').join('\n')
-      if (content !== '') addPrefixBlock(state, 'agents', content)
+      if (content !== '') addPrefixBlock(state, 'agents', content, undefined, entries(content))
       return
     }
     case 'deferred_tools_delta': {
@@ -361,6 +361,7 @@ function consumeAttachment(state: ParseState, record: JsonObject): void {
           bytes: Buffer.byteLength(name, 'utf8'),
           tokens: 0,
           basis: 'estimated',
+          items: 1,
         })
       }
       return
@@ -391,6 +392,7 @@ function addPrefixBlock(
   category: PrefixBlock['category'],
   content: string,
   source?: string,
+  items = 1,
 ): void {
   const key = `${category}\u0000${source ?? ''}\u0000${content}`
   if (state.prefixKeys.has(key)) return
@@ -401,7 +403,25 @@ function addPrefixBlock(
     bytes: Buffer.byteLength(content, 'utf8'),
     tokens: 0,
     basis: 'estimated',
+    items,
   })
+}
+
+/**
+ * Сколько штук перечислено в листинге скиллов или сабагентов (4.2).
+ *
+ * Формат один на оба: `- имя: описание` с начала строки, причём описание может
+ * продолжаться на следующих строках — и тогда они начинаются с чего угодно
+ * другого. Считаются только начала строк: маркированный список внутри описания
+ * иначе насчитал бы лишних скиллов, а описания у половины из них длиной в абзац.
+ *
+ * Сторож на дрейф формата — проба `breakdown-live.ts`: каждый скилл и каждый
+ * сабагент, которых в этих сессиях звали, обязан найтись в листинге по имени.
+ */
+const LISTING_ENTRY = /^- [A-Za-z0-9][\w :.-]*: /gm
+
+function entries(content: string): number {
+  return content.match(LISTING_ENTRY)?.length ?? 0
 }
 
 function nestedMemoryContent(value: unknown): string | undefined {
@@ -545,6 +565,7 @@ function buildSession(state: ParseState, requests: Request[], options: ParseOpti
       bytes: Buffer.byteLength(readFileSync(full, 'utf8'), 'utf8'),
       tokens: 0,
       basis: 'estimated',
+      items: 1,
     })
   }
   if (state.userTurnBytes > 0) {
@@ -553,6 +574,7 @@ function buildSession(state: ParseState, requests: Request[], options: ParseOpti
       bytes: state.userTurnBytes,
       tokens: 0,
       basis: 'estimated',
+      items: 1,
     })
   }
   const session: Session = {

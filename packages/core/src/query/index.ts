@@ -4,6 +4,8 @@ export { doctorReport } from './doctor.ts'
 export { changedFiles } from './files.ts'
 export type { ChangedFile } from './files.ts'
 export { limitsReport } from './limits.ts'
+export { loadedCategories } from './loaded.ts'
+export type { LoadedCategory, LoadedSource } from './loaded.ts'
 export { spendSplit } from './split.ts'
 export type { SpendCategory, SpendSplitReport } from './split.ts'
 export { daySplits } from './splits.ts'
@@ -12,7 +14,7 @@ export { ticketKey } from './ticket.ts'
 export { taskDetail, taskSessions } from './task.ts'
 export type { TaskCall, TaskDetail, TaskRequest } from './task.ts'
 export { taskRows } from './tasks.ts'
-export { hasRequests, todayReport } from './today.ts'
+export { hasRequests, sourceCount, todayReport } from './today.ts'
 export type {
   BreakdownReport,
   DayRange,

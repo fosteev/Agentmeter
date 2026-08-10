@@ -41,6 +41,9 @@ export function attributePrefix(
     bytes: 0,
     tokens: session.prefixTokens - estimatedTokens,
     basis: 'residual',
+    // Ноль, а не единица: остаток — это системный промпт и схемы вшитых тулов,
+    // он не состоит из перечислимых штук, и «1 штука» была бы утверждением.
+    items: 0,
   }
 
   session.prefixBlocks = sortBlocks([...estimated, residual])
@@ -116,6 +119,7 @@ function aggregateEstimated(blocks: PrefixBlock[]): PrefixBlock[] {
     if (current) {
       current.bytes += block.bytes
       current.tokens += block.tokens
+      current.items += block.items
     } else {
       aggregated.set(key, { ...block, basis: 'estimated' })
     }

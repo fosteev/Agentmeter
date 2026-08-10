@@ -37,6 +37,38 @@ function exactName(prefix: string, bytes: number): string {
   return `${prefix}${'x'.repeat(rest)}`
 }
 
+/**
+ * Листинг скиллов или сабагентов: `count` записей формата `- имя: описание`,
+ * ровно `totalBytes` байт вместе с переводами строк между ними.
+ *
+ * Записей больше одной не для красоты: с 4.2 парсер считает их число, и на
+ * листинге из одного куска филлера проверять было бы нечего — ноль записей
+ * получился бы и при верном правиле, и при любом неверном.
+ */
+function listing(prefix: string, count: number, totalBytes: number): string {
+  const separators = count - 1
+  const body = totalBytes - separators
+  const heads = Array.from({ length: count }, (_, index) => `- ${prefix}${index}: `)
+  const headBytes = heads.reduce((sum, head) => sum + Buffer.byteLength(head, 'utf8'), 0)
+  const rest = body - headBytes
+  const share = Math.floor(rest / count)
+  // Внутри описания первой записи — то, что выглядит записью, но ею не
+  // является: маркированный список в описании скилла встречается сплошь и
+  // рядом. Без него правило «считать только начала строк» неотличимо от
+  // «считать где угодно», и мутация, снимающая якорь, проходит молча.
+  const decoy = ' - decoy: список внутри описания '
+  const decoyBytes = Buffer.byteLength(decoy, 'utf8')
+  const lines = heads.map((head, index) => {
+    const size = share + (index < rest % count ? 1 : 0)
+    return index === 0
+      ? `${head}${padBytes(size - decoyBytes)}${decoy}`
+      : `${head}${padBytes(size)}`
+  })
+  const result = lines.join('\n')
+  if (Buffer.byteLength(result, 'utf8') !== totalBytes) throw new Error(`listing(${totalBytes})`)
+  return result
+}
+
 function splitNames(prefix: string, count: number, totalBytes: number): string[] {
   const base = Math.floor(totalBytes / count)
   return Array.from({ length: count }, (_, index) =>
@@ -73,7 +105,10 @@ function claudeLines(options: {
     type: 'user',
     message: { role: 'user', content: padBytes(3020) },
   })
-  push({ type: 'attachment', attachment: { type: 'skill_listing', content: padBytes(4050) } })
+  push({
+    type: 'attachment',
+    attachment: { type: 'skill_listing', content: listing('skill', 5, 4050) },
+  })
 
   if (!options.eager) {
     const builtins = splitNames('Builtin', 5, 1295)
@@ -88,7 +123,10 @@ function claudeLines(options: {
     })
     push({
       type: 'attachment',
-      attachment: { type: 'agent_listing_delta', addedLines: [padBytes(4220)] },
+      attachment: {
+        type: 'agent_listing_delta',
+        addedLines: listing('agent', 4, 4220).split('\n'),
+      },
     })
     push({
       type: 'attachment',

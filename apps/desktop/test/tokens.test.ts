@@ -158,6 +158,14 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   'HourChart.tsx': [[738, 749]],
   'ProjectBars.tsx': [[756, 761]],
   'SpendBar.tsx': [[767, 778]],
+  // Развёртка (4.2): рама и полоса сверху — 927–955, левая колонка — 959–1046,
+  // правая — 1049–1105, подпись под ней — 1107.
+  'BreakdownTab.tsx': [
+    [927, 955],
+    [959, 1046],
+    [1049, 1107],
+  ],
+  'SpendCategoryTable.tsx': [[971, 1040]],
 }
 
 /**

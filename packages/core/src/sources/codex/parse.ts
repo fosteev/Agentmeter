@@ -217,6 +217,7 @@ function consumeSessionMeta(state: ParseState, payload: JsonObject | undefined):
       bytes: Buffer.byteLength(baseInstructions, 'utf8'),
       tokens: 0,
       basis: 'estimated',
+      items: 1,
     })
   }
 }
@@ -502,6 +503,9 @@ function buildSession(state: ParseState): Session {
       bytes: memoryBytes,
       tokens: 0,
       basis: 'estimated',
+      // Сообщений столько, сколько их приехало до первой реплики человека:
+      // у Codex `AGENTS.md` и прочая память лежат отдельными `input_text`.
+      items: userMessages.length - 1,
     })
   }
   if (userTurn) {
@@ -510,6 +514,7 @@ function buildSession(state: ParseState): Session {
       bytes: userTurn.bytes,
       tokens: 0,
       basis: 'estimated',
+      items: 1,
     })
   }
   const session: Session = {

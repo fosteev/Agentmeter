@@ -115,8 +115,8 @@ function insertSession(db: Db, session: Session): void {
 function insertPrefixBlocks(db: Db, session: Session): void {
   session.prefixBlocks.forEach((block, idx) => {
     db.run(
-      `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis, items)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       session.id,
       idx,
       block.category,
@@ -124,6 +124,7 @@ function insertPrefixBlocks(db: Db, session: Session): void {
       block.bytes,
       block.tokens,
       block.basis,
+      block.items,
     )
   })
 }

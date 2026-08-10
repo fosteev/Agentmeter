@@ -5,6 +5,7 @@ import type {
   ConfigReport,
   DayReport,
   DeepPartial,
+  SpendScreen,
   TaskCard,
   TodayFilter,
   TraySnapshot,
@@ -18,6 +19,7 @@ import { dayRange } from '@agentmeter/core/day'
 import './tokens.css'
 import { SettingsTab } from './components/SettingsTab.tsx'
 import { TodayTab } from './components/TodayTab.tsx'
+import { BreakdownTab } from './components/BreakdownTab.tsx'
 import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
@@ -86,6 +88,23 @@ export function requestToday(
   return getToday(filter)
 }
 
+type BreakdownArg = { scope: 'day' | 'session'; from: number; to: number }
+
+/**
+ * Развёртка за тот же период, что и лента (4.2).
+ *
+ * Период берётся из фильтра ленты, а не из «сегодня» по часам процесса: иначе
+ * человек, переключившийся на вкладку после полуночи, увидел бы развёртку
+ * другого дня — и не имел бы способа это заметить, потому что даты на экране
+ * рядом нет.
+ */
+export function requestBreakdown(
+  arg: BreakdownArg,
+  getBreakdown: (arg: BreakdownArg) => Promise<SpendScreen> = window.agentmeter['breakdown:get'],
+): Promise<SpendScreen> {
+  return getBreakdown(arg)
+}
+
 type TaskGetter = (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCard | null>
 
 /**
@@ -124,10 +143,13 @@ export function WindowApp() {
   const [todayFilter, setTodayFilter] = useState<TodayFilter | null>(null)
   const [today, setToday] = useState<DayReport | null>(null)
   const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
+  const [breakdown, setBreakdown] = useState<SpendScreen | null>(null)
+  const [breakdownScope, setBreakdownScope] = useState<'day' | 'session'>('day')
   const [tab, setTab] = useState<WindowTab>(() =>
     initialTab(typeof location === 'undefined' ? '' : location.search),
   )
   const todayRequest = useRef(0)
+  const breakdownRequest = useRef(0)
   const taskRequest = useRef(createTaskRequestGuard())
   useTheme(config?.ui.theme ?? 'system')
 
@@ -189,6 +211,19 @@ export function WindowApp() {
     })
   }, [tab, todayFilter])
 
+  useEffect(() => {
+    if (todayFilter === null || tab !== 'breakdown') return
+    const request = ++breakdownRequest.current
+    setBreakdown(null)
+    void requestBreakdown({
+      scope: breakdownScope,
+      from: todayFilter.from,
+      to: todayFilter.to,
+    }).then((screen) => {
+      if (request === breakdownRequest.current) setBreakdown(screen)
+    })
+  }, [tab, todayFilter, breakdownScope])
+
   const handleTaskToggle = (sessionId: string): void => {
     if (todayFilter === null) return
     setTaskCard(null)
@@ -211,6 +246,8 @@ export function WindowApp() {
           />
           <TodaySide report={today} />
         </>
+      ) : tab === 'breakdown' ? (
+        <BreakdownTab screen={breakdown} onScopeChange={setBreakdownScope} />
       ) : tab === 'settings' && configReport !== null ? (
         <SettingsTab report={configReport} onChange={changeConfig} />
       ) : (

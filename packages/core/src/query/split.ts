@@ -37,6 +37,14 @@ export interface SpendCategory {
   tokens: number
   /** Цена блока в одной сессии, суммарно по сессиям периода. Знаменатель для 4.3. */
   perSession: number
+  /** Сколько сессий периода несли эту статью — делитель «цены за сессию». */
+  sessions: number
+  /**
+   * Сколько штук загружено, в среднем на сессию: скиллов в листинге, тулов у
+   * сервера. Складывать по сессиям нельзя — один и тот же сервер загружался в
+   * каждой, и сумма сказала бы «двести серверов» там, где их четыре.
+   */
+  items: number
 }
 
 export interface SpendSplitReport {
@@ -71,6 +79,7 @@ interface BlockRow {
   source: string | null
   basis: 'estimated' | 'residual'
   tokens: number
+  items: number
 }
 
 export function spendSplit(db: Db, range: DayRange, scope: RequestScope = {}): SpendSplitReport {
@@ -122,7 +131,7 @@ function sessionRows(db: Db, filter: { sql: string; params: SqlValue[] }): Sessi
 function blockRows(db: Db, filter: { sql: string; params: SqlValue[] }): BlockRow[] {
   return db.all<BlockRow>(
     `SELECT prefix_blocks.session_id, prefix_blocks.category, prefix_blocks.source,
-            prefix_blocks.basis, prefix_blocks.tokens
+            prefix_blocks.basis, prefix_blocks.tokens, prefix_blocks.items
      FROM prefix_blocks
      WHERE prefix_blocks.session_id IN (
        SELECT DISTINCT requests.session_id
@@ -166,19 +175,25 @@ function spreadCategories(sessions: SessionRow[], blocks: BlockRow[]): SpendCate
         basis: block.basis,
         tokens: 0,
         perSession: 0,
+        sessions: 0,
+        items: 0,
       }
       current.tokens += shares[index] ?? 0
       current.perSession += block.tokens
+      current.sessions += 1
+      current.items += block.items
       totals.set(key, current)
     })
   }
 
-  return [...totals.values()].sort(
-    (left, right) =>
-      right.tokens - left.tokens ||
-      left.category.localeCompare(right.category) ||
-      (left.source ?? '').localeCompare(right.source ?? ''),
-  )
+  return [...totals.values()]
+    .map((row) => ({ ...row, items: Math.round(row.items / Math.max(1, row.sessions)) }))
+    .sort(
+      (left, right) =>
+        right.tokens - left.tokens ||
+        left.category.localeCompare(right.category) ||
+        (left.source ?? '').localeCompare(right.source ?? ''),
+    )
 }
 
 /**
