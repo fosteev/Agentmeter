@@ -154,10 +154,11 @@ describe('чей ход — Codex', () => {
    * идёт `task_complete` либо следующий инструмент.
    */
   it('ответ модели сам по себе ход не заканчивает', () => {
-    const tail = lines(
-      codexEvent('task_started'),
-      { type: 'response_item', ts: '2026-08-10T08:00:00.000Z', payload: { type: 'message', role: 'assistant' } },
-    )
+    const tail = lines(codexEvent('task_started'), {
+      type: 'response_item',
+      ts: '2026-08-10T08:00:00.000Z',
+      payload: { type: 'message', role: 'assistant' },
+    })
     expect(codexTurn(tail)?.kind).toBe('agent-thinking')
   })
 })
@@ -171,12 +172,12 @@ describe('состояние из хода и тишины', () => {
    * прятать единственный случай, ради которого в трей и смотрят.
    */
   it('ожидание человека не протухает от тишины', () => {
-    expect(deriveState({ ...base, lastActivityAt: 1_000_000 - 3 * 3_600_000, turn: 'turn-end' })).toBe(
-      'waiting',
-    )
-    expect(deriveState({ ...base, lastActivityAt: 1_000_000 - 3 * 3_600_000, turn: 'ask-pending' })).toBe(
-      'waiting',
-    )
+    expect(
+      deriveState({ ...base, lastActivityAt: 1_000_000 - 3 * 3_600_000, turn: 'turn-end' }),
+    ).toBe('waiting')
+    expect(
+      deriveState({ ...base, lastActivityAt: 1_000_000 - 3 * 3_600_000, turn: 'ask-pending' }),
+    ).toBe('waiting')
   })
 
   /**
@@ -187,12 +188,12 @@ describe('состояние из хода и тишины', () => {
     expect(deriveState({ ...base, lastActivityAt: 1_000_000 - 30_000, turn: 'tool-pending' })).toBe(
       'working',
     )
-    expect(deriveState({ ...base, lastActivityAt: 1_000_000 - 200_000, turn: 'tool-pending' })).toBe(
-      'idle',
-    )
-    expect(deriveState({ ...base, lastActivityAt: 1_000_000 - 200_000, turn: 'agent-thinking' })).toBe(
-      'idle',
-    )
+    expect(
+      deriveState({ ...base, lastActivityAt: 1_000_000 - 200_000, turn: 'tool-pending' }),
+    ).toBe('idle')
+    expect(
+      deriveState({ ...base, lastActivityAt: 1_000_000 - 200_000, turn: 'agent-thinking' }),
+    ).toBe('idle')
   })
 
   it('нечитаемый хвост откатывается к правилу 2.1', () => {

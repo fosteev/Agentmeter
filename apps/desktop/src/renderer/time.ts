@@ -33,7 +33,9 @@ export function span(ms: number): string {
   if (ms < DAY) {
     const hours = Math.floor(ms / HOUR)
     const minutes = Math.floor((ms % HOUR) / MINUTE)
-    return minutes === 0 ? t('time.hours', { count: hours }) : t('time.hoursMinutes', { hours, minutes })
+    return minutes === 0
+      ? t('time.hours', { count: hours })
+      : t('time.hoursMinutes', { hours, minutes })
   }
   const days = Math.floor(ms / DAY)
   const hours = Math.floor((ms % DAY) / HOUR)

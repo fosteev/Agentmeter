@@ -136,7 +136,11 @@ function lastAgent(db: Db): LastAgent | undefined {
      LIMIT 1`,
   )
   if (row === undefined) return undefined
-  return { provider: row.provider as LastAgent['provider'], project: row.project, endedAt: row.ended_at }
+  return {
+    provider: row.provider as LastAgent['provider'],
+    project: row.project,
+    endedAt: row.ended_at,
+  }
 }
 
 function toAgent(agent: CoreLiveAgent): LiveAgent {

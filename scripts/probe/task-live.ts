@@ -126,9 +126,7 @@ try {
   // Ловит фразу, собранную из пустого места: подпись есть ровно там, где есть
   // выделенные точки, а наблюдение про кэш — там, где кэш и правда съел задачу.
   const captions = cards.filter((card) => card.timelineNote !== undefined)
-  const wrong = captions.filter(
-    (card) => !card.timeline.some((point) => point.note !== undefined),
-  )
+  const wrong = captions.filter((card) => !card.timeline.some((point) => point.note !== undefined))
   const notes = cards.filter((card) => card.note !== undefined)
   const advice = cards.filter((card) => card.note?.advice !== undefined)
   report(

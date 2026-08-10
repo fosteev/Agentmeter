@@ -347,7 +347,11 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     // фильтр по origin прошёл бы незамеченным.
     const rs = requests(readJsonl(join(LIMITS, 'claude-limits.jsonl')))
     const warms = rs.filter((r, i) => i > 0 && r.cr - (rs[i - 1]!.cr + rs[i - 1]!.cw) > 0).length
-    check('limits / незаписанные запросы внутри окна', warms === 3, `${warms} разрывов цепочки кэша`)
+    check(
+      'limits / незаписанные запросы внутри окна',
+      warms === 3,
+      `${warms} разрывов цепочки кэша`,
+    )
   }
   const border = stamps[0] + 5 * 60 * 60 * 1000
   check(

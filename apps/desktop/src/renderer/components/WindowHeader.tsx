@@ -24,7 +24,9 @@ function providerLimits(limits: LimitReportRow[]): LimitReportRow[] {
   }
   // Порядок задан, а не унаследован от данных: иначе CL и CX меняются местами
   // от снимка к снимку, и глаз каждый раз ищет свою цифру заново.
-  return ORDER.filter((provider) => selected.has(provider)).map((provider) => selected.get(provider)!)
+  return ORDER.filter((provider) => selected.has(provider)).map((provider) =>
+    selected.get(provider)!,
+  )
 }
 
 const ORDER: readonly Provider[] = ['claude', 'codex']

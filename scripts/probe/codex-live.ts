@@ -47,9 +47,18 @@ function lastTotalUsage(path: string): Usage | undefined {
 
 const files = globSync(join(ROOT, '**/rollout-*.jsonl')).sort()
 
-const unknown = new Map<string, { records: number; files: number; versions: Set<string>; sample: string }>()
+const unknown = new Map<
+  string,
+  { records: number; files: number; versions: Set<string>; sample: string }
+>()
 const crashed: { file: string; error: string }[] = []
-const mismatched: { file: string; field: string; parsed: number; expected: number; delta: number }[] = []
+const mismatched: {
+  file: string
+  field: string
+  parsed: number
+  expected: number
+  delta: number
+}[] = []
 const versions = new Map<string, number>()
 
 let checked = 0
@@ -72,9 +81,15 @@ for (const file of files) {
 
   requests += result.requests.length
   malformed += result.diagnostics.malformedLines
-  for (const version of result.diagnostics.cliVersions) versions.set(version, (versions.get(version) ?? 0) + 1)
+  for (const version of result.diagnostics.cliVersions)
+    versions.set(version, (versions.get(version) ?? 0) + 1)
   for (const [type, count] of Object.entries(result.diagnostics.unknownRecordTypes)) {
-    const entry = unknown.get(type) ?? { records: 0, files: 0, versions: new Set<string>(), sample: file }
+    const entry = unknown.get(type) ?? {
+      records: 0,
+      files: 0,
+      versions: new Set<string>(),
+      sample: file,
+    }
     entry.records += count
     entry.files += 1
     for (const version of result.diagnostics.cliVersions) entry.versions.add(version)
@@ -124,7 +139,10 @@ if (asJson) {
         crashed,
         mismatched: mismatched.map((m) => ({ ...m, file: relative(ROOT, m.file) })),
         unknown: Object.fromEntries(
-          [...unknown].map(([type, u]) => [type, { ...u, versions: [...u.versions].sort(), sample: relative(ROOT, u.sample) }]),
+          [...unknown].map(([type, u]) => [
+            type,
+            { ...u, versions: [...u.versions].sort(), sample: relative(ROOT, u.sample) },
+          ]),
         ),
       },
       null,
@@ -135,7 +153,9 @@ if (asJson) {
   console.log(
     `${files.length} роллаутов, ${requests} запросов, ${limits} наблюдений лимита — ${(elapsed / 1000).toFixed(1)} с`,
   )
-  console.log(`сверено с total_token_usage: ${checked}, сошлось до токена: ${exact}, без расхода: ${noUsage}`)
+  console.log(
+    `сверено с total_token_usage: ${checked}, сошлось до токена: ${exact}, без расхода: ${noUsage}`,
+  )
   console.log(`ломаных строк: ${malformed}`)
   console.log(`\nверсии CLI: ${[...versions.keys()].sort().join(', ')}\n`)
 

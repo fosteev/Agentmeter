@@ -81,7 +81,9 @@ function sortTasks(rows: readonly CoreTaskRow[], sort: NonNullable<TodayFilter['
     sort === 'tokens' ? row.totals.total : sort === 'requests' ? row.totals.requests : row.startedAt
   // Второй ключ — идентификатор сессии: без него две задачи с равным расходом
   // меняются местами от запроса к запросу, и строка под курсором уезжает.
-  return [...rows].sort((left, right) => key(right) - key(left) || left.sessionId.localeCompare(right.sessionId))
+  return [...rows].sort(
+    (left, right) => key(right) - key(left) || left.sessionId.localeCompare(right.sessionId),
+  )
 }
 
 /**
@@ -150,13 +152,11 @@ function toHourBucket(hour: HourSplit): HourBucket {
  * окно сложит только показанные строки.
  */
 function toProjectRows(projects: readonly ProjectSplit[]): ProjectRow[] {
-  const head = projects.slice(0, KEEP_PROJECTS).map(
-    (project): ProjectRow => ({
-      project: project.project,
-      tokens: measured(project.total, project.reconstructed > 0),
-      provider: dominant(project),
-    }),
-  )
+  const head = projects.slice(0, KEEP_PROJECTS).map((project): ProjectRow => ({
+    project: project.project,
+    tokens: measured(project.total, project.reconstructed > 0),
+    provider: dominant(project),
+  }))
   const tail = projects.slice(KEEP_PROJECTS)
   if (tail.length === 0) return head
   const total = tail.reduce((sum, project) => sum + project.total, 0)

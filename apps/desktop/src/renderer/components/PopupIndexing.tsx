@@ -32,7 +32,9 @@ function megabytes(bytes: number): string {
  */
 function remaining(ms: number): string {
   if (ms < 60_000) {
-    return `≈ ${new Intl.NumberFormat(locale()).format(Math.round(ms / 1000))} с`
+    return t('popup.etaSeconds', {
+      seconds: new Intl.NumberFormat(locale()).format(Math.round(ms / 1000)),
+    })
   }
   return `≈ ${span(ms)}`
 }

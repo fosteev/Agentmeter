@@ -171,8 +171,7 @@ report(
 //    оказываясь тёмной на тёмной панели. Растр проверяют юнит-тесты, а это —
 //    единственное место, где виден настоящий `nativeImage`.
 const tray = payload.tray as
-  | { size?: string; scales?: number[]; template?: boolean; empty?: boolean }
-  | undefined
+  { size?: string; scales?: number[]; template?: boolean; empty?: boolean } | undefined
 const trayOk =
   tray !== undefined &&
   tray.empty === false &&

@@ -55,12 +55,7 @@ export function ensureLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowSta
 const LIMITS_INPUT_KEY = 'limits_input'
 
 function limitsFingerprint(limits: ClaudeLimits): string {
-  return JSON.stringify([
-    limits.fiveHourCap,
-    limits.weeklyCap,
-    limits.cacheReadWeight,
-    limits.plan,
-  ])
+  return JSON.stringify([limits.fiveHourCap, limits.weeklyCap, limits.cacheReadWeight, limits.plan])
 }
 
 /** Полностью пересобирает окна: частичный результат здесь неизбежно врёт. */

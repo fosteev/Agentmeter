@@ -1,4 +1,5 @@
 import type { DoctorReport } from '@agentmeter/core'
+import { t } from '@agentmeter/core'
 import { formatNumber, table } from '../format.ts'
 
 export function renderDoctor(
@@ -6,33 +7,44 @@ export function renderDoctor(
   locale: string,
   configProblems: readonly string[],
 ): string {
-  const lines = [`Индекс: ${report.indexPath || '—'}`, `Схема: ${report.schemaVersion}`]
+  const lines: string[] = [
+    t('cli.indexPath', { path: report.indexPath || '—' }),
+    t('cli.schema', { version: report.schemaVersion }),
+  ]
   if (report.emptyIndex) {
-    lines.push('индекс пуст, запустите `agentmeter index`')
+    lines.push(t('cli.emptyIndex'))
   } else {
     lines.push(
-      `Источники: ${formatNumber(report.sources, locale)} · сессии: ${formatNumber(report.sessions!, locale)} · запросы: ${formatNumber(report.requests!, locale)}`,
-      `Сессии с измеренной поправкой: ${formatNumber(report.reconstructedSessions, locale)}`,
+      t('cli.sources', {
+        sources: formatNumber(report.sources, locale),
+        sessions: formatNumber(report.sessions!, locale),
+        requests: formatNumber(report.requests!, locale),
+      }),
+      t('cli.reconstructedSessions', {
+        sessions: formatNumber(report.reconstructedSessions, locale),
+      }),
     )
   }
   lines.push(
     '',
-    'Калибровка',
-    `cache_read: ${report.calibration.cacheReadWeight ?? '— (не откалиброван, этап 1.9)'}`,
-    `пятичасовой потолок: ${report.calibration.fiveHourCap ?? '— (не задан)'}`,
-    `недельный потолок: ${report.calibration.weeklyCap ?? '— (не задан)'}`,
+    t('cli.calibration'),
+    t('cli.cacheReadWeight', {
+      value: report.calibration.cacheReadWeight ?? t('cli.notCalibrated'),
+    }),
+    t('cli.fiveHourCap', { value: report.calibration.fiveHourCap ?? t('cli.notSet') }),
+    t('cli.weeklyCap', { value: report.calibration.weeklyCap ?? t('cli.notSet') }),
   )
-  if (configProblems.length > 0) lines.push('', 'Проблемы конфига', ...configProblems)
+  if (configProblems.length > 0) lines.push('', t('cli.configProblems'), ...configProblems)
   if (report.diagnostics.length > 0) {
     lines.push(
       '',
-      'Диагностика',
+      t('cli.diagnostics'),
       table(
         [
-          { header: 'Вид', width: 22 },
-          { header: 'Деталь', width: 30 },
+          { header: t('cli.columnKind'), width: 22 },
+          { header: t('cli.columnDetail'), width: 30 },
           { header: 'CLI', width: 12 },
-          { header: 'Число', width: 7, align: 'right' },
+          { header: t('cli.columnCount'), width: 7, align: 'right' },
         ],
         report.diagnostics.map((row) => [
           row.kind,

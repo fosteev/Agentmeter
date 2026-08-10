@@ -89,9 +89,7 @@ function splitResidual(
     return { index, tokens: Math.floor(exact), fraction: exact - Math.floor(exact) }
   })
   const remaining = residual - shares.reduce((sum, share) => sum + share.tokens, 0)
-  const byRemainder = [...shares].sort(
-    (a, b) => b.fraction - a.fraction || a.index - b.index,
-  )
+  const byRemainder = [...shares].sort((a, b) => b.fraction - a.fraction || a.index - b.index)
   for (let index = 0; index < remaining; index += 1) {
     const share = byRemainder[index]
     if (share) share.tokens += 1

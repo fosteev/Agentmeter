@@ -126,8 +126,12 @@ try {
   const codexTurns = codexFiles.map((path) => ({ path, turn: codexTurn(tail(path)) }))
   const codexEnded = codexTurns.filter(({ turn }) => turn?.kind === 'turn-end').length
   const codexBusy = codexTurns.filter(({ turn }) => turn?.kind === 'agent-thinking').length
-  const completeTailed = codexFiles.filter((path) => lastEventPayload(tail(path)) === 'task_complete')
-  const completeMisread = completeTailed.filter((path) => codexTurn(tail(path))?.kind !== 'turn-end')
+  const completeTailed = codexFiles.filter(
+    (path) => lastEventPayload(tail(path)) === 'task_complete',
+  )
+  const completeMisread = completeTailed.filter(
+    (path) => codexTurn(tail(path))?.kind !== 'turn-end',
+  )
   report(
     4,
     'ход Codex читается из разметки провайдера',
@@ -191,10 +195,11 @@ try {
   //    прожитого времени, потерянный множитель 60 000 и двойной учёт сабагентов
   //    все ломают именно это тождество.
   const hourAgo = Date.now() - 3_600_000
-  const direct = db.get<{ tokens: number | null }>(
-    `SELECT sum(input + output + cache_write + cache_read) AS tokens FROM requests WHERE ts >= ?`,
-    hourAgo,
-  )!.tokens ?? 0
+  const direct =
+    db.get<{ tokens: number | null }>(
+      `SELECT sum(input + output + cache_write + cache_read) AS tokens FROM requests WHERE ts >= ?`,
+      hourAgo,
+    )!.tokens ?? 0
   const viaRate = perMinute(direct, 3_600_000) * 60
   const rateDrift = direct === 0 ? 0 : Math.abs(viaRate - direct) / direct
   report(
@@ -216,7 +221,8 @@ try {
   const busiest = readLimitWindows(db)
     .filter((window) => window.provider === 'codex' && (window.usedPercent ?? 0) > 0)
     .sort((a, b) => b.observedAt - a.observedAt)[0]
-  const now = busiest === undefined ? Date.now() : Math.min(busiest.observedAt + 60_000, busiest.resetsAt - 1)
+  const now =
+    busiest === undefined ? Date.now() : Math.min(busiest.observedAt + 60_000, busiest.resetsAt - 1)
   const fast = limitsReport(db, now, config.limits.claude, 300_000)
   const slow = limitsReport(db, now, config.limits.claude, 1_800_000)
   const claudeForecasts = fast.windows.filter(
@@ -255,7 +261,6 @@ try {
 }
 
 process.exit(failed ? 1 : 0)
-
 
 /** Хвост файла теми же 64 КБ, что читает живой слой. */
 function tail(path: string): string[] {

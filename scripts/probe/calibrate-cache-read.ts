@@ -111,7 +111,9 @@ function snap(): void {
     appendFileSync(JOURNAL, `${JSON.stringify(record)}\n`, 'utf8')
 
     console.log(`снимок записан в ${JOURNAL}`)
-    console.log(`  окно      ${new Date(record.windowStartsAt).toLocaleString('ru')} → ${new Date(record.resetsAt).toLocaleString('ru')}`)
+    console.log(
+      `  окно      ${new Date(record.windowStartsAt).toLocaleString('ru')} → ${new Date(record.resetsAt).toLocaleString('ru')}`,
+    )
     console.log(`  A         ${record.a.toLocaleString('ru')}`)
     console.log(`  cacheRead ${record.r.toLocaleString('ru')}`)
     console.log(`  запросов  ${record.requests}`)
@@ -177,7 +179,9 @@ function solve(): void {
     const exact = weight(first, last, first.usagePercent!, last.usagePercent!)
     const low = Math.min(...corners)
     const high = Math.max(...corners)
-    console.log(`  вес cache_read: ${fmt(exact)}  (с учётом округления процента: ${fmt(low)} … ${fmt(high)})`)
+    console.log(
+      `  вес cache_read: ${fmt(exact)}  (с учётом округления процента: ${fmt(low)} … ${fmt(high)})`,
+    )
     if (exact !== null) {
       const cap = (last.a + exact * last.r) / (last.usagePercent! / 100)
       console.log(`  потолок плана: ${Math.round(cap).toLocaleString('ru')} токенов`)
@@ -193,7 +197,9 @@ function solve(): void {
   }
 
   if (!solved) {
-    console.log('\nпригодной пары нет: нужны два замера одного пятичасового окна с работой между ними')
+    console.log(
+      '\nпригодной пары нет: нужны два замера одного пятичасового окна с работой между ними',
+    )
     process.exit(1)
   }
 }

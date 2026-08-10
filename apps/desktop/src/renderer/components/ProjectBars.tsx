@@ -31,9 +31,7 @@ export function ProjectBars({ projects }: ProjectBarsProps) {
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 12, color: folded ? 'var(--tx2)' : undefined }}>
-                {folded
-                  ? t('today.projects', { count: row.folded! })
-                  : row.project}
+                {folded ? t('today.projects', { count: row.folded! }) : row.project}
               </span>
               <div
                 style={{

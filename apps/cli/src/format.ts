@@ -1,4 +1,4 @@
-import { formatTokens } from '@agentmeter/core'
+import { formatTokens, t } from '@agentmeter/core'
 
 export interface Column {
   header: string
@@ -20,25 +20,19 @@ export function formatNumber(value: number, locale: string): string {
 }
 
 /**
- * Число со словом в нужном падеже: «1 задача», «2 задачи», «23 задачи».
- *
- * Формы задаются в порядке `Intl.PluralRules` для русского — one/few/many;
- * для локали с двумя формами хватит первых двух.
+ * Единицы времени берутся из каталога (`time.*`) — тех же, что показывает
+ * попап. Свои «мин» и «ч» здесь означали бы, что на одной машине терминал и
+ * окно сокращают одно и то же слово по-разному.
  */
-export function plural(value: number, locale: string, forms: readonly string[]): string {
-  const category = new Intl.PluralRules(locale).select(value)
-  const index = category === 'one' ? 0 : category === 'few' ? 1 : 2
-  const word = forms[index] ?? forms.at(-1) ?? ''
-  return `${formatNumber(value, locale)} ${word}`
-}
-
-export function formatDuration(ms: number, locale: string): string {
-  if (ms <= 0) return '0 мин'
+export function formatDuration(ms: number, _locale?: string): string {
+  if (ms <= 0) return t('time.minutes', { count: 0 })
   const minutes = Math.ceil(ms / 60_000)
-  if (minutes < 60) return `${formatNumber(minutes, locale)} мин`
+  if (minutes < 60) return t('time.minutes', { count: minutes })
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return rest === 0 ? `${hours} ч` : `${hours} ч ${rest} мин`
+  return rest === 0
+    ? t('time.hours', { count: hours })
+    : t('time.hoursMinutes', { hours, minutes: rest })
 }
 
 export function formatDate(at: number, locale: string): string {

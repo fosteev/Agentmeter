@@ -19,10 +19,7 @@ export const WINDOW_TABS: ReadonlyArray<{ id: WindowTab; labelKey: TabLabelKey; 
 ]
 
 type TabLabelKey =
-  | 'window.tabToday'
-  | 'window.tabBreakdown'
-  | 'window.tabHistory'
-  | 'window.tabSettings'
+  'window.tabToday' | 'window.tabBreakdown' | 'window.tabHistory' | 'window.tabSettings'
 
 export interface WindowTabsProps {
   active: WindowTab

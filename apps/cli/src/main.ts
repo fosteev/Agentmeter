@@ -15,6 +15,8 @@ import {
   limitsReport,
   loadConfig,
   openDb,
+  setLocale,
+  t,
   taskRows,
   todayReport,
   type Config,
@@ -50,11 +52,11 @@ interface CommonOptions {
 
 function usage(): string {
   return [
-    'agentmeter <команда> [параметры]',
+    t('cli.usage'),
     '',
-    `команды: ${COMMANDS.join(', ')}`,
+    t('cli.usageCommands', { commands: COMMANDS.join(', ') }),
     '',
-    'общие флаги: --index <path> --config <path> --no-ingest --json',
+    t('cli.usageFlags'),
     'today     [--day YYYY-MM-DD] [--days N] [--provider claude|codex]',
     'tasks     [--day YYYY-MM-DD] [--limit N]',
     'breakdown [--day YYYY-MM-DD] [--session <id>] [--by tool|server|skill|agent|model]',
@@ -72,17 +74,20 @@ export function run(argv: readonly string[]): number {
     return 0
   }
   if (!COMMANDS.includes(command as Command)) {
-    console.error(`неизвестная команда: ${command}`)
+    console.error(t('cli.unknownCommand', { command }))
     return 2
   }
   if (command === 'verify') {
-    console.error('команда verify не входит в этап 1.10 и пока не реализована')
+    console.error(t('cli.verifyNotImplemented'))
     return 2
   }
 
   try {
     const common = parseCommon(argv.slice(1))
     const loaded = loadConfig(common.configPath)
+    // Язык — до первой напечатанной строки и из того же конфига, что у окна:
+    // терминал и трей на одной машине обязаны говорить на одном языке.
+    setLocale(loaded.config.ui.locale)
     mkdirSync(dirname(common.indexPath), { recursive: true })
     if (command === 'index') return runIndex(common, loaded.config)
 
@@ -103,7 +108,7 @@ export function run(argv: readonly string[]): number {
         case 'doctor':
           return runDoctor(db, common, loaded.config, loaded.problems)
         default:
-          throw new CliArgumentError(`команда ${command} не поддерживается`)
+          throw new CliArgumentError(t('cli.unsupported', { command }))
       }
     } finally {
       db.close()
@@ -169,7 +174,7 @@ function runBreakdown(
 ): number {
   const values = parseValues(common.rest, new Set(['--day', '--session', '--by']))
   if (values.has('--day') && values.has('--session')) {
-    throw new CliArgumentError('--day и --session нельзя использовать вместе')
+    throw new CliArgumentError(t('cli.dayAndSession'))
   }
   const axis = breakdownAxis(values.get('--by'))
   const scope = values.has('--session')
@@ -237,7 +242,7 @@ function runDoctor(
 }
 
 function runIndex(common: CommonOptions, config: Config): number {
-  if (common.noIngest) throw new CliArgumentError('--no-ingest неприменим к команде index')
+  if (common.noIngest) throw new CliArgumentError(t('cli.noIngestIndex'))
   const values = parseSwitches(common.rest, new Set(['--rebuild']))
   if (values.has('--rebuild')) removeIndex(common.indexPath)
   const { db } = openDb(common.indexPath)
@@ -276,7 +281,8 @@ function parseCommon(argv: readonly string[]): CommonOptions {
     else if (arg === '--no-ingest') noIngest = true
     else if (arg === '--index' || arg === '--config') {
       const value = argv[index + 1]
-      if (!value || value.startsWith('--')) throw new CliArgumentError(`${arg} требует значение`)
+      if (!value || value.startsWith('--'))
+        throw new CliArgumentError(t('cli.needsValue', { flag: arg }))
       if (arg === '--index') indexPath = value
       else configPath = value
       index += 1
@@ -289,10 +295,11 @@ function parseValues(argv: readonly string[], allowed: ReadonlySet<string>): Map
   const values = new Map<string, string>()
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]!
-    if (!allowed.has(arg)) throw new CliArgumentError(`неизвестный флаг: ${arg}`)
-    if (values.has(arg)) throw new CliArgumentError(`флаг ${arg} указан дважды`)
+    if (!allowed.has(arg)) throw new CliArgumentError(t('cli.unknownFlag', { flag: arg }))
+    if (values.has(arg)) throw new CliArgumentError(t('cli.twiceFlag', { flag: arg }))
     const value = argv[index + 1]
-    if (!value || value.startsWith('--')) throw new CliArgumentError(`${arg} требует значение`)
+    if (!value || value.startsWith('--'))
+      throw new CliArgumentError(t('cli.needsValue', { flag: arg }))
     values.set(arg, value)
     index += 1
   }
@@ -302,21 +309,21 @@ function parseValues(argv: readonly string[], allowed: ReadonlySet<string>): Map
 function parseSwitches(argv: readonly string[], allowed: ReadonlySet<string>): Set<string> {
   const values = new Set<string>()
   for (const arg of argv) {
-    if (!allowed.has(arg)) throw new CliArgumentError(`неизвестный флаг: ${arg}`)
-    if (values.has(arg)) throw new CliArgumentError(`флаг ${arg} указан дважды`)
+    if (!allowed.has(arg)) throw new CliArgumentError(t('cli.unknownFlag', { flag: arg }))
+    if (values.has(arg)) throw new CliArgumentError(t('cli.twiceFlag', { flag: arg }))
     values.add(arg)
   }
   return values
 }
 
 function ensureNoArgs(argv: readonly string[]): void {
-  if (argv.length > 0) throw new CliArgumentError(`неизвестный флаг: ${argv[0]}`)
+  if (argv.length > 0) throw new CliArgumentError(t('cli.unknownFlag', { flag: argv[0] ?? '' }))
 }
 
 function rangeFor(day: string | undefined, dayStartsAtHour: number): DayRange {
   if (day === undefined) return dayRange(Date.now(), dayStartsAtHour)
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day)
-  if (!match) throw new CliArgumentError(`неверная дата: ${day}`)
+  if (!match) throw new CliArgumentError(t('cli.badDate', { value: day }))
   const year = Number(match[1])
   const month = Number(match[2]) - 1
   const date = Number(match[3])
@@ -327,7 +334,7 @@ function rangeFor(day: string | undefined, dayStartsAtHour: number): DayRange {
     local.getDate() !== date ||
     local.getHours() !== dayStartsAtHour
   ) {
-    throw new CliArgumentError(`неверная дата: ${day}`)
+    throw new CliArgumentError(t('cli.badDate', { value: day }))
   }
   return dayRange(local.getTime(), dayStartsAtHour)
 }
@@ -335,7 +342,7 @@ function rangeFor(day: string | undefined, dayStartsAtHour: number): DayRange {
 function positiveInteger(value: string, name: string): number {
   const parsed = Number(value)
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new CliArgumentError(`${name} должен быть положительным целым числом`)
+    throw new CliArgumentError(t('cli.positiveInt', { name }))
   }
   return parsed
 }
@@ -343,7 +350,7 @@ function positiveInteger(value: string, name: string): number {
 function optionalProvider(value: string | undefined): Provider | undefined {
   if (value === undefined) return undefined
   if (value === 'claude' || value === 'codex') return value
-  throw new CliArgumentError('--provider должен быть claude или codex')
+  throw new CliArgumentError(t('cli.badProvider'))
 }
 
 function breakdownAxis(value: string | undefined): BreakdownAxis {
@@ -351,7 +358,7 @@ function breakdownAxis(value: string | undefined): BreakdownAxis {
   if (['tool', 'server', 'skill', 'agent', 'model'].includes(value)) {
     return value as BreakdownAxis
   }
-  throw new CliArgumentError('--by должен быть tool, server, skill, agent или model')
+  throw new CliArgumentError(t('cli.badBy'))
 }
 
 function sourceCount(db: Parameters<typeof taskRows>[0]): number {

@@ -54,7 +54,9 @@ describe('разбор входа инструмента до пути', () => {
     expect(claudeToolFiles('Bash', { command: 'sed -n 1,40p src/app.ts' })).toBeUndefined()
     expect(claudeToolFiles('Grep', { pattern: 'x', path: '/proj/src' })).toBeUndefined()
     expect(claudeToolFiles('Glob', { pattern: '**/*.ts', path: '/proj' })).toBeUndefined()
-    expect(claudeToolFiles('mcp__serena__replace_content', { relative_path: 'a.php' })).toBeUndefined()
+    expect(
+      claudeToolFiles('mcp__serena__replace_content', { relative_path: 'a.php' }),
+    ).toBeUndefined()
   })
 
   // Ловит падение и выдумку на обрезанном входе: в логах у 2 вызовов `Read`
@@ -100,10 +102,14 @@ describe('разбор входа инструмента до пути', () => {
   // Ловит разбор чего попало как патча: содержимое обезличенных фикстур и
   // оборванный хвост живого лога — не патч, а обычный текст.
   it('не считает патчем текст без заголовка', () => {
-    expect(codexToolFiles('apply_patch', 'lorem ipsum\n*** Update File: /proj/a.ts')).toBeUndefined()
+    expect(
+      codexToolFiles('apply_patch', 'lorem ipsum\n*** Update File: /proj/a.ts'),
+    ).toBeUndefined()
     expect(codexToolFiles('apply_patch', '*** Begin Patch\n*** End Patch')).toBeUndefined()
     expect(codexToolFiles('apply_patch', undefined)).toBeUndefined()
-    expect(codexToolFiles('exec_command', '{"cmd":["sed","-n","1,40p","src/a.ts"]}')).toBeUndefined()
+    expect(
+      codexToolFiles('exec_command', '{"cmd":["sed","-n","1,40p","src/a.ts"]}'),
+    ).toBeUndefined()
   })
 
   // Ловит `view_image`: у него вход — строка JSON, а не объект, и наивное

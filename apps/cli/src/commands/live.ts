@@ -1,5 +1,6 @@
 import type { LiveAgent, LiveSnapshot } from '@agentmeter/core'
-import { formatDuration, formatTokens, plural, table } from '../format.ts'
+import { t } from '@agentmeter/core'
+import { formatDuration, formatTokens, table } from '../format.ts'
 
 /**
  * Живой снимок в терминале. Он же стенд для попапа (2.5): экран показывает
@@ -8,24 +9,24 @@ import { formatDuration, formatTokens, plural, table } from '../format.ts'
 export function renderLive(snapshot: LiveSnapshot, locale: string): string {
   const parts: string[] = []
   if (snapshot.agents.length === 0) {
-    parts.push('сейчас никто не работает')
+    parts.push(t('cli.nobody'))
   } else {
-    parts.push(plural(snapshot.agents.length, locale, ['агент', 'агента', 'агентов']))
+    parts.push(t('cli.agents', { count: snapshot.agents.length }))
     parts.push('')
     parts.push(
       table(
         [
-          { header: 'Провайдер', width: 10 },
-          { header: 'Проект', width: 22 },
-          { header: 'Состояние', width: 10 },
-          { header: 'Ход', width: 14 },
-          { header: 'Живость', width: 9 },
-          { header: 'В работе', width: 10 },
-          { header: 'Тишина', width: 8 },
-          { header: 'Токены', width: 10, align: 'right' },
-          { header: 'Темп', width: 11, align: 'right' },
-          { header: 'Контекст', width: 9, align: 'right' },
-          { header: 'Запросов', width: 9, align: 'right' },
+          { header: t('cli.columnProvider'), width: 10 },
+          { header: t('cli.columnProject'), width: 22 },
+          { header: t('cli.columnState'), width: 10 },
+          { header: t('cli.columnTurn'), width: 14 },
+          { header: t('cli.columnLiveness'), width: 9 },
+          { header: t('cli.columnWorking'), width: 10 },
+          { header: t('cli.columnSilence'), width: 8 },
+          { header: t('cli.columnTokens'), width: 10, align: 'right' },
+          { header: t('cli.columnRate'), width: 11, align: 'right' },
+          { header: t('cli.columnContext'), width: 9, align: 'right' },
+          { header: t('cli.columnRequests'), width: 9, align: 'right' },
         ],
         snapshot.agents.map((agent) => row(agent, snapshot.at, locale)),
       ),
@@ -40,16 +41,16 @@ function row(agent: LiveAgent, at: number, locale: string): string[] {
     agent.provider,
     agent.project,
     agent.state === 'done'
-      ? `завершился ${formatDuration(at - (agent.endedAt ?? at), locale)}`
+      ? t('state.finishedAgo', { ago: formatDuration(at - (agent.endedAt ?? at), locale) })
       : stateName(agent.state),
     turnName(agent),
     // «Процесс» — проверенный факт, «тишина» — догадка по свежести лога.
     // У Codex реестра процессов нет вовсе, и выдавать догадку за факт нельзя.
-    agent.liveness === 'process' ? 'процесс' : 'тишина',
+    agent.liveness === 'process' ? t('state.liveProcess') : t('state.liveSilence'),
     formatDuration(at - agent.startedAt, locale),
     formatDuration(at - agent.lastActivityAt, locale),
     `${agent.approximate ? '≈' : ''}${formatTokens(agent.tokens, locale)}`,
-    agent.rate === 0 ? '—' : `${formatTokens(agent.rate, locale)}/мин`,
+    agent.rate === 0 ? '—' : t('time.perMinute', { tokens: formatTokens(agent.rate, locale) }),
     // Прочерк, а не «0%»: размера окна у Claude в логах нет вовсе, и пустое
     // заполнение читалось бы как «контекст свободен» (2.6).
     contextCell(agent),
@@ -68,12 +69,12 @@ function contextCell(agent: LiveAgent): string {
 }
 
 function stateName(state: LiveAgent['state']): string {
-  if (state === 'working') return 'думает'
-  if (state === 'waiting') return 'ждёт'
-  if (state === 'done') return 'завершился'
+  if (state === 'working') return t('state.thinking')
+  if (state === 'waiting') return t('state.waitingShort')
+  if (state === 'done') return t('state.finished')
   // Ход у агента, но в логе тишина: зависший инструмент, запрос разрешения,
   // уснувший процесс. Называть это «думает» — врать.
-  return 'молчит'
+  return t('state.silent')
 }
 
 /**
@@ -82,9 +83,13 @@ function stateName(state: LiveAgent['state']): string {
  * видно без отладчика.
  */
 function turnName(agent: LiveAgent): string {
-  if (agent.turn === undefined) return 'не видно'
-  if (agent.turn === 'turn-end') return 'ход у человека'
-  if (agent.turn === 'ask-pending') return `спросил${agent.pendingTool ? ` (${agent.pendingTool})` : ''}`
-  if (agent.turn === 'tool-pending') return agent.pendingTool ?? 'инструмент'
-  return 'ход у модели'
+  if (agent.turn === undefined) return t('state.notSeen')
+  if (agent.turn === 'turn-end') return t('state.turnHuman')
+  if (agent.turn === 'ask-pending') {
+    return agent.pendingTool === undefined
+      ? t('state.asked')
+      : t('state.askedWith', { tool: agent.pendingTool })
+  }
+  if (agent.turn === 'tool-pending') return agent.pendingTool ?? t('state.tool')
+  return t('state.turnModel')
 }

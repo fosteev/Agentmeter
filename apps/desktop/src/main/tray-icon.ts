@@ -246,7 +246,14 @@ function fill(
   }
 }
 
-function clear(data: Buffer, size: number, x: number, y: number, width: number, height: number): void {
+function clear(
+  data: Buffer,
+  size: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
   for (let py = y; py < y + height; py += 1) {
     for (let pxi = x; pxi < x + width; pxi += 1) {
       if (pxi < 0 || py < 0 || pxi >= size || py >= size) continue

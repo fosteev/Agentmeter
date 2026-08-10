@@ -256,9 +256,7 @@ describe('карточка задачи', () => {
     const firstResponse = new Promise<TaskCardData | null>((resolve) => (resolveFirst = resolve))
     const secondResponse = new Promise<TaskCardData | null>((resolve) => (resolveSecond = resolve))
     const getTask = vi
-      .fn<
-        (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCardData | null>
-      >()
+      .fn<(arg: { sessionId: string; from: number; to: number }) => Promise<TaskCardData | null>>()
       .mockReturnValueOnce(firstResponse)
       .mockReturnValueOnce(secondResponse)
     const guarded = createTaskRequestGuard(getTask)

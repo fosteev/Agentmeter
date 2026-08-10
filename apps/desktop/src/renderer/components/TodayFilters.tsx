@@ -12,7 +12,11 @@ export interface TodayFiltersProps {
  * переводятся. Ключ, а не готовая подпись, по той же причине, что у вкладок:
  * константа модуля посчиталась бы один раз и застыла на языке загрузки.
  */
-const PROVIDERS: ReadonlyArray<{ value: Provider | undefined; labelKey?: 'today.filterAll'; label?: string }> = [
+const PROVIDERS: ReadonlyArray<{
+  value: Provider | undefined
+  labelKey?: 'today.filterAll'
+  label?: string
+}> = [
   { value: undefined, labelKey: 'today.filterAll' },
   { value: 'claude', label: 'Claude' },
   { value: 'codex', label: 'Codex' },

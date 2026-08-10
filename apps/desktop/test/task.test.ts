@@ -67,8 +67,8 @@ function fixtures(): void {
 }
 
 function cards() {
-  return taskRows(db, ALL).map(
-    (row) => buildTaskCard(db, { sessionId: row.sessionId, ...ALL }, config)!,
+  return taskRows(db, ALL).map((row) =>
+    buildTaskCard(db, { sessionId: row.sessionId, ...ALL }, config)!,
   )
 }
 
@@ -182,9 +182,7 @@ describe('buildTaskCard на фикстурах', () => {
     expect(part.timeline.length).toBeLessThan(whole.timeline.length)
     expect(part.timeline).toHaveLength(part.task.requests)
     expect(part.timeline.every((point) => point.ts < cut)).toBe(true)
-    expect(part.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(
-      part.task.tokens.value,
-    )
+    expect(part.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(part.task.tokens.value)
     expect(part.tools.reduce((sum, tool) => sum + tool.calls, 0)).toBe(part.task.toolCalls)
     expect(part.task.tokens.value).toBeLessThan(whole.task.tokens.value)
   })
@@ -227,9 +225,7 @@ describe('buildTaskCard на фикстурах', () => {
 
     expect(card.timeline.length).toBeGreaterThan(alone.timeline.length)
     expect(card.timeline).toHaveLength(card.task.requests)
-    expect(card.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(
-      card.task.tokens.value,
-    )
+    expect(card.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(card.task.tokens.value)
     expect(card.tools.reduce((sum, tool) => sum + tool.calls, 0)).toBe(card.task.toolCalls)
     expect(card.task.toolCalls).toBeGreaterThan(alone.task.toolCalls)
   })
@@ -346,7 +342,10 @@ describe('модель выделения запроса', () => {
   it('красит запрос, оплативший рост промпта, а не тот, что сделал вызов', () => {
     seed([
       ...quiet(4),
-      { tokens: 120_000, calls: [{ name: 'Read', bytes: 400_000, tokens: 150_000, path: '/proj/bench/runner.py' }] },
+      {
+        tokens: 120_000,
+        calls: [{ name: 'Read', bytes: 400_000, tokens: 150_000, path: '/proj/bench/runner.py' }],
+      },
       { tokens: 300_000 },
       ...quiet(4),
     ])
@@ -402,7 +401,13 @@ describe('модель выделения запроса', () => {
         tokens: 120_000,
         calls: [
           { name: 'Grep', bytes: 1000, tokens: 90_000, basis: 'split' },
-          { name: 'Read', bytes: 500_000, tokens: 60_000, basis: 'split', path: '/proj/src/app.ts' },
+          {
+            name: 'Read',
+            bytes: 500_000,
+            tokens: 60_000,
+            basis: 'split',
+            path: '/proj/src/app.ts',
+          },
         ],
       },
       { tokens: 320_000 },
@@ -466,7 +471,10 @@ describe('модель выделения запроса', () => {
         tokens: 100_000,
         calls: [{ name: 'Bash', bytes: 3000, tokens: 1000 }],
       })),
-      { tokens: 100_000, calls: [{ name: 'view_image', bytes: 5000, tokens: 30_000, image: true }] },
+      {
+        tokens: 100_000,
+        calls: [{ name: 'view_image', bytes: 5000, tokens: 30_000, image: true }],
+      },
       { tokens: 100_000 },
     ])
     const tools = buildTaskCard(db, { sessionId: 'seed', ...ALL }, config)!.tools
@@ -482,9 +490,18 @@ describe('модель выделения запроса', () => {
    */
   it('период режет и список файлов', () => {
     seed([
-      { tokens: 10, calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/a.ts', action: 'write' }] },
-      { tokens: 10, calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/b.ts', action: 'write' }] },
-      { tokens: 10, calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/c.ts', action: 'write' }] },
+      {
+        tokens: 10,
+        calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/a.ts', action: 'write' }],
+      },
+      {
+        tokens: 10,
+        calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/b.ts', action: 'write' }],
+      },
+      {
+        tokens: 10,
+        calls: [{ name: 'Edit', bytes: 10, tokens: 1, path: '/proj/c.ts', action: 'write' }],
+      },
     ])
     const whole = buildTaskCard(db, { sessionId: 'seed', ...ALL }, config)!
     const part = buildTaskCard(db, { sessionId: 'seed', from: 0, to: 2000 }, config)!
@@ -547,7 +564,10 @@ describe('фразы карточки', () => {
       timelineNote([point(1000, 'сжатие контекста'), point(2000, 'сжатие контекста')], 'ru'),
     ).toBe('2 сжатия контекста — 3k вместе')
     expect(
-      timelineNote([point(1000, 'сжатие контекста'), point(700_000, 'большой результат Read')], 'ru'),
+      timelineNote(
+        [point(1000, 'сжатие контекста'), point(700_000, 'большой результат Read')],
+        'ru',
+      ),
     ).toBe('2 запроса выделены — 701k вместе')
     expect(timelineNote([point(10), point(20)], 'ru')).toBeUndefined()
   })

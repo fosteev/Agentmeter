@@ -26,7 +26,17 @@ const emptyDay = fixture<DayReport>('today-empty')
 const filtered = fixture<DayReport>('today-filtered')
 const card = fixture<TaskCard>('task')
 
-const DAY_KEYS = ['range', 'emptyIndex', 'emptyDay', 'totals', 'tasks', 'folded', 'byHour', 'byProject', 'split']
+const DAY_KEYS = [
+  'range',
+  'emptyIndex',
+  'emptyDay',
+  'totals',
+  'tasks',
+  'folded',
+  'byHour',
+  'byProject',
+  'split',
+]
 const TASK_KEYS = [
   'sessionId',
   'title',
@@ -42,7 +52,16 @@ const TASK_KEYS = [
   'tokens',
   'children',
 ]
-const CARD_KEYS = ['task', 'dayShare', 'timeline', 'timelineNote', 'tokens', 'tools', 'note', 'files']
+const CARD_KEYS = [
+  'task',
+  'dayShare',
+  'timeline',
+  'timelineNote',
+  'tokens',
+  'tools',
+  'note',
+  'files',
+]
 
 const RANK = { exact: 0, reconstructed: 1, estimate: 2 } as const
 const worst = (values: readonly Measured[]): Measured =>
@@ -56,7 +75,10 @@ describe('fixtures/window — контракт 0.4 под M3', () => {
    */
   it('поля отчёта и строки задачи — только те, что в контракте', () => {
     for (const [name, report] of Object.entries({ day, emptyDay, filtered })) {
-      expect(Object.keys(report).filter((key) => !DAY_KEYS.includes(key)), name).toEqual([])
+      expect(
+        Object.keys(report).filter((key) => !DAY_KEYS.includes(key)),
+        name,
+      ).toEqual([])
       for (const key of DAY_KEYS.slice(0, -1)) {
         expect(key in report, `${name}: нет ${key}`).toBe(true)
       }
@@ -219,9 +241,7 @@ describe('fixtures/window — контракт 0.4 под M3', () => {
    */
   it('таймлайн — по столбику на запрос, сумма равна расходу задачи, выделенные названы', () => {
     expect(card.timeline.length).toBe(card.task.requests)
-    expect(card.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(
-      card.task.tokens.value,
-    )
+    expect(card.timeline.reduce((sum, point) => sum + point.tokens, 0)).toBe(card.task.tokens.value)
     const marked = card.timeline.filter((point) => point.note !== undefined)
     expect(marked.length).toBeGreaterThanOrEqual(2)
     for (const point of marked) {

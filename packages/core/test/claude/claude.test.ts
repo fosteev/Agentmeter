@@ -120,9 +120,7 @@ describe('Claude Code parser', () => {
   // а написано в UTC, и на зоне +3 промах в три часа объявляет переиспользо-
   // ванным каждый живой pid.
   it('procStart разбирается как UTC', () => {
-    expect(parseProcStart('Mon Aug 10 07:11:48 2026')).toBe(
-      Date.parse('2026-08-10T07:11:48.000Z'),
-    )
+    expect(parseProcStart('Mon Aug 10 07:11:48 2026')).toBe(Date.parse('2026-08-10T07:11:48.000Z'))
     expect(parseProcStart('что-то другое')).toBeUndefined()
   })
 })

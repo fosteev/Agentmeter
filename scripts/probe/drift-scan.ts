@@ -182,7 +182,9 @@ if (asJson) {
   if (slow.length) {
     console.log(`\nмедленнее ${slowMs} мс:`)
     for (const s of slow.sort((a, b) => b.ms - a.ms)) {
-      console.log(`  ${s.ms.toString().padStart(6)} мс  ${s.mb.toFixed(1).padStart(6)} МБ  ${relative(ROOT, s.file)}`)
+      console.log(
+        `  ${s.ms.toString().padStart(6)} мс  ${s.mb.toFixed(1).padStart(6)} МБ  ${relative(ROOT, s.file)}`,
+      )
     }
   }
 

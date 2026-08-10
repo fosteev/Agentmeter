@@ -94,7 +94,14 @@ describe('схема индекса', () => {
     expect(
       db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
     ).toEqual({ value: String(SCHEMA_VERSION) })
-    for (const table of ['sources', 'sessions', 'requests', 'tool_calls', 'tool_files', 'diagnostics']) {
+    for (const table of [
+      'sources',
+      'sessions',
+      'requests',
+      'tool_calls',
+      'tool_files',
+      'diagnostics',
+    ]) {
       expect(db.all(`SELECT * FROM ${table}`), table).toHaveLength(0)
     }
     // Пересборка гасит внешние ключи, чтобы снести таблицы в любом порядке.

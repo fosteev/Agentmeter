@@ -131,7 +131,8 @@ export function claudeTurn(lines: readonly string[]): TurnRead | undefined {
       if (typeof stop !== 'string') return withAt({ kind: 'agent-thinking' }, at)
       if (stop !== 'tool_use') return withAt({ kind: 'turn-end' }, at)
       const tool = message === undefined ? undefined : pendingTool(message)
-      const kind: TurnKind = tool !== undefined && ASKS_HUMAN.has(tool) ? 'ask-pending' : 'tool-pending'
+      const kind: TurnKind =
+        tool !== undefined && ASKS_HUMAN.has(tool) ? 'ask-pending' : 'tool-pending'
       const read: TurnRead = { kind }
       if (tool !== undefined) read.tool = tool
       return withAt(read, at)

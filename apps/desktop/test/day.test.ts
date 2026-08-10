@@ -79,9 +79,7 @@ describe('buildDayReport', () => {
     expect(scoped.tasks.reduce((sum, task) => sum + task.tokens.value, 0)).toBe(
       scoped.totals.total.value,
     )
-    expect(scoped.byHour.reduce((sum, hour) => sum + hour.total, 0)).toBe(
-      scoped.totals.total.value,
-    )
+    expect(scoped.byHour.reduce((sum, hour) => sum + hour.total, 0)).toBe(scoped.totals.total.value)
     expect(scoped.byProject.map((row) => row.project)).toEqual([project])
   })
 
@@ -132,7 +130,9 @@ describe('buildDayReport', () => {
    */
   it('часы знают обоих провайдеров, и сумма по провайдеру сходится с суженным итогом', () => {
     const report = buildDayReport(db, ALL)
-    const seen = new Set(report.byHour.flatMap((hour) => hour.slices.map((slice) => slice.provider)))
+    const seen = new Set(
+      report.byHour.flatMap((hour) => hour.slices.map((slice) => slice.provider)),
+    )
     expect([...seen].sort()).toEqual(['claude', 'codex'])
     for (const provider of ['claude', 'codex'] as const) {
       const scoped = buildDayReport(db, { ...ALL, provider })
@@ -214,9 +214,7 @@ describe('foldTail', () => {
     const folded = foldTail(tasks, 'tokens')
     expect(folded).toEqual({ from: 8, belowTokens: 10 })
     for (const [index, task] of tasks.entries()) {
-      expect(task.tokens.value >= folded!.belowTokens, `строка ${index}`).toBe(
-        index < folded!.from,
-      )
+      expect(task.tokens.value >= folded!.belowTokens, `строка ${index}`).toBe(index < folded!.from)
     }
   })
 

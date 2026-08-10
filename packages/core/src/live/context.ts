@@ -120,9 +120,7 @@ export function collectContext(
 
   const needObserved = [
     ...new Set(
-      last
-        .filter((row) => row.window === null && isClaudeModel(row.model))
-        .map((row) => row.model),
+      last.filter((row) => row.window === null && isClaudeModel(row.model)).map((row) => row.model),
     ),
   ]
   const observed = observedMax(db, needObserved, at - OBSERVED_WINDOW_DAYS * 86_400_000)

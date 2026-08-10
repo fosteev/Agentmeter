@@ -112,10 +112,7 @@ export function lastPrefix(requests: readonly Request[]): number {
   return last ? last.cacheRead + last.cacheWrite : 0
 }
 
-export function compareOne(
-  entry: GroundTruthEntry,
-  requests: readonly Request[],
-): Comparison {
+export function compareOne(entry: GroundTruthEntry, requests: readonly Request[]): Comparison {
   const actual = sumRequests(requests)
   const expected = entry.totals
   const diff: Totals = {
@@ -141,7 +138,9 @@ export function compareOne(
 
 export function buildReport(comparisons: Comparison[], missing: string[]): VerifyReport {
   return {
-    comparisons: [...comparisons].sort((a, b) => Math.abs(b.cacheReadDrift) - Math.abs(a.cacheReadDrift)),
+    comparisons: [...comparisons].sort(
+      (a, b) => Math.abs(b.cacheReadDrift) - Math.abs(a.cacheReadDrift),
+    ),
     checked: comparisons.length,
     exact: comparisons.filter((c) => c.exact).length,
     missing,

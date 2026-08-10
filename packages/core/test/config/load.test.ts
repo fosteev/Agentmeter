@@ -39,7 +39,9 @@ describe('конфиг', () => {
     writeFileSync(path(), JSON.stringify({ alerts: { warnAtPercent: 'много' } }))
     const { config, problems } = loadConfig(path())
     expect(config.alerts.warnAtPercent).toBe(DEFAULT_CONFIG.alerts.warnAtPercent)
-    expect(problems).toEqual(['alerts.warnAtPercent: ожидалось number, пришло string — взят дефолт'])
+    expect(problems).toEqual([
+      'alerts.warnAtPercent: ожидалось number, пришло string — взят дефолт',
+    ])
   })
 
   it('битый JSON не роняет загрузку, но и не замалчивается', () => {
@@ -59,7 +61,12 @@ describe('конфиг', () => {
 
   it('сохранённый конфиг читается обратно без изменений', () => {
     const cfg = structuredClone(DEFAULT_CONFIG)
-    cfg.limits.claude = { fiveHourCap: 44_000_000, weeklyCap: 480_000_000, cacheReadWeight: 0.1, plan: 'max20' }
+    cfg.limits.claude = {
+      fiveHourCap: 44_000_000,
+      weeklyCap: 480_000_000,
+      cacheReadWeight: 0.1,
+      plan: 'max20',
+    }
     saveConfig(cfg, path())
     expect(loadConfig(path()).config).toEqual(cfg)
   })

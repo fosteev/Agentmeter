@@ -1,6 +1,11 @@
 import { statSync, type Stats } from 'node:fs'
 import { performance } from 'node:perf_hooks'
-import { discoverSources, type DiscoverOpts, type SourceFile, type SourceIssue } from './discover.ts'
+import {
+  discoverSources,
+  type DiscoverOpts,
+  type SourceFile,
+  type SourceIssue,
+} from './discover.ts'
 import { putFailure, putSession, forgetSource } from './store.ts'
 import type { Db } from './db.ts'
 import { parseSubagentFile } from '../sources/claude/parse.ts'

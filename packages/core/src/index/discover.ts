@@ -100,7 +100,13 @@ export function discoverClaudeProjects(
   if (!existsSync(root) || !statSync(root).isDirectory()) return []
   const files: SourceFile[] = []
 
-  const roots = safely('claude', root, onIssue, () => readdirSync(root, { withFileTypes: true }), [])
+  const roots = safely(
+    'claude',
+    root,
+    onIssue,
+    () => readdirSync(root, { withFileTypes: true }),
+    [],
+  )
   for (const entry of roots) {
     if (!entry.isDirectory() || !entry.name.startsWith('-')) continue
     const projectDir = join(root, entry.name)
@@ -168,7 +174,13 @@ function walkJsonl(
   provider: Provider,
   onIssue?: (issue: SourceIssue) => void,
 ): string[] {
-  return safely(provider, root, onIssue, () => readdirSync(root, { recursive: true, withFileTypes: true }), [])
+  return safely(
+    provider,
+    root,
+    onIssue,
+    () => readdirSync(root, { recursive: true, withFileTypes: true }),
+    [],
+  )
     .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
     .map((entry) => join(entry.parentPath, entry.name))
     .sort((a, b) => a.localeCompare(b))

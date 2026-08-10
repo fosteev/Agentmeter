@@ -87,7 +87,11 @@ describe('сверка с эталоном', () => {
 
   it('пустая сессия не делит на ноль', () => {
     const c = compareOne(
-      { project: 'proj-02', sessionId: 's1', totals: { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 } },
+      {
+        project: 'proj-02',
+        sessionId: 's1',
+        totals: { input: 0, output: 0, cacheWrite: 0, cacheRead: 0 },
+      },
       [],
     )
     expect(c.cacheReadDrift).toBe(0)

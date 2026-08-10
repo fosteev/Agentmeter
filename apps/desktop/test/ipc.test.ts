@@ -97,7 +97,12 @@ describe('недоступный источник доезжает до окна
    */
   it('на провайдера одна строка, и в ней сказано, что уцелело', () => {
     const problems = toProblems([
-      { provider: 'codex', path: '~/.codex/sessions', code: 'EACCES', message: 'permission denied' },
+      {
+        provider: 'codex',
+        path: '~/.codex/sessions',
+        code: 'EACCES',
+        message: 'permission denied',
+      },
       { provider: 'codex', path: '~/.codex/sessions/2026', code: 'EACCES', message: 'denied' },
     ])
     expect(problems).toHaveLength(1)

@@ -100,7 +100,11 @@ export function buildTaskCard(db: Db, arg: TaskArg, config: Config): TaskCard | 
     dayShare: dayShare(db, row.totals.total, range, config.ui.dayStartsAtHour),
     timeline: timeline(detail.requests, detail.calls, locale),
     tokens: slices(row.totals, row.approximate),
-    tools: tools(breakdownReport(db, { sessionId: arg.sessionId, range }).tool, detail.calls, locale),
+    tools: tools(
+      breakdownReport(db, { sessionId: arg.sessionId, range }).tool,
+      detail.calls,
+      locale,
+    ),
   }
 
   const caption = timelineNote(card.timeline, locale)
@@ -123,7 +127,12 @@ export function buildTaskCard(db: Db, arg: TaskArg, config: Config): TaskCard | 
  * вчера в 23:50, сравнивалась бы со вчерашним днём, а числитель у неё
  * сегодняшний.
  */
-function dayShare(db: Db, tokens: number, range: { from: number; to: number }, hour: number): number {
+function dayShare(
+  db: Db,
+  tokens: number,
+  range: { from: number; to: number },
+  hour: number,
+): number {
   const first = dayRange(range.from, hour)
   const last = dayRange(range.to - 1, hour)
   const day = todayReport(db, { from: first.from, to: Math.max(first.to, last.to) })

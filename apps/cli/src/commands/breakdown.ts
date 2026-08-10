@@ -1,4 +1,5 @@
 import type { BreakdownReport } from '@agentmeter/core'
+import { t } from '@agentmeter/core'
 import { formatNumber, formatTokens, table } from '../format.ts'
 
 export type BreakdownAxis = 'tool' | 'server' | 'skill' | 'agent' | 'model'
@@ -8,16 +9,16 @@ export function renderBreakdown(
   axis: BreakdownAxis,
   locale: string,
 ): string {
-  if (report.emptyIndex) return 'индекс пуст, запустите `agentmeter index`'
-  if (report.emptyScope) return 'в выбранном диапазоне записей нет'
+  if (report.emptyIndex) return t('cli.emptyIndex')
+  if (report.emptyScope) return t('cli.emptyRange')
   if (axis === 'tool') {
     return table(
       [
-        { header: 'Инструмент', width: 28 },
-        { header: 'Измерено', width: 11, align: 'right' },
-        { header: 'Делёж', width: 11, align: 'right' },
-        { header: 'Неизвестно', width: 11, align: 'right' },
-        { header: 'Вызовы', width: 7, align: 'right' },
+        { header: t('cli.columnTool'), width: 28 },
+        { header: t('cli.columnMeasured'), width: 11, align: 'right' },
+        { header: t('cli.columnSplit'), width: 11, align: 'right' },
+        { header: t('cli.columnUnknown'), width: 11, align: 'right' },
+        { header: t('cli.columnCalls'), width: 7, align: 'right' },
       ],
       report.tool.map((row) => [
         row.key,
@@ -31,9 +32,9 @@ export function renderBreakdown(
   if (axis === 'server') {
     return table(
       [
-        { header: 'MCP-сервер', width: 40 },
-        { header: 'Токены', width: 14, align: 'right' },
-        { header: 'Вызовы', width: 10, align: 'right' },
+        { header: t('cli.columnServer'), width: 40 },
+        { header: t('cli.columnTokens'), width: 14, align: 'right' },
+        { header: t('cli.columnCalls'), width: 10, align: 'right' },
       ],
       report.server.map((row) => [
         row.key,
@@ -45,8 +46,8 @@ export function renderBreakdown(
   return table(
     [
       { header: axisTitle(axis), width: 40 },
-      { header: 'Токены', width: 14, align: 'right' },
-      { header: 'Запросы', width: 10, align: 'right' },
+      { header: t('cli.columnTokens'), width: 14, align: 'right' },
+      { header: t('cli.columnRequests'), width: 10, align: 'right' },
     ],
     report[axis].map((row) => [
       row.key,
@@ -57,7 +58,7 @@ export function renderBreakdown(
 }
 
 function axisTitle(axis: Exclude<BreakdownAxis, 'tool' | 'server'>): string {
-  if (axis === 'skill') return 'Скилл'
-  if (axis === 'agent') return 'Агент'
-  return 'Модель'
+  if (axis === 'skill') return t('cli.columnSkill')
+  if (axis === 'agent') return t('cli.columnAgent')
+  return t('cli.columnModel')
 }

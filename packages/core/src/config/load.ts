@@ -66,7 +66,9 @@ export function loadConfig(path = configPath()): LoadResult {
   } catch (e) {
     return {
       config: structuredClone(DEFAULT_CONFIG),
-      problems: [`${path}: не разбирается как JSON (${(e as Error).message}), взяты значения по умолчанию`],
+      problems: [
+        `${path}: не разбирается как JSON (${(e as Error).message}), взяты значения по умолчанию`,
+      ],
     }
   }
   return merge(raw)

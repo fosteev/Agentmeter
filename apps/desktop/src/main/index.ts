@@ -173,7 +173,14 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
   const runtime: Runtime = { db, live, config, issues: ingested?.issues ?? [] }
   if (defer) {
     runtime.pending = ingestSteps(db, { ...sources, progress: true })
-    runtime.indexing = { phase: 'scanning', filesDone: 0, filesTotal: 0, bytesDone: 0, bytesTotal: 0, etaMs: null }
+    runtime.indexing = {
+      phase: 'scanning',
+      filesDone: 0,
+      filesTotal: 0,
+      bytesDone: 0,
+      bytesTotal: 0,
+      etaMs: null,
+    }
   }
   // При отложенном проходе вотчер поднимается после него: иначе первое же
   // событие файловой системы дёрнет второй полный `ingestAll` поверх текущего.
@@ -261,7 +268,8 @@ async function runSmoke(): Promise<void> {
       empty: icon.isEmpty(),
     }
     if (icon.isEmpty()) problems.push('иконка трея пустая')
-    if (size.width !== TRAY_SIZE) problems.push(`иконка трея ${size.width} точек вместо ${TRAY_SIZE}`)
+    if (size.width !== TRAY_SIZE)
+      problems.push(`иконка трея ${size.width} точек вместо ${TRAY_SIZE}`)
     if (scales.length !== TRAY_SCALES.length) {
       problems.push(`у иконки ${scales.length} представлений вместо ${TRAY_SCALES.length}`)
     }
@@ -328,7 +336,11 @@ async function runSmoke(): Promise<void> {
  */
 function createHandlers(runtime: () => Runtime, openWindow: (tab: WindowTab) => void): IpcHandlers {
   return {
-    'snapshot:get': () => withIndexing(runtime(), buildSnapshot(runtime().db, runtime().live, runtime().config, { issues: runtime().issues })),
+    'snapshot:get': () =>
+      withIndexing(
+        runtime(),
+        buildSnapshot(runtime().db, runtime().live, runtime().config, { issues: runtime().issues }),
+      ),
     'limits:get': () =>
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
     'config:get': () => ({ config: runtime().config, problems: [] }),
@@ -749,7 +761,10 @@ function main(): void {
     // и переключение работает без перезапуска.
     nativeTheme.themeSource = runtime.config.ui.theme
 
-    registerIpc(ipcMain, createHandlers(() => runtime!, openMainWindow))
+    registerIpc(
+      ipcMain,
+      createHandlers(() => runtime!, openMainWindow),
+    )
 
     window = createPopup(gallery ? 'gallery' : 'index', !windowed)
     window.once('ready-to-show', () => {

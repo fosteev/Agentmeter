@@ -1,5 +1,5 @@
 import type { Provider, TaskRow as TaskRowData } from '@agentmeter/core'
-import {formatTokens, t } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 
 // Строка задачи. Состояния из строк 185–190 макета:
 // обычная (без фона) · наведение (s2) · раскрыта (s2 + inset-акцент 2px слева,

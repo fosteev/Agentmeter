@@ -13,12 +13,7 @@ import { defaultClaudeHome, defaultCodexHome } from '../index/paths.ts'
 import { readLiveSessions, type ProcessStartCache } from '../sources/claude/live.ts'
 import type { Entrypoint, LiveSession, Provider } from '../sources/types.ts'
 import { collectContext, type ContextFill } from './context.ts'
-import {
-  DEFAULT_RATE_WINDOW_MS,
-  observedSpan,
-  perMinute,
-  windowTokens,
-} from './rate.ts'
+import { DEFAULT_RATE_WINDOW_MS, observedSpan, perMinute, windowTokens } from './rate.ts'
 import { deriveState, readTurn, type TurnRead } from './state.ts'
 import type { LiveAgent, LiveSnapshot } from './types.ts'
 
@@ -107,7 +102,12 @@ export function collectAgents(
     ...claude.sessions.map((s) => s.sessionId),
     ...codex.map((r) => r.sessionId),
   ])
-  const graveyard = harvestGone(cache, liveIds, at, opts.doneGraceMs ?? DEFAULT_LIVE_OPTIONS.doneGraceMs)
+  const graveyard = harvestGone(
+    cache,
+    liveIds,
+    at,
+    opts.doneGraceMs ?? DEFAULT_LIVE_OPTIONS.doneGraceMs,
+  )
 
   const ids = [...liveIds, ...graveyard.map((entry) => entry.agent.sessionId)]
   const meta = sessionMeta(db, ids)
@@ -178,7 +178,9 @@ export function collectAgents(
   // — последний кусок транскрипта вотчер дочитывает уже после смерти процесса,
   // и замороженное число было бы меньше настоящего.
   for (const entry of graveyard) {
-    agents.push(doneAgent(entry, usage.get(entry.agent.sessionId), context.get(entry.agent.sessionId)))
+    agents.push(
+      doneAgent(entry, usage.get(entry.agent.sessionId), context.get(entry.agent.sessionId)),
+    )
   }
 
   forgetGone(
