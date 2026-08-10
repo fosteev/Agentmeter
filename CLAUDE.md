@@ -16,52 +16,30 @@ MCP-серверам, скиллам и сабагентам. Всё счита�
 | -------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | [`docs/plan.md`](docs/plan.md)                                                   | что лежит в логах, модель атрибуции, каталог функций |
 | [`docs/roadmap.md`](docs/roadmap.md)                                             | вехи и этапы, **единственное место со статусами**    |
-| [`docs/roadmap/`](docs/roadmap/)                                                 | брифы этапов, пишутся на веху вперёд                 |
+| [`docs/roadmap/`](docs/roadmap/)                                                 | модели расчётов и брифы этапов в работе              |
 | [`docs/roadmap/design-implementation.md`](docs/roadmap/design-implementation.md) | карта макета по строкам, порядок вёрстки             |
 | [`design/Agentmeter.dc.html`](design/Agentmeter.dc.html)                         | макет, 9 разделов, все экраны                        |
 
-Сейчас: M0 закрыт, оба парсера (1.1 Claude, 1.2 Codex) готовы и прогнаны по
-всему, что есть на диске (1.4). 1.3 закрыт исходом «измеренная поправка» —
-остаток ≤ 3.3% на хвостовых прогревах, замер перенесён в 2.1. 1.5 закрыт:
-индекс, дочитывание и вотчер живут в `packages/core/src/index/`. 1.6 закрыт:
-маржинальная стоимость каждого вызова считается в
-`packages/core/src/attribution/`, эталон с ручным расчётом —
-`fixtures/attribution/`. 1.7 закрыт: стартовый префикс раскладывается по
-категориям в `packages/core/src/attribution/prefix.ts`, эталон —
-`fixtures/prefix/`, коэффициенты подтверждены парной сверкой на живых сессиях
-(1.020 при пороге 1.00 ± 0.10). 1.8 закрыт: окна лимита собирает
-`packages/core/src/limits/`, эталон — `fixtures/limits/`, проба
-`scripts/probe/limits-live.ts` даёт шесть зелёных проверок на живых логах.
-Схема индекса — версия 4. 1.10 закрыт: агрегаты живут в
-`packages/core/src/query/`, шесть команд — в `apps/cli/`. 2.1 закрыт: живой
-слой — `packages/core/src/live/`, проба `scripts/probe/live-probe.ts` даёт
-**одиннадцать** зелёных проверок. Замер времени жизни сессий (долг 1.3) копится
-в `configDir()/lifetimes.jsonl`. 2.2 и 2.3 закрыты: состояния считает
-`packages/core/src/live/state.ts`, темп и прогноз — `live/rate.ts` и
-`query/limits.ts`, проба `scripts/probe/states-live.ts` даёт восемь зелёных
-проверок. 2.5 закрыт: Electron поднят целиком — main на `tsc`
-(`apps/desktop/src/main/`), preload отдельной сборкой в CommonJS (при
-`sandbox: true` ESM там не поддерживается), рендерер на Vite с двумя точками
-входа. **`node:sqlite` в main-процессе Electron 43 работает без флага.**
-2.6 закрыт: заполнение контекстного окна считает
-`packages/core/src/live/context.ts`, показывает его полоска акцента в строке
-агента. 2.7 закрыт: иконка трея рисуется из состояния
-(`apps/desktop/src/main/tray-icon.ts`), палитра сверяется с `:root` макета.
-2.8 закрыт: четыре состояния попапа плюс первый проход кусками
-(`ingestSteps`), недоступные источники больше не роняют обход. Смоук
-`scripts/probe/desktop-smoke.ts` даёт **семь** зелёных проверок на **собранном**
-приложении. Витрина открывается командой
-`npm run -w @agentmeter/desktop gallery`, попап без трея — `dev`, из трея —
-`start`. 3.0 закрыт: контракт 0.4 доведён под разделы 3 и 4 макета,
-`today:list` стал `today:get` и отдаёт `DayReport` целиком, отчёт собирает
-`apps/desktop/src/main/day.ts`, разрезы по часам и проектам —
-`packages/core/src/query/splits.ts`, фикстуры окна — `fixtures/window/`.
-3.1 и 3.2 закрыты: главное окно поднимает `openMainWindow` в main (вкладка едет
-параметром адреса), каркас и лента живут в `renderer/components/Window*.tsx` и
-`Today*.tsx`. Смоук вырос до восьми проверок — восьмая поднимает главное окно.
-Дальше 1.9 — ручная калибровка веса `cache_read` по `/usage`, её не
-делегируем, и 3.3. Статусы этапов —
-только в [`docs/roadmap.md`](docs/roadmap.md).
+**Статусы этапов не пересказывать здесь** — они живут в
+[`docs/roadmap.md`](docs/roadmap.md), и второе место со статусами разъезжается с
+первым на второй неделе. Ниже — только где что лежит.
+
+| что                                        | где                                                       |
+| ------------------------------------------ | --------------------------------------------------------- |
+| разбор логов                               | `packages/core/src/sources/{claude,codex}/`                |
+| индекс, дочитывание, вотчер                | `packages/core/src/index/`, схема версии 4                 |
+| атрибуция и стартовый префикс              | `packages/core/src/attribution/`                           |
+| окна лимита                                | `packages/core/src/limits/`                                |
+| живой слой: кто работает, в каком состоянии | `packages/core/src/live/`                                  |
+| агрегаты под экраны                        | `packages/core/src/query/`                                 |
+| контракт main↔renderer                     | `packages/ipc/src/index.ts`                                |
+| трей, окна, проводка IPC                   | `apps/desktop/src/main/`                                   |
+| попап, главное окно, витрина               | `apps/desktop/src/renderer/`                               |
+| эталоны с ручным расчётом                  | `fixtures/{attribution,prefix,limits,popup,window}/`       |
+| замер хвостовых прогревов (долг 1.3)       | `configDir()/lifetimes.jsonl` — **не восстановим из логов** |
+
+Запуск десктопа: `start` — из трея, `dev` — попап обычным окном, `gallery` —
+витрина компонентов (`npm run -w @agentmeter/desktop <команда>`).
 
 Команды: `npm run check` (линт, сборка, тесты) · `npm run fixtures:check`.
 Прогон по живым логам: `scripts/probe/verify-live.ts` (сверка с эталоном),
