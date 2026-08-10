@@ -1,6 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import type { TaskCard as TaskCardData } from '@agentmeter/ipc'
-import { clock, formatTokens, plural } from '../format.ts'
+import { clock, formatTokens, t } from '../format.ts'
 import { span } from '../time.ts'
 
 const PROVIDER: Record<Provider, string> = {
@@ -35,7 +35,7 @@ export function TaskCardHeader({ card }: { card: TaskCardData }) {
             color: task.title === null ? 'var(--tx3)' : undefined,
           }}
         >
-          {task.title ?? 'Без названия'}
+          {task.title ?? t('card.untitled')}
         </div>
         <div
           data-task-card-meta=""
@@ -55,7 +55,7 @@ export function TaskCardHeader({ card }: { card: TaskCardData }) {
             {clock(task.startedAt)} → {clock(task.endedAt)}
           </span>
           <span>{span(task.endedAt - task.startedAt)}</span>
-          <span>{plural(task.requests, ['запрос', 'запроса', 'запросов'])}</span>
+          <span>{t('today.requests', { count: task.requests })}</span>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>

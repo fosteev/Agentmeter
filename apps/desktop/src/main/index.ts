@@ -34,6 +34,8 @@ import {
   lifetimesPath,
   limitsReport,
   loadConfig,
+  setLocale,
+  t,
   openDb,
   watchSources,
   type Config,
@@ -146,6 +148,10 @@ function assertElectron(): void {
 function openRuntime(withWatcher: boolean, defer = false): Runtime {
   const loaded = loadConfig(configPath())
   const config = loaded.config
+  // Язык ставится до первой собранной строки: подсказка трея, оговорки точности
+  // и фразы карточки собираются в main, и собраны они будут на том языке,
+  // который стоит сейчас.
+  setLocale(config.ui.locale)
   const { db } = openDb(defaultIndexPath())
   const sources = {
     claudeHome: claudeHome(config),
@@ -488,14 +494,13 @@ function trayState(snapshot: TraySnapshot, config: Config): TrayState {
  */
 function trayTooltip(state: TrayState): string {
   const count = state.agents.length
-  const agents =
-    count === 0
-      ? 'никто не работает'
-      : `${count} ${count === 1 ? 'агент' : count < 5 ? 'агента' : 'агентов'}`
+  // Своих правил счёта здесь больше нет: формы лежат в каталоге, и «5 агента»
+  // на одиннадцати агентах теперь невозможно — этим занимается `Intl`.
+  const agents = count === 0 ? t('popup.nobody') : t('popup.agents', { count })
   const limit =
     state.limitPercent === undefined
-      ? 'лимит неизвестен'
-      : `лимит ${Math.round(state.limitPercent)}%`
+      ? t('limit.unknown')
+      : t('limit.trayPercent', { percent: Math.round(state.limitPercent) })
   return `Agentmeter · ${agents} · ${limit}`
 }
 

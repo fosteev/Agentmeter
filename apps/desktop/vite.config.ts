@@ -16,6 +16,7 @@ const formatter = fileURLToPath(
   new URL('../../packages/core/src/format/tokens.ts', import.meta.url),
 )
 const day = fileURLToPath(new URL('../../packages/core/src/query/day.ts', import.meta.url))
+const i18n = fileURLToPath(new URL('../../packages/core/src/i18n/index.ts', import.meta.url))
 
 export default defineConfig({
   root: renderer,
@@ -30,6 +31,9 @@ export default defineConfig({
       // Границы дня — то же самое: правило одно на CLI, трей и окно, а
       // `query/day.ts` ни к базе, ни к файловой системе не ходит.
       { find: '@agentmeter/core/day', replacement: day },
+      // Каталоги перевода — туда же и по той же причине: они общие на main,
+      // окно и CLI, а `node:sqlite` в окне не нужен никому.
+      { find: '@agentmeter/core/i18n', replacement: i18n },
     ],
   },
   build: {

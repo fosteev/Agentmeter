@@ -2,6 +2,7 @@ import type { DayReport } from '@agentmeter/ipc'
 import { HourChart } from './HourChart.tsx'
 import { ProjectBars } from './ProjectBars.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
+import { t } from '../format.ts'
 
 export interface TodaySideProps {
   report: DayReport | null
@@ -26,7 +27,7 @@ export function TodaySide({ report }: TodaySideProps) {
           data-today-side-block="hours"
           style={{ padding: '18px 18px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}
         >
-          <SectionTitle title="Расход по часам" />
+          <SectionTitle title={t('today.byHour')} />
           <HourChart hours={report.byHour} />
         </div>
       ) : null}
@@ -38,7 +39,7 @@ export function TodaySide({ report }: TodaySideProps) {
           data-today-side-block="projects"
           style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}
         >
-          <SectionTitle title="По проектам" />
+          <SectionTitle title={t('today.byProject')} />
           <ProjectBars projects={report.byProject} />
         </div>
       ) : null}

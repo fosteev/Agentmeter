@@ -1,6 +1,6 @@
 import type { LimitReportRow, Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
-import { plural } from '../format.ts'
+import { t } from '../format.ts'
 import { WindowLimit } from './WindowLimit.tsx'
 import { WindowTabs, type WindowTab } from './WindowTabs.tsx'
 
@@ -69,7 +69,7 @@ export function WindowHeader({ snapshot, activeTab, onTabChange }: WindowHeaderP
               animation: 'am-pulse 1.6s ease-in-out infinite',
             }}
           />
-          {plural(active, ['активный', 'активных', 'активных'])}
+          {t('window.active', { count: active })}
         </div>
         {limits.map((limit) => (
           <WindowLimit key={`${limit.provider}-${limit.kind}-${limit.startsAt}`} limit={limit} />

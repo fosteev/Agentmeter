@@ -2,6 +2,7 @@ import type { DayReport, TaskCard, TodayFilter } from '@agentmeter/ipc'
 import { DaySummary } from './DaySummary.tsx'
 import { TaskTable } from './TaskTable.tsx'
 import { TodayFilters } from './TodayFilters.tsx'
+import { t } from '../format.ts'
 
 export interface TodayTabProps {
   report: DayReport | null
@@ -12,9 +13,9 @@ export interface TodayTabProps {
 }
 
 function emptyMessage(report: DayReport): string | null {
-  if (report.emptyIndex) return 'Первичное индексирование — лента появится после чтения логов'
-  if (report.emptyDay) return 'Сегодня задач не было'
-  if (report.tasks.length === 0) return 'По выбранному фильтру задач нет'
+  if (report.emptyIndex) return t('today.emptyIndex')
+  if (report.emptyDay) return t('today.emptyDay')
+  if (report.tasks.length === 0) return t('today.emptyFilter')
   return null
 }
 
@@ -25,7 +26,7 @@ export function TodayTab({
   taskCard = null,
   onTaskToggle = () => undefined,
 }: TodayTabProps) {
-  const message = report === null ? 'Загружаем ленту…' : emptyMessage(report)
+  const message = report === null ? t('today.loading') : emptyMessage(report)
 
   return (
     <section

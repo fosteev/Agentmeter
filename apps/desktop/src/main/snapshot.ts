@@ -19,6 +19,7 @@ import {
   type LiveAgent as CoreLiveAgent,
   type LiveLayer,
   type Totals,
+  t,
 } from '@agentmeter/core'
 import { measured } from './measured.ts'
 import type {
@@ -76,6 +77,7 @@ export function buildSnapshot(
   return snapshot
 }
 
+/** Имена продуктов не переводятся: это их названия, а не слова. */
 const PROVIDER_NAME: Record<SourceIssue['provider'], string> = {
   claude: 'Claude',
   codex: 'Codex',
@@ -105,12 +107,14 @@ export function toProblems(issues: readonly SourceIssue[]): SourceProblem[] {
     const intact =
       others.length === 0
         ? ''
-        : `Данные ${others.map((name) => PROVIDER_NAME[name]).join(' и ')} показываются как обычно, `
+        : t('note.sourceIntact', {
+            names: others.map((name) => PROVIDER_NAME[name]).join(t('popup.and')),
+          })
     return {
       provider,
       path: issue.path,
       code: issue.code,
-      consequence: `${intact}цифры ${PROVIDER_NAME[provider]} за сегодня — неполные.`,
+      consequence: t('note.sourceBroken', { intact, provider: PROVIDER_NAME[provider] }),
     }
   })
 }
@@ -155,9 +159,6 @@ function toAgent(agent: CoreLiveAgent): LiveAgent {
   return result
 }
 
-const OBSERVED_WINDOW =
-  'размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6'
-
 /**
  * Происхождение размера окна переводится в точность здесь, а не в компоненте.
  *
@@ -173,7 +174,7 @@ export function toContext(context: CoreContextFill): ContextUsage {
     fill: context.fill,
     confidence: context.source === 'log' ? 'exact' : 'estimate',
   }
-  if (context.source !== 'log') used.caveat = OBSERVED_WINDOW
+  if (context.source !== 'log') used.caveat = t('caveat.observedWindow')
   return used
 }
 

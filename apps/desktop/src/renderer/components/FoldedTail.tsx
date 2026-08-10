@@ -1,4 +1,4 @@
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 
 export interface FoldedTailProps {
   count: number
@@ -15,8 +15,7 @@ export function FoldedTail({ count, belowTokens }: FoldedTailProps) {
         color: 'var(--tx3)',
       }}
     >
-      и ещё {plural(count, ['задача', 'задачи', 'задач'])} ниже {formatTokens(belowTokens)} —
-      свернуто
+      {t('today.foldedTail', { count, tokens: formatTokens(belowTokens) })}
     </div>
   )
 }

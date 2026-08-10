@@ -1,5 +1,5 @@
 import type { TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { ago } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
@@ -31,7 +31,7 @@ export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
         flexDirection: 'column',
       }}
     >
-      <PopupHeader updated={`обновлено ${ago(now - at)}`} />
+      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
       <div
         style={{
@@ -61,7 +61,7 @@ export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
 
       <PopupFooter
         total={total}
-        summary={`${plural(today.sessions, ['сессия', 'сессии', 'сессий'])} · ${plural(today.projects, ['проект', 'проекта', 'проектов'])}`}
+        summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
     </div>

@@ -1,5 +1,5 @@
 import type { DayReport } from '@agentmeter/ipc'
-import { dayTitle, formatTokens, plural } from '../format.ts'
+import { dayTitle, formatTokens, t } from '../format.ts'
 
 export interface DaySummaryProps {
   report: DayReport
@@ -32,9 +32,9 @@ export function DaySummary({ report }: DaySummaryProps) {
             whiteSpace: 'nowrap',
           }}
         >
-          {plural(totals.sessions, ['сессия', 'сессии', 'сессий'])} ·{' '}
-          {plural(totals.projects, ['проект', 'проекта', 'проектов'])} ·{' '}
-          {plural(totals.requests, ['запрос', 'запроса', 'запросов'])}
+          {t('today.sessions', { count: totals.sessions })} ·{' '}
+          {t('today.projectsPlain', { count: totals.projects })} ·{' '}
+          {t('today.requests', { count: totals.requests })}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

@@ -1,6 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import type { TimelinePoint } from '@agentmeter/ipc'
-import { clock } from '../format.ts'
+import { clock, t } from '../format.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 
 export interface TaskTimelineProps {
@@ -24,7 +24,7 @@ export function TaskTimeline({ timeline, timelineNote, provider }: TaskTimelineP
         borderBottom: '1px solid var(--line)',
       }}
     >
-      <SectionTitle title="Таймлайн запросов · высота = токены запроса" />
+      <SectionTitle title={t('card.timeline')} />
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: 64 }}>
         {timeline.map((point, index) => (
           <div

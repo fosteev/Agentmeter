@@ -1,5 +1,5 @@
 import type { Provider } from '@agentmeter/core'
-import { formatTokens } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { ProviderBadge } from './ProviderBadge.tsx'
 
 // Строка агента. Состояния из строк 145–171 макета:
@@ -57,10 +57,23 @@ export interface AgentRowProps {
   context?: { fill: number; approximate: boolean; hint: string } | undefined
 }
 
-const STATUS_LABEL: Record<Exclude<AgentStatus, 'done'>, string> = {
-  thinking: 'думает',
-  waiting: 'ждёт ответа',
-  idle: 'молчит',
+/**
+ * Ключи, а не слова: подпись состояния — самое узкое место интерфейса (замер
+ * 2.6: 367 пикселей из 372), и потолок длины проверяется по ключу
+ * (`i18n/limits.ts`).
+ */
+const STATUS_KEY = {
+  thinking: 'state.thinking',
+  waiting: 'state.waiting',
+  idle: 'state.silent',
+} as const
+
+function statusLabel(status: Exclude<AgentStatus, 'done'>): string {
+  return t(STATUS_KEY[status])
+}
+
+function finished(endedAgo: string | undefined): string {
+  return endedAgo === undefined ? t('state.finished') : t('state.finishedAgo', { ago: endedAgo })
 }
 
 const ACCENT: Record<Provider, string> = {
@@ -127,12 +140,12 @@ function PanelLines({ provider, project, status, tokens, rate, endedAgo }: Agent
       >
         {done ? (
           <span>
-            {endedAgo ? `завершился ${endedAgo}` : 'завершился'} · {formatTokens(tokens)}
+            {finished(endedAgo)} · {formatTokens(tokens)}
           </span>
         ) : (
           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Dot status={status} />
-            {STATUS_LABEL[status]} · {formatTokens(tokens)}
+            {statusLabel(status)} · {formatTokens(tokens)}
             {pace(status, rate)}
           </span>
         )}
@@ -218,8 +231,8 @@ function PopupLines({
           {done ? null : <Dot status={status} />}
           <span style={{ whiteSpace: 'nowrap' }}>
             {done
-              ? `${endedAgo ? `завершился ${endedAgo}` : 'завершился'} · ${amount}`
-              : `${duration ? `${duration} · ` : ''}${amount}${status === 'thinking' ? '' : ` · ${STATUS_LABEL[status]}`}${pace(status, rate) ?? ''}`}
+              ? `${finished(endedAgo)} · ${amount}`
+              : `${duration ? `${duration} · ` : ''}${amount}${status === 'thinking' ? '' : ` · ${statusLabel(status)}`}${pace(status, rate) ?? ''}`}
           </span>
         </div>
         {aside ? (
@@ -276,7 +289,7 @@ function stripe(accent: string, context: AgentRowProps['context']): string {
 // читается как «всё ещё жжёт».
 function pace(status: AgentStatus, rate: number | undefined): string | null {
   if (status === 'done' || rate === undefined || rate <= 0) return null
-  return ` · ${formatTokens(rate)}/мин`
+  return ` · ${t('time.perMinute', { tokens: formatTokens(rate) })}`
 }
 
 function Dot({ status }: { status: AgentStatus }) {

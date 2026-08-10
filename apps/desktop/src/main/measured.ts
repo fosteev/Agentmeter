@@ -6,9 +6,8 @@
  * одной пользовательской фразы — это три места, где её правят по одному, и в
  * 3.8 три ключа перевода вместо одного.
  */
+import { t } from '@agentmeter/core'
 import type { Measured } from '@agentmeter/ipc'
-
-export const RECONSTRUCTED = 'часть запросов восстановлена по разрыву цепочки кэша, этап 1.3'
 
 /**
  * Восстановленное (1.3) — всегда `cache_read`, поэтому оговорка вешается на
@@ -17,6 +16,6 @@ export const RECONSTRUCTED = 'часть запросов восстановле
  */
 export function measured(value: number, approximate: boolean): Measured {
   return approximate
-    ? { value, confidence: 'reconstructed', caveat: RECONSTRUCTED }
+    ? { value, confidence: 'reconstructed', caveat: t('caveat.reconstructed') }
     : { value, confidence: 'exact' }
 }

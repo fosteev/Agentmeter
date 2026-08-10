@@ -13,6 +13,7 @@ import {
   type Db,
   type SourceFile,
 } from '@agentmeter/core'
+import { setLocale } from '@agentmeter/core'
 import type { TimelinePoint } from '@agentmeter/ipc'
 import { buildDayReport } from '../src/main/day.ts'
 import { buildTaskCard, note, timelineNote } from '../src/main/task.ts'
@@ -34,6 +35,12 @@ const claudeDir = fileURLToPath(new URL('../../../fixtures/claude/', import.meta
 const codexDir = fileURLToPath(new URL('../../../fixtures/codex/', import.meta.url))
 const ALL = { from: 0, to: Date.parse('2030-01-01T00:00:00.000Z') }
 const config: Config = { ...DEFAULT_CONFIG, ui: { ...DEFAULT_CONFIG.ui, locale: 'ru' } }
+
+// Язык фраз ставится явно: с 3.8 по умолчанию берётся системный, а проверки
+// ниже — про русские формулировки. Без этого они ловили бы локаль машины.
+beforeEach(() => {
+  setLocale('ru')
+})
 
 let dir: string
 let db: Db

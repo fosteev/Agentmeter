@@ -1,6 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 
 // Ошибка чтения — строки 1226–1235 макета. Обычный список намеренно не
@@ -24,7 +24,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
   // сказать «цифры Codex неполные», умолчав, что и Claude не прочитан. Макет
   // рисует одну строку, потому что рисует один случай, а не потому, что второй
   // невозможен.
-  const broken = problems.map((problem) => PROVIDER[problem.provider]).join(' и ')
+  const broken = problems.map((problem) => PROVIDER[problem.provider]).join(t('popup.and'))
 
   return (
     <div
@@ -53,7 +53,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
       >
         <span>Agentmeter</span>
         <span
-          aria-label="Ошибка чтения"
+          aria-label={t('popup.readError')}
           style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--alarm)' }}
         />
       </div>
@@ -131,7 +131,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
 
       <PopupFooter
         total={`${today.total.confidence === 'exact' ? '' : '≈'}${formatTokens(today.total.value)}`}
-        summary={`${plural(today.sessions, ['сессия', 'сессии', 'сессий'])} · ${plural(today.projects, ['проект', 'проекта', 'проектов'])}`}
+        summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
     </div>

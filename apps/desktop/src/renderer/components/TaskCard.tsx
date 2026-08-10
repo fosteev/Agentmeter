@@ -1,4 +1,5 @@
 import type { TaskCard as TaskCardData } from '@agentmeter/ipc'
+import { t } from '../format.ts'
 import { BreakdownRow } from './BreakdownRow.tsx'
 import { TaskCardHeader } from './TaskCardHeader.tsx'
 import { TaskFiles } from './TaskFiles.tsx'
@@ -47,7 +48,7 @@ export function TaskCard({ card }: { card: TaskCardData }) {
           <TokenSplit tokens={card.tokens} note={card.note} />
         </div>
         <div style={COLUMN}>
-          <SectionTitle title="Инструменты в этой задаче" />
+          <SectionTitle title={t('card.tools')} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             {card.tools.map((tool) => (
               <BreakdownRow

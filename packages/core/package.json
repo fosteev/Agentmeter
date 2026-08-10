@@ -16,6 +16,10 @@
     "./day": {
       "types": "./dist/query/day.d.ts",
       "default": "./dist/query/day.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "default": "./dist/i18n/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -23,5 +27,8 @@
   "scripts": {
     "build": "tsc --build",
     "test": "cd ../.. && vitest run --project core"
+  },
+  "dependencies": {
+    "i18next": "^26.3.6"
   }
 }

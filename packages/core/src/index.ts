@@ -75,4 +75,11 @@ export * from './query/index.ts'
  * рендерер обязан брать его без этого файла, иначе в браузерный бандл уедет
  * `node:sqlite`. Здесь он для CLI и тестов, которые и так тянут ядро целиком.
  */
-export { formatTokens, plural } from './format/tokens.ts'
+export { formatTokens } from './format/tokens.ts'
+
+/**
+ * Тексты интерфейса. Здесь — для main и CLI; рендерер берёт их подпутём
+ * `@agentmeter/core/i18n` по той же причине, что форматтер.
+ */
+export { locale, setLocale, t, LOCALES, resolveLocale } from './i18n/index.ts'
+export type { Locale, LocaleSetting } from './i18n/locale.ts'

@@ -1,4 +1,5 @@
 import type { LimitReportRow, Provider } from '@agentmeter/core'
+import { t } from '../format.ts'
 
 const PROVIDER_LABEL: Record<Provider, string> = {
   claude: 'CL',
@@ -33,7 +34,7 @@ export function WindowLimit({ limit }: WindowLimitProps) {
 
   return (
     <div
-      title={known ? undefined : (limit.unavailableReason ?? 'процент недоступен')}
+      title={known ? undefined : (limit.unavailableReason ?? t('limit.unknownPercent'))}
       style={{ display: 'flex', alignItems: 'center', gap: 8 }}
     >
       <span

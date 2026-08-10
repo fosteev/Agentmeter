@@ -1,4 +1,5 @@
 import type { TaskCard as TaskCardData } from '@agentmeter/ipc'
+import { t } from '../format.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 
 export function TaskFiles({ files }: { files?: TaskCardData['files'] }) {
@@ -16,7 +17,7 @@ export function TaskFiles({ files }: { files?: TaskCardData['files'] }) {
         gap: 7,
       }}
     >
-      <SectionTitle title={`Затронутые файлы · ${files.total}`} />
+      <SectionTitle title={t('card.files', { count: files.total })} />
       <div
         style={{
           display: 'flex',

@@ -1,16 +1,21 @@
 import type { TaskCard as TaskCardData, TokenSlice } from '@agentmeter/ipc'
-import { formatTokens } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 
-const TOKEN_STYLE: Record<TokenSlice['kind'], { label: string; color: string }> = {
-  input: { label: 'свежий ввод', color: 'var(--claude)' },
+/**
+ * Ключ вместо слова: имена видов токенов — термины провайдера (`cache read`,
+ * `cache write`), и переводить их врозь нельзя (глоссарий 3.8). Длина каждого
+ * проверяется потолком: подпись стоит в колонке рядом с числом.
+ */
+const TOKEN_STYLE = {
+  input: { key: 'tokens.input', color: 'var(--claude)' },
   cacheWrite: {
-    label: 'запись в кэш',
+    key: 'tokens.cacheWrite',
     color: 'color-mix(in oklch, var(--claude) 55%, transparent)',
   },
-  cacheRead: { label: 'чтение кэша', color: 'var(--codex)' },
-  output: { label: 'вывод', color: 'var(--ok)' },
-}
+  cacheRead: { key: 'tokens.cacheRead', color: 'var(--codex)' },
+  output: { key: 'tokens.output', color: 'var(--ok)' },
+} as const satisfies Record<TokenSlice['kind'], { key: string; color: string }>
 
 /**
  * Раскладка по видам токенов. Рамку колонки и её поля рисует `TaskCard`: числа
@@ -26,7 +31,7 @@ export function TokenSplit({
 }) {
   return (
     <>
-      <SectionTitle title="Токены по типам" />
+      <SectionTitle title={t('card.tokenSplit')} />
       <div style={{ display: 'flex', height: 12, borderRadius: 3, overflow: 'hidden' }}>
         {tokens.map((slice, index) => (
           <div
@@ -63,7 +68,7 @@ export function TokenSplit({
                   flex: 'none',
                 }}
               />
-              <span style={{ flex: 1, color: 'var(--tx2)' }}>{tokenStyle.label}</span>
+              <span style={{ flex: 1, color: 'var(--tx2)' }}>{t(tokenStyle.key)}</span>
               <span>{formatTokens(slice.tokens.value)}</span>
               <span style={{ width: 44, textAlign: 'right', color: 'var(--tx3)' }}>
                 {Math.round(slice.share * 100)}%

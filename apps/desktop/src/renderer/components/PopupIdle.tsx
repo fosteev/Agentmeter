@@ -1,6 +1,6 @@
 import type { LimitReportRow, Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
@@ -22,16 +22,17 @@ const PROVIDER: Record<Provider, string> = {
   codex: 'Codex',
 }
 
-const KIND_TITLE: Record<LimitReportRow['kind'], string> = {
-  fiveHour: '5-часовое окно',
-  weekly: 'недельное окно',
-  monthly: 'месячное окно',
-  other: 'окно лимита',
-}
+/** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
+const KIND_KEY = {
+  fiveHour: 'limit.fiveHour',
+  weekly: 'limit.weekly',
+  monthly: 'limit.monthly',
+  other: 'limit.other',
+} as const satisfies Record<LimitReportRow['kind'], string>
 
 function caption(window: LimitReportRow, at: number): string {
-  if (window.usedPercent === null) return window.unavailableReason ?? 'процент недоступен'
-  return `окно закроется через ${span(Math.max(0, window.resetsAt - at))} — пауза его не расходует`
+  if (window.usedPercent === null) return window.unavailableReason ?? t('limit.unknownPercent')
+  return t('limit.idleWindow', { span: span(Math.max(0, window.resetsAt - at)) })
 }
 
 export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
@@ -51,9 +52,9 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
         flexDirection: 'column',
       }}
     >
-      <PopupHeader updated={`обновлено ${ago(now - at)}`} />
+      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
-      <SectionTitle title="Сейчас работают" padding="14px 14px 6px" />
+      <SectionTitle title={t('popup.working')} padding="14px 14px 6px" />
       <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center', gap: 9 }}>
         <div
           aria-hidden="true"
@@ -88,7 +89,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
           <PopupLimit
             key={`${window.provider}-${window.kind}-${window.startsAt}`}
             provider={window.provider}
-            title={KIND_TITLE[window.kind]}
+            title={t(KIND_KEY[window.kind])}
             percent={window.usedPercent}
             approximate={!window.exact}
             caption={caption(window, at)}
@@ -98,7 +99,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
 
       <PopupFooter
         total={`${today.total.confidence === 'exact' ? '' : '≈'}${formatTokens(today.total.value)}`}
-        summary={`${plural(today.sessions, ['сессия', 'сессии', 'сессий'])} · ${plural(today.projects, ['проект', 'проекта', 'проектов'])}`}
+        summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
     </div>

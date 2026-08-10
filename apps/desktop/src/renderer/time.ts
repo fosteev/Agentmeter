@@ -11,6 +11,8 @@
  * назад» на протухших данных врёт ровно про то, ради чего эта строка есть.
  */
 
+import { t } from '@agentmeter/core/i18n'
+
 const SECOND = 1000
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
@@ -18,22 +20,22 @@ const DAY = 24 * HOUR
 
 /** «2 с назад», «4 мин назад», «3 ч назад». */
 export function ago(ms: number): string {
-  if (ms < MINUTE) return `${Math.max(0, Math.floor(ms / SECOND))} с назад`
-  if (ms < HOUR) return `${Math.floor(ms / MINUTE)} мин назад`
-  if (ms < DAY) return `${Math.floor(ms / HOUR)} ч назад`
-  return `${Math.floor(ms / DAY)} д назад`
+  if (ms < MINUTE) return t('time.secondsAgo', { count: Math.max(0, Math.floor(ms / SECOND)) })
+  if (ms < HOUR) return t('time.minutesAgo', { count: Math.floor(ms / MINUTE) })
+  if (ms < DAY) return t('time.hoursAgo', { count: Math.floor(ms / HOUR) })
+  return t('time.daysAgo', { count: Math.floor(ms / DAY) })
 }
 
 /** «4 мин», «1 ч 20 мин», «2 д». Меньше минуты — «меньше минуты». */
 export function span(ms: number): string {
-  if (ms < MINUTE) return 'меньше минуты'
-  if (ms < HOUR) return `${Math.floor(ms / MINUTE)} мин`
+  if (ms < MINUTE) return t('time.lessThanMinute')
+  if (ms < HOUR) return t('time.minutes', { count: Math.floor(ms / MINUTE) })
   if (ms < DAY) {
     const hours = Math.floor(ms / HOUR)
     const minutes = Math.floor((ms % HOUR) / MINUTE)
-    return minutes === 0 ? `${hours} ч` : `${hours} ч ${minutes} мин`
+    return minutes === 0 ? t('time.hours', { count: hours }) : t('time.hoursMinutes', { hours, minutes })
   }
   const days = Math.floor(ms / DAY)
   const hours = Math.floor((ms % DAY) / HOUR)
-  return hours === 0 ? `${days} д` : `${days} д ${hours} ч`
+  return hours === 0 ? t('time.days', { count: days }) : t('time.daysHours', { days, hours })
 }

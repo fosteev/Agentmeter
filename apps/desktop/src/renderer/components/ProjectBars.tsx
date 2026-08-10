@@ -1,5 +1,5 @@
 import type { ProjectRow } from '@agentmeter/ipc'
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 
 export interface ProjectBarsProps {
@@ -32,7 +32,7 @@ export function ProjectBars({ projects }: ProjectBarsProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 12, color: folded ? 'var(--tx2)' : undefined }}>
                 {folded
-                  ? `+ ${plural(row.folded!, ['проект', 'проекта', 'проектов'])}`
+                  ? t('today.projects', { count: row.folded! })
                   : row.project}
               </span>
               <div

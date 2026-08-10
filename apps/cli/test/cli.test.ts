@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -18,7 +18,11 @@ let stderr: string[]
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'agentmeter-cli-'))
   indexPath = join(dir, 'index.sqlite')
-  configPath = join(dir, 'missing-config.json')
+  // Язык пиним явно: с 3.8 по умолчанию берётся системный, а снапшот вывода
+  // проверяет структуру русского текста. Без этого проверка ловила бы локаль
+  // машины, на которой её запустили, — то есть ничего.
+  configPath = join(dir, 'config.json')
+  writeFileSync(configPath, JSON.stringify({ ui: { locale: 'ru' } }))
   seedIndex()
   stdout = []
   stderr = []

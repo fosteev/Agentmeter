@@ -42,7 +42,7 @@ import {
   changedFiles,
   dayRange,
   formatTokens,
-  plural,
+  t,
   taskDetail,
   taskRows,
   todayReport,
@@ -77,9 +77,6 @@ const COSTLY_SHARE = 0.1
 const KEEP_PATHS = 4
 /** С какой доли чтения кэша про него есть что сказать. */
 const REREAD_SHARE = 0.5
-
-const SPLIT = 'стоимость поделена между вызовами одного запроса, этап 1.6'
-const UNMEASURED = 'часть вызовов измерить нечем — следующего запроса в логе нет, этап 1.6'
 
 export interface TaskArg {
   sessionId: string
@@ -185,7 +182,7 @@ function why(
   usual: number,
   locale: string,
 ): string | undefined {
-  if (request.compacted) return 'сжатие контекста'
+  if (request.compacted) return t('note.compaction')
   if (growth.tokens < GROWTH_FLOOR) return undefined
   if (usual > 0 && growth.tokens < GROWTH_TIMES * usual) return undefined
 
@@ -197,17 +194,17 @@ function why(
   if (top === undefined) return undefined
 
   const images = growth.calls.filter((call) => call.hasImage).length
-  if (images > 0) {
-    return `${plural(images, ['картинка', 'картинки', 'картинок'], locale)} в результате — плотнее текста в тринадцать раз, ${size} в промпт`
-  }
+  if (images > 0) return t('note.images', { count: images, tokens: size })
   // Один результат крупнее всех остальных вместе — его и называем. Иначе
   // называть некого: у пятнадцати параллельных `exec_command` виноват не
   // какой-то один, а то, что их пятнадцать.
   if (bytes > 0 && top.resultBytes >= DOMINANT_BYTES * bytes) {
-    const path = top.paths.length === 1 ? ` — ${top.paths[0]}` : ''
-    return `большой результат ${top.name}${path} — ${size} в промпт`
+    const path = top.paths.length === 1 ? top.paths[0] : undefined
+    return path === undefined
+      ? t('note.bigResult', { tool: top.name, tokens: size })
+      : t('note.bigResultFile', { tool: top.name, path, tokens: size })
   }
-  return `${plural(growth.calls.length, ['результат инструмента', 'результата инструментов', 'результатов инструментов'], locale)} сразу — ${size} в промпт`
+  return t('note.spread', { count: growth.calls.length, tokens: size })
 }
 
 /**
@@ -224,15 +221,13 @@ export function timelineNote(points: readonly TimelinePoint[], locale: string): 
     marked.reduce((sum, point) => sum + point.tokens, 0),
     locale,
   )
-  const compacted = marked.filter((point) => point.note === 'сжатие контекста').length
-  const together = marked.length > 1 ? ' вместе' : ''
-  if (compacted === marked.length) {
-    return `${plural(compacted, ['сжатие контекста', 'сжатия контекста', 'сжатий контекста'], locale)} — ${tokens}${together}`
-  }
-  if (compacted === 0) {
-    return `${plural(marked.length, ['запрос дороже прочих', 'запроса дороже прочих', 'запросов дороже прочих'], locale)} — ${tokens}${together}`
-  }
-  return `${plural(marked.length, ['запрос выделен', 'запроса выделены', 'запросов выделены'], locale)} — ${tokens}${together}`
+  // «Сжатие» узнаётся сравнением с его же переводом, а не с русской строкой:
+  // иначе на английском все пометки оказались бы «дороже прочих», включая те,
+  // что как раз удешевляют следующий запрос.
+  const compacted = marked.filter((point) => point.note === t('note.compaction')).length
+  if (compacted === marked.length) return t('note.compactions', { count: compacted, tokens })
+  if (compacted === 0) return t('note.costlier', { count: marked.length, tokens })
+  return t('note.marked', { count: marked.length, tokens })
 }
 
 /** Четыре вида токенов в порядке макета, с долями от суммы задачи. */
@@ -317,9 +312,13 @@ function costly(
   const per = tokens / calls
   if (per < COSTLY_TIMES * average || tokens < COSTLY_SHARE * spend) return undefined
   if (images > 0) {
-    return `${plural(images, ['вызов', 'вызова', 'вызовов'], locale)} с картинками — они плотнее текста в тринадцать раз, по ${formatTokens(Math.round(per), locale)} на вызов`
+    return t('note.toolImages', { count: images, per: formatTokens(Math.round(per), locale) })
   }
-  return `по ${formatTokens(Math.round(per), locale)} в промпт на вызов при среднем ${formatTokens(Math.round(average), locale)} — ${name} дороже прочих`
+  return t('note.toolCostly', {
+    per: formatTokens(Math.round(per), locale),
+    average: formatTokens(Math.round(average), locale),
+    tool: name,
+  })
 }
 
 /**
@@ -341,9 +340,8 @@ export function note(
   const rereads = requests.filter((request) => request.cacheRead > 0).length
   if (rereads < 2) return undefined
   const peak = Math.max(0, ...requests.map((request) => request.contextTokens))
-  const grew =
-    peak === 0 ? '' : ` — контекст вырастал до ${formatTokens(peak, locale)}`
-  return `Кэш перечитывался ${plural(rereads, ['раз', 'раза', 'раз'], locale)}${grew}.`
+  const grew = peak === 0 ? '' : t('note.rereadGrew', { peak: formatTokens(peak, locale) })
+  return t('note.reread', { count: rereads, grew })
 }
 
 /**
@@ -356,8 +354,12 @@ export function note(
  * нельзя.
  */
 function cost(tokens: number, row: ToolBreakdownRow): Measured {
-  if (row.calls.split > 0) return { value: tokens, confidence: 'estimate', caveat: SPLIT }
-  if (row.calls.unknown > 0) return { value: tokens, confidence: 'estimate', caveat: UNMEASURED }
+  if (row.calls.split > 0) {
+    return { value: tokens, confidence: 'estimate', caveat: t('caveat.split') }
+  }
+  if (row.calls.unknown > 0) {
+    return { value: tokens, confidence: 'estimate', caveat: t('caveat.unmeasured') }
+  }
   return { value: tokens, confidence: 'exact' }
 }
 

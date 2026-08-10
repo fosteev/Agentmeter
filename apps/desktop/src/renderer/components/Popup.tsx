@@ -1,6 +1,6 @@
 import type { Entrypoint, LimitReportRow } from '@agentmeter/core'
 import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, plural } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { AgentRow, type AgentStatus } from './AgentRow.tsx'
 import { PopupFooter } from './PopupFooter.tsx'
@@ -38,12 +38,13 @@ const STATUS: Record<LiveAgent['state'], AgentStatus> = {
   done: 'done',
 }
 
-const KIND_TITLE: Record<LimitReportRow['kind'], string> = {
-  fiveHour: '5-часовое окно',
-  weekly: 'недельное окно',
-  monthly: 'месячное окно',
-  other: 'окно лимита',
-}
+/** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
+const KIND_KEY = {
+  fiveHour: 'limit.fiveHour',
+  weekly: 'limit.weekly',
+  monthly: 'limit.monthly',
+  other: 'limit.other',
+} as const satisfies Record<LimitReportRow['kind'], string>
 
 // Точка входа коротким словом — как в макете («Opus 5 · VS Code», «· term»).
 // `unknown` не показывается вовсе: пустое место честнее слова «неизвестно»,
@@ -94,11 +95,11 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
         flexDirection: 'column',
       }}
     >
-      <PopupHeader updated={`обновлено ${ago(now - at)}`} />
+      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <SectionTitle
-          title="Сейчас работают"
+          title={t('popup.working')}
           padding="14px 14px 4px"
           aside={
             <span
@@ -136,7 +137,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
         </div>
 
         <SectionTitle
-          title="Лимиты"
+          title={t('popup.limits')}
           padding="16px 14px 4px"
           aside={
             <span
@@ -156,7 +157,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
             <PopupLimit
               key={`${window.provider}-${window.kind}-${window.startsAt}`}
               provider={window.provider}
-              title={KIND_TITLE[window.kind]}
+              title={t(KIND_KEY[window.kind])}
               percent={window.usedPercent}
               approximate={!window.exact}
               caption={caption(window, at)}
@@ -167,7 +168,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
 
       <PopupFooter
         total={`${today.total.confidence === 'exact' ? '' : '≈'}${formatTokens(today.total.value)}`}
-        summary={`${plural(today.sessions, ['сессия', 'сессии', 'сессий'])} · ${plural(today.projects, ['проект', 'проекта', 'проектов'])}`}
+        summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
     </div>
@@ -189,7 +190,12 @@ function context(
   if (usage === undefined) return undefined
   const estimate = usage.confidence !== 'exact'
   const sign = estimate ? '≈' : ''
-  const head = `контекст ${sign}${Math.round(usage.fill * 100)}% · ${formatTokens(usage.used)} из ${sign}${formatTokens(usage.window)}`
+  const head = t('popup.context', {
+    sign,
+    percent: Math.round(usage.fill * 100),
+    used: formatTokens(usage.used),
+    window: formatTokens(usage.window),
+  })
   return {
     fill: usage.fill,
     approximate: estimate,
@@ -206,9 +212,9 @@ function context(
  * иначе это пугающее число ни о чём.
  */
 function caption(window: LimitReportRow, at: number): string {
-  if (window.usedPercent === null) return window.unavailableReason ?? 'процент недоступен'
-  const reset = `сброс через ${span(Math.max(0, window.resetsAt - at))}`
+  if (window.usedPercent === null) return window.unavailableReason ?? t('limit.unknownPercent')
+  const reset = t('limit.resetsIn', { span: span(Math.max(0, window.resetsAt - at)) })
   const forecast = window.forecast
   if (forecast === null || forecast.resetsFirst || forecast.minutesToCap === null) return reset
-  return `${reset} · ≈${span(forecast.minutesToCap * 60_000)} до упора`
+  return t('limit.untilCap', { reset, span: span(forecast.minutesToCap * 60_000) })
 }

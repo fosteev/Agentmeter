@@ -1,13 +1,28 @@
 import type { IpcCalls } from '@agentmeter/ipc'
+import { t } from '../format.ts'
 
 export type WindowTab = IpcCalls['window:open']['arg']['tab']
 
-export const WINDOW_TABS: ReadonlyArray<{ id: WindowTab; label: string; stage: string }> = [
-  { id: 'today', label: 'Сегодня', stage: '3.2' },
-  { id: 'breakdown', label: 'Развёртка', stage: '4.2' },
-  { id: 'history', label: 'История', stage: '4.6' },
-  { id: 'settings', label: 'Настройки', stage: '3.6' },
+/**
+ * В списке лежит **ключ**, а не подпись.
+ *
+ * Разница не косметическая: список — константа модуля, и `t()` в нём посчитался
+ * бы один раз при загрузке. Язык, сменённый после этого (3.6 меняет его без
+ * перезапуска окна), не доехал бы до вкладок — и это единственное место в окне,
+ * которое осталось бы на прежнем языке, причём самое заметное.
+ */
+export const WINDOW_TABS: ReadonlyArray<{ id: WindowTab; labelKey: TabLabelKey; stage: string }> = [
+  { id: 'today', labelKey: 'window.tabToday', stage: '3.2' },
+  { id: 'breakdown', labelKey: 'window.tabBreakdown', stage: '4.2' },
+  { id: 'history', labelKey: 'window.tabHistory', stage: '4.6' },
+  { id: 'settings', labelKey: 'window.tabSettings', stage: '3.6' },
 ]
+
+type TabLabelKey =
+  | 'window.tabToday'
+  | 'window.tabBreakdown'
+  | 'window.tabHistory'
+  | 'window.tabSettings'
 
 export interface WindowTabsProps {
   active: WindowTab
@@ -37,7 +52,7 @@ export function WindowTabs({ active, onChange }: WindowTabsProps) {
               cursor: 'pointer',
             }}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         )
       })}

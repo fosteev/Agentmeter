@@ -7,6 +7,8 @@
  * про честные ограничения).
  */
 
+import type { LocaleSetting } from '../i18n/locale.ts'
+
 export interface Config {
   /** Где искать логи. Пустой массив — использовать пути по умолчанию для ОС. */
   sources: {
@@ -72,7 +74,12 @@ export interface Config {
     theme: 'system' | 'light' | 'dark'
     /** С какого часа считать начало дня. Пятичасовое окно ходит через полночь. */
     dayStartsAtHour: number
-    locale: string
+    /**
+     * Язык интерфейса. `system` — взять у системы с откатом на английский; до
+     * 3.8 здесь лежало зашитое `ru`, и человек с английской системой видел
+     * русский интерфейс, не имея способа догадаться, откуда он взялся.
+     */
+    locale: LocaleSetting
   }
 }
 
@@ -113,5 +120,5 @@ export const DEFAULT_CONFIG: Config = {
   index: { retentionDays: 90, watch: true },
   live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },
   privacy: { hidePrompts: false, hidePaths: false },
-  ui: { theme: 'system', dayStartsAtHour: 0, locale: 'ru' },
+  ui: { theme: 'system', dayStartsAtHour: 0, locale: 'system' },
 }
