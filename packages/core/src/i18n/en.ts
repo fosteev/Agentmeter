@@ -189,6 +189,11 @@ export const en = {
     calls_other: '{{count}} calls',
   },
 
+  menu: {
+    export: 'Export spend…',
+    quit: 'Quit',
+  },
+
   notify: {
     limitTitle: '{{provider}} — {{percent}} of the {{window}}',
     limitBody: 'Resets at {{reset}}. Working now: {{agents}}.',
@@ -453,6 +458,7 @@ export const en = {
     tasks_one: '{{count}} task',
     tasks_other: '{{count}} tasks',
     usage: 'agentmeter <command> [options]',
+    badGrain: 'unknown export grain: {{value}} (expected task or day)',
     usageCommands: 'commands: {{commands}}',
     usageFlags: 'common flags: --index <path> --config <path> --no-ingest --json',
     unknownCommand: 'unknown command: {{command}}',

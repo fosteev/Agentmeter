@@ -17,8 +17,10 @@ import {
   openDb,
   locale as currentLocale,
   setLocale,
+  exportRows,
   spendSplit,
   t,
+  toCsv,
   taskRows,
   todayReport,
   type Config,
@@ -41,6 +43,7 @@ const COMMANDS = [
   'doctor',
   'verify',
   'index',
+  'export',
 ] as const
 type Command = (typeof COMMANDS)[number]
 
@@ -109,6 +112,8 @@ export function run(argv: readonly string[]): number {
           return runLive(db, common, loaded.config)
         case 'doctor':
           return runDoctor(db, common, loaded.config, loaded.problems)
+        case 'export':
+          return runExport(db, common, loaded.config)
         default:
           throw new CliArgumentError(t('cli.unsupported', { command }))
       }
@@ -152,6 +157,40 @@ function runToday(
     common.json ? { ...report, split } : renderToday(report, split, currentLocale()),
     common.json,
   )
+  return 0
+}
+
+/**
+ * Выгрузка расхода (4.8).
+ *
+ * `--json` работает тем же флагом, что у остальных команд, и это не экономия:
+ * второй способ попросить JSON у одной программы — это второй формат, который
+ * разойдётся с первым. CSV печатается в stdout, как и всё остальное:
+ * перенаправление в файл делает оболочка, а своего `--out` у команды нет —
+ * иначе пришлось бы заводить правила перезаписи, каталогов и прав, которых у
+ * `>` уже есть.
+ */
+function runExport(
+  db: Parameters<typeof exportRows>[0],
+  common: CommonOptions,
+  config: Config,
+): number {
+  const values = parseValues(common.rest, new Set(['--day', '--days', '--grain']))
+  const days = positiveInteger(values.get('--days') ?? '1', '--days')
+  const grain = values.get('--grain') ?? 'task'
+  if (grain !== 'task' && grain !== 'day') {
+    throw new CliArgumentError(t('cli.badGrain', { value: grain }))
+  }
+  const endRange = rangeFor(values.get('--day'), config.ui.dayStartsAtHour)
+  const range = {
+    from: dayRange(endRange.from, config.ui.dayStartsAtHour, -(days - 1)).from,
+    to: endRange.to,
+  }
+  const rows = exportRows(db, range, grain, config.ui.dayStartsAtHour)
+  // Не через `output`: тот добавляет перевод строки, а в CSV он уже есть по
+  // RFC 4180, и лишний превращается в пустую строку в конце таблицы.
+  if (common.json) console.log(JSON.stringify(rows))
+  else process.stdout.write(toCsv(rows))
   return 0
 }
 

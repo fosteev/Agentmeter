@@ -7,15 +7,19 @@
  * запускается той нодой, что несёт Electron, без флагов вроде
  * `--experimental-strip-types`: в Electron их не передашь.
  *
- * Чего здесь намеренно нет: автообновления и меню — это M5.
+ * Чего здесь намеренно нет: автообновления — это M5. Меню трея появилось в 4.8
+ * и состоит из одного пункта: выгрузки расхода в файл.
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { writeFileSync } from 'node:fs'
 import {
   BrowserWindow,
+  Menu,
   Notification,
   Tray,
   app,
+  dialog,
   ipcMain,
   nativeImage,
   nativeTheme,
@@ -38,6 +42,9 @@ import {
   t,
   openDb,
   watchSources,
+  dayRange,
+  exportRows,
+  toCsv,
   type Config,
   type Db,
   type IngestProgress as CoreIngestProgress,
@@ -801,6 +808,41 @@ function main(): void {
       buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
     )
 
+  /**
+   * Меню трея (4.8). Пункт один, и он единственный, чего нельзя сделать из
+   * окна: выгрузка расхода в файл. Собирается на каждый показ, потому что язык
+   * меняется без перезапуска (3.6), а меню, собранное однажды, застыло бы на
+   * языке запуска — та же ловушка, что с `t()` на верхнем уровне модуля.
+   */
+  const trayMenu = (): Menu =>
+    Menu.buildFromTemplate([
+      { label: t('menu.export'), click: () => void exportToFile() },
+      { type: 'separator' },
+      { label: t('menu.quit'), click: () => app.quit() },
+    ])
+
+  /**
+   * Выгрузка в файл. Формат выбирается расширением, которое человек назвал сам:
+   * отдельный переключатель формата рядом с полем имени спрашивал бы дважды об
+   * одном.
+   */
+  const exportToFile = async (): Promise<void> => {
+    const config = runtime!.config
+    const day = dayRange(Date.now(), config.ui.dayStartsAtHour)
+    const range = { from: dayRange(day.from, config.ui.dayStartsAtHour, -29).from, to: day.to }
+    const rows = exportRows(runtime!.db, range, 'task', config.ui.dayStartsAtHour)
+    const target = await dialog.showSaveDialog({
+      defaultPath: `agentmeter-${new Date(day.from).toISOString().slice(0, 10)}.csv`,
+      filters: [
+        { name: 'CSV', extensions: ['csv'] },
+        { name: 'JSON', extensions: ['json'] },
+      ],
+    })
+    if (target.canceled || target.filePath === undefined) return
+    const json = target.filePath.toLowerCase().endsWith('.json')
+    writeFileSync(target.filePath, json ? JSON.stringify(rows, null, 2) : toCsv(rows), 'utf8')
+  }
+
   const notifyState = emptyNotifyState()
   /**
    * Показ уведомления. Всё решение — в `notify.ts`; здесь только вызов ОС и
@@ -932,6 +974,10 @@ function main(): void {
       tray = new Tray(trayIcon(trayState(first, runtime.config)))
       tray.setToolTip(trayTooltip(trayState(first, runtime.config)))
       tray.on('click', toggle)
+      // Контекстное меню вешается на правую кнопку, а не через
+      // `setContextMenu`: тот на macOS перехватывает и левый клик, а левым
+      // открывается попап — главное, ради чего значок в трее и стоит.
+      tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
       // На macOS иконка в доке приложению без окон не нужна.
       if (process.platform === 'darwin') app.dock?.hide()
     }

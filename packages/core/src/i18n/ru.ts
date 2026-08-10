@@ -257,6 +257,12 @@ export const ru = {
    * шаблоне: у Codex процент точный, у Claude до калибровки 1.9 — оценка, и
    * зашитый знак соврал бы про один из двух.
    */
+  /** Меню трея (4.8). */
+  menu: {
+    export: 'Выгрузить расход…',
+    quit: 'Выйти',
+  },
+
   notify: {
     limitTitle: '{{provider}} — {{percent}} {{window}}',
     limitBody: 'Сброс в {{reset}}. Сейчас работают: {{agents}}.',
@@ -561,6 +567,7 @@ export const ru = {
     tasks_few: '{{count}} задачи',
     tasks_many: '{{count}} задач',
     usage: 'agentmeter <команда> [параметры]',
+    badGrain: 'неизвестная единица выгрузки: {{value}} (нужно task или day)',
     usageCommands: 'команды: {{commands}}',
     usageFlags: 'общие флаги: --index <path> --config <path> --no-ingest --json',
     unknownCommand: 'неизвестная команда: {{command}}',

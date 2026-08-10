@@ -58,6 +58,8 @@ export {
   perMinute,
   windowTokens,
 } from './live/index.ts'
+export { CSV_BOM, EXPORT_COLUMNS, exportRows, toCsv } from './export/index.ts'
+export type { ExportGrain, ExportRow } from './export/index.ts'
 export { watchSources } from './index/watch.ts'
 export type { Watcher } from './index/watch.ts'
 export { openDb } from './index/db.ts'
