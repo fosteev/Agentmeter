@@ -4,6 +4,7 @@ import { BreakdownRow } from './BreakdownRow.tsx'
 import { TaskCardHeader } from './TaskCardHeader.tsx'
 import { TaskFiles } from './TaskFiles.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
+import { TaskSubagents } from './TaskSubagents.tsx'
 import { TaskTimeline } from './TaskTimeline.tsx'
 import { TokenSplit } from './TokenSplit.tsx'
 
@@ -46,6 +47,7 @@ export function TaskCard({ card }: { card: TaskCardData }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 0 }}>
         <div data-token-split="" style={{ ...COLUMN, borderRight: '1px solid var(--line)' }}>
           <TokenSplit tokens={card.tokens} note={card.note} />
+          <TaskSubagents {...(card.task.children === undefined ? {} : { children: card.task.children })} />
         </div>
         <div style={COLUMN}>
           <SectionTitle title={t('card.tools')} />

@@ -56,7 +56,8 @@ export function buildDayReport(db: Db, filter: TodayFilter): DayReport {
   const report = todayReport(db, range, scope)
   const splits = daySplits(db, range, scope)
   const sort = filter.sort ?? 'tokens'
-  const tasks = sortTasks(taskRows(db, range, scope), sort).map((row) => toTaskRow(row))
+  const options = filter.foldSubagents === false ? { foldSubagents: false } : {}
+  const tasks = sortTasks(taskRows(db, range, scope, options), sort).map((row) => toTaskRow(row))
 
   return {
     range,
@@ -107,6 +108,11 @@ export function toTaskRow(row: CoreTaskRow): TaskRow {
   if (row.firstPrompt !== null) task.firstPrompt = row.firstPrompt
   if (row.branch !== null) task.branch = row.branch
   if (row.model.length > 0) task.model = row.model
+  if (row.agentType !== null) task.agentType = row.agentType
+  // Тем же переводом, что и родитель: строка ребёнка показывается в карточке
+  // рядом с его расходом, и собери её вторым похожим кодом — однажды они
+  // разойдутся полем, которое видно на экране дважды.
+  if (row.children.length > 0) task.children = row.children.map((child) => toTaskRow(child))
   return task
 }
 

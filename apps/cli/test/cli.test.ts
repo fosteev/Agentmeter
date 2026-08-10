@@ -105,14 +105,15 @@ describe('agentmeter CLI', () => {
   it('tasks сворачивает сабагента в родителя в JSON', () => {
     expect(execute('tasks', '--day', '2026-07-10', '--json')).toBe(0)
     const result = JSON.parse(stdout[0]!) as {
-      rows: Array<{ sessionId: string; subagents: number }>
+      rows: Array<{ sessionId: string; children: Array<{ sessionId: string }> }>
     }
 
     expect(result.rows.some((row) => row.sessionId === 'a6bf337b0067775dd')).toBe(false)
     expect(
-      result.rows.find((row) => row.sessionId === '92cc27dc-193d-4c2c-aef1-843d7d41aeab')
-        ?.subagents,
-    ).toBe(1)
+      result.rows
+        .find((row) => row.sessionId === '92cc27dc-193d-4c2c-aef1-843d7d41aeab')
+        ?.children.map((child) => child.sessionId),
+    ).toEqual(['a6bf337b0067775dd'])
   })
 
   it('breakdown --json не сливает basis в одну цифру', () => {

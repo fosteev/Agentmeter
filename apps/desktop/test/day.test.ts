@@ -31,6 +31,14 @@ beforeEach(() => {
   for (const name of ['compact', 'images', 'mcp', 'parallel', 'plain', 'sidechain']) {
     ingest({ path: join(claudeDir, `${name}.jsonl`), provider: 'claude', kind: 'session' })
   }
+  // Транскрипт сабагента — отдельный файл, и без него дерево задачи состоит из
+  // одного корня: проверка на детей прошла бы на пустом входе (3.5).
+  ingest({
+    path: join(claudeDir, 'sidechain.subagents', 'agent-a6bf337b0067775dd.jsonl'),
+    provider: 'claude',
+    kind: 'subagent',
+    parentPath: join(claudeDir, '92cc27dc-193d-4c2c-aef1-843d7d41aeab.jsonl'),
+  })
   ingest({ path: join(codexDir, 'rollout.jsonl'), provider: 'codex', kind: 'session' })
 })
 
@@ -157,6 +165,43 @@ describe('buildDayReport', () => {
       expect(task.title).not.toBe('без названия')
     }
     expect(report.tasks.some((task) => task.title === null)).toBe(true)
+  })
+
+  /**
+   * Ловит список детей, потерянный по дороге в контракт (3.5): ядро сводит
+   * сабагента в родителя с 3.4, но до окна доезжал только его расход — из чего
+   * строка сложилась, спросить было негде.
+   */
+  it('сабагент доезжает до строки ленты списком, а не только расходом', () => {
+    const report = buildDayReport(db, ALL)
+    const parent = report.tasks.find(
+      (task) => task.sessionId === '92cc27dc-193d-4c2c-aef1-843d7d41aeab',
+    )
+
+    expect(parent?.children?.map((child) => child.sessionId)).toEqual(['a6bf337b0067775dd'])
+    expect(parent?.children?.[0]?.agentType).toBe('general-purpose')
+    // Ребёнок живёт внутри родителя, а не рядом с ним: иначе его расход
+    // окажется на экране дважды — своей строкой и внутри родительской.
+    expect(report.tasks.some((task) => task.sessionId === 'a6bf337b0067775dd')).toBe(false)
+    expect(report.tasks.filter((task) => task.children !== undefined)).toHaveLength(1)
+  })
+
+  /**
+   * Ловит разворачивание, забывшее вычесть детей из родителя: сумма строк
+   * обязана сойтись с шапкой **в обоих** режимах, иначе одна и та же тысяча
+   * токенов покажется и в строке ребёнка, и в строке родителя.
+   */
+  it('развёрнутые сабагенты не двоят расход и не пропадают', () => {
+    const folded = buildDayReport(db, ALL)
+    const spread = buildDayReport(db, { ...ALL, foldSubagents: false })
+
+    expect(spread.totals.total.value).toBe(folded.totals.total.value)
+    expect(spread.tasks.reduce((sum, task) => sum + task.tokens.value, 0)).toBe(
+      spread.totals.total.value,
+    )
+    expect(spread.tasks).toHaveLength(folded.tasks.length + 1)
+    expect(spread.tasks.some((task) => task.sessionId === 'a6bf337b0067775dd')).toBe(true)
+    expect(spread.tasks.every((task) => task.children === undefined)).toBe(true)
   })
 
   /**

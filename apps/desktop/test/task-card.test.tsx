@@ -190,17 +190,49 @@ describe('карточка задачи', () => {
     expect(segment(html, 'data-file-chip', 'tail')).toContain('+ 8')
   })
 
+  /**
+   * Ловит блок сабагентов, потерявший имя, расход или самих сабагентов (3.5).
+   *
+   * У ребёнка нет названия — оно есть только у корневой сессии, — поэтому
+   * строка зовётся типом агента. Пропади он, и в списке окажутся две
+   * неразличимые строки, отвечающие на вопрос «кто это был» словом «сабагент».
+   */
+  it('называет каждого сабагента типом агента и его расходом', () => {
+    const withChildren = structuredClone(card)
+    withChildren.task.children = [
+      { ...card.task, sessionId: 'agent-a1', title: null, agentType: 'Explore' },
+      {
+        ...card.task,
+        sessionId: 'agent-a2',
+        title: null,
+        tokens: { value: 1_200_000, confidence: 'exact' },
+      },
+    ]
+    const html = markup(withChildren)
+
+    expect(html).toContain('Сабагенты · 2')
+    expect(html.split('data-subagent-row=').length - 1).toBe(2)
+    expect(segment(html, 'data-subagent-row', 'agent-a1')).toContain('Explore')
+    // Тип неизвестен — строка всё равно называется словом из каталога, а не
+    // пустотой: пустая ячейка читается как «данные не доехали».
+    expect(segment(html, 'data-subagent-row', 'agent-a2')).toContain('сабагент')
+    expect(segment(html, 'data-subagent-row', 'agent-a2')).toContain(formatTokens(1_200_000))
+  })
+
   /** Ловит пустые блоки и NaN при отсутствии необязательных полей контракта. */
-  it('собирается без необязательных файлов и заметок', () => {
+  it('собирается без необязательных файлов, сабагентов и заметок', () => {
     const minimal = structuredClone(card)
     delete minimal.files
     delete minimal.note
     delete minimal.timelineNote
+    delete minimal.task.children
     const html = markup(minimal)
 
     expect(html).not.toContain('data-task-files=')
     expect(html).not.toContain('data-token-note=')
+    expect(html).not.toContain('data-task-subagents=')
     expect(html).not.toContain('Затронутые файлы')
+    expect(html).not.toContain('Сабагенты')
     expect(html).not.toContain('NaN')
   })
 

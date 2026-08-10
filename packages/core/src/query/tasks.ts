@@ -1,3 +1,13 @@
+/**
+ * Лента задач дня.
+ *
+ * **Задача — дерево сессий, а не файл** (3.5). Сабагент пишет свой транскрипт, и
+ * его расход принадлежит задаче, которая его позвала: `findRoot` сводит детей в
+ * корень, `children` показывает, из чего сложилась строка. Resume и `--continue`
+ * дерева не образуют — оба провайдера дописывают продолжение в тот же файл, и
+ * склеивать нечего; измерение и счёт контрфакта — в
+ * [`docs/roadmap/3.5-tasks.md`](../../../../docs/roadmap/3.5-tasks.md).
+ */
 import type { Db } from '../index/db.ts'
 import type { Provider } from '../sources/types.ts'
 import { addTotals, emptyTotals, requestFilter } from './today.ts'
@@ -13,6 +23,7 @@ interface RequestRow {
   session_model: string | null
   title: string | null
   first_prompt: string | null
+  agent_type: string | null
   parent_session_id: string | null
   is_sidechain: number
   model: string
@@ -24,12 +35,30 @@ interface RequestRow {
   tool_calls: number
 }
 
-export function taskRows(db: Db, range: DayRange, scope: RequestScope = {}): TaskRow[] {
+export interface TaskOptions {
+  /**
+   * Свести сабагентов в родителя. По умолчанию да — так лента отвечает на
+   * вопрос «сколько стоила задача», а не «сколько стоил каждый её участник».
+   *
+   * `false` разворачивает детей в самостоятельные строки, и расход родителя их
+   * уже не включает: посчитай мы их дважды — сумма строк разошлась бы с итогом
+   * дня, причём каждое число по себе осталось бы настоящим.
+   */
+  foldSubagents?: boolean
+}
+
+export function taskRows(
+  db: Db,
+  range: DayRange,
+  scope: RequestScope = {},
+  options: TaskOptions = {},
+): TaskRow[] {
   const filter = requestFilter(range, scope)
   const requests = db.all<RequestRow>(
     `SELECT requests.session_id, sessions.provider, sessions.started_at, sessions.ended_at,
             sessions.project, sessions.branch, sessions.model AS session_model,
-            sessions.title, sessions.first_prompt, sessions.parent_session_id,
+            sessions.title, sessions.first_prompt, sessions.agent_type,
+            sessions.parent_session_id,
             sessions.is_sidechain, requests.model, requests.input, requests.output,
             requests.cache_write, requests.cache_read, requests.origin,
             (SELECT count(*) FROM tool_calls
@@ -57,9 +86,10 @@ export function taskRows(db: Db, range: DayRange, scope: RequestScope = {}): Tas
         model: request.session_model ?? request.model,
         title: request.title,
         firstPrompt: request.first_prompt,
+        agentType: request.agent_type,
         totals: emptyTotals(),
         toolCalls: 0,
-        subagents: 0,
+        children: [],
         approximate: false,
         sidechain: request.is_sidechain === 1,
         parentSessionId: request.parent_session_id,
@@ -79,6 +109,12 @@ export function taskRows(db: Db, range: DayRange, scope: RequestScope = {}): Tas
     row.approximate ||= request.origin !== 'log'
   }
 
+  // Развёрнутый режим: каждая сессия сама себе задача, ничего никуда не
+  // сводится. Расход при этом тот же — просто разложен по другим строкам.
+  if (options.foldSubagents === false) {
+    return sorted([...bySession.values()].map((row) => publicRow(row)))
+  }
+
   const roots = new Map<string, TaskRow>()
   for (const row of bySession.values()) {
     const rootId = findRoot(row.sessionId, bySession)
@@ -88,20 +124,30 @@ export function taskRows(db: Db, range: DayRange, scope: RequestScope = {}): Tas
         ...publicRow(source),
         totals: emptyTotals(),
         toolCalls: 0,
-        subagents: 0,
+        children: [],
       })
     }
     const root = roots.get(rootId)!
     addTotals(root.totals, row.totals)
     root.toolCalls += row.toolCalls
-    if (row.sessionId !== rootId) root.subagents += 1
+    if (row.sessionId !== rootId) root.children.push(publicRow(row))
     root.startedAt = Math.min(root.startedAt, row.startedAt)
     root.endedAt = Math.max(root.endedAt, row.endedAt)
     root.durationMs = Math.max(0, root.endedAt - root.startedAt)
     root.approximate ||= row.approximate
   }
 
-  return [...roots.values()].sort(
+  for (const root of roots.values()) root.children = sorted(root.children)
+  return sorted([...roots.values()])
+}
+
+/**
+ * Порядок один на оба режима и на список детей: сначала по времени начала,
+ * позже — выше. Второй ключ — идентификатор: без него две сессии, начавшиеся в
+ * одну миллисекунду, меняются местами от запроса к запросу.
+ */
+function sorted(rows: TaskRow[]): TaskRow[] {
+  return rows.sort(
     (left, right) =>
       right.startedAt - left.startedAt || left.sessionId.localeCompare(right.sessionId),
   )
@@ -119,9 +165,10 @@ function publicRow(row: TaskRow & { parentSessionId: string | null }): TaskRow {
     model: row.model,
     title: row.title,
     firstPrompt: row.firstPrompt,
+    agentType: row.agentType,
     totals: row.totals,
     toolCalls: row.toolCalls,
-    subagents: row.subagents,
+    children: row.children,
     approximate: row.approximate,
     sidechain: row.sidechain,
   }

@@ -69,7 +69,33 @@ describe('query reports', () => {
 
     expect(rows).toHaveLength(9)
     expect(rows.some((row) => row.sessionId === 'a6bf337b0067775dd')).toBe(false)
-    expect(parent?.subagents).toBe(1)
+    expect(parent?.children.map((child) => child.sessionId)).toEqual(['a6bf337b0067775dd'])
+    expect(sumRows(rows)).toEqual(expectedTotals)
+    expect(sumRows(rows)).toEqual(todayReport(db, allTime).totals)
+  })
+
+  /**
+   * Ловит развёрнутый режим, забывший вычесть детей из родителя: расход
+   * ребёнка попал бы и в его строку, и в строку родителя, а итог дня остался
+   * бы прежним — то есть сумма строк разошлась бы с шапкой над ними, и каждое
+   * число по себе выглядело бы настоящим (3.5).
+   */
+  it('развёрнутые сабагенты не удваивают расход', () => {
+    ingestFixtures()
+
+    const rows = taskRows(db, allTime, {}, { foldSubagents: false })
+    const child = rows.find((row) => row.sessionId === 'a6bf337b0067775dd')
+    const parent = rows.find((row) => row.sessionId === '92cc27dc-193d-4c2c-aef1-843d7d41aeab')
+    const folded = taskRows(db, allTime).find(
+      (row) => row.sessionId === '92cc27dc-193d-4c2c-aef1-843d7d41aeab',
+    )
+
+    expect(rows).toHaveLength(10)
+    expect(child).toBeDefined()
+    expect(child?.agentType).toBe('general-purpose')
+    expect(rows.every((row) => row.children.length === 0)).toBe(true)
+    // Родитель в развёрнутом режиме беднее ровно на ребёнка, а не «примерно».
+    expect(parent!.totals.total + child!.totals.total).toBe(folded!.totals.total)
     expect(sumRows(rows)).toEqual(expectedTotals)
     expect(sumRows(rows)).toEqual(todayReport(db, allTime).totals)
   })

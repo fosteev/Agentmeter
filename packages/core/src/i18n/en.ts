@@ -109,6 +109,8 @@ export const en = {
     projectsPlain_other: '{{count}} projects',
     requests_one: '{{count}} request',
     requests_other: '{{count}} requests',
+    subagents_one: '{{count}} subagent',
+    subagents_other: '{{count}} subagents',
   },
 
   card: {
@@ -117,6 +119,8 @@ export const en = {
     tokenSplit: 'Tokens by kind',
     tools: 'Tools in this task',
     files: 'Files touched · {{count}}',
+    subagents: 'Subagents · {{count}}',
+    subagentUnnamed: 'subagent',
     dayShare: '{{percent}}% of the day',
   },
 

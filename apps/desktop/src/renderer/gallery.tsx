@@ -376,7 +376,8 @@ function taskRow(provider: Provider, title: string, total: number): TaskRowData 
       requests: 0,
     },
     toolCalls: 0,
-    subagents: 0,
+    agentType: null,
+    children: [],
     approximate: false,
     sidechain: false,
   }

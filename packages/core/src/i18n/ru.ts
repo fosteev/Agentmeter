@@ -127,6 +127,9 @@ export const ru = {
     requests_one: '{{count}} запрос',
     requests_few: '{{count}} запроса',
     requests_many: '{{count}} запросов',
+    subagents_one: '{{count}} сабагент',
+    subagents_few: '{{count}} сабагента',
+    subagents_many: '{{count}} сабагентов',
   },
 
   /** Карточка задачи — раздел 4 макета. */
@@ -136,6 +139,8 @@ export const ru = {
     tokenSplit: 'Токены по типам',
     tools: 'Инструменты в этой задаче',
     files: 'Затронутые файлы · {{count}}',
+    subagents: 'Сабагенты · {{count}}',
+    subagentUnnamed: 'сабагент',
     dayShare: '{{percent}}% дневного расхода',
   },
 

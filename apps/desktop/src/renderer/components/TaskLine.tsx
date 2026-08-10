@@ -21,9 +21,16 @@ function estimated(task: TaskRow): boolean {
 export function TaskLine({ task, maxTokens }: TaskLineProps) {
   const approximate = estimated(task)
   const width = maxTokens === 0 ? 0 : (task.tokens.value / maxTokens) * 100
-  const details = [task.model, span(task.endedAt - task.startedAt), PROVIDER[task.provider]].filter(
-    (part): part is string => part !== undefined,
-  )
+  // Подпись собирается здесь, а не в main: это подстановка уже приехавшего
+  // числа в постоянный шаблон, суждения за ней нет (правило 3.0). Число детей
+  // берётся из самого списка — второй счётчик рядом разошёлся бы с ним молча.
+  const subagents = task.children?.length ?? 0
+  const details = [
+    task.model,
+    span(task.endedAt - task.startedAt),
+    PROVIDER[task.provider],
+    subagents === 0 ? undefined : t('today.subagents', { count: subagents }),
+  ].filter((part): part is string => part !== undefined)
 
   return (
     <div
@@ -88,6 +95,10 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
                 fontSize: 10.5,
                 color: 'var(--tx3)',
                 whiteSpace: 'nowrap',
+                // Подпись выросла на «3 сабагента» и в узкой колонке налезала
+                // бы на соседнюю: обрезается так же, как название над ней.
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {details.join(' · ')}

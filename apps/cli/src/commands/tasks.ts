@@ -35,7 +35,7 @@ export function renderTasks(
       `${row.approximate ? '≈' : ''}${row.title ?? row.firstPrompt ?? t('cli.untitled')}`,
       formatTokens(row.totals.total, state.locale),
       String(row.toolCalls),
-      String(row.subagents),
+      String(row.children.length),
     ]),
   )
 }
