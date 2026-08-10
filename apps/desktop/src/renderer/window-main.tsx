@@ -244,7 +244,7 @@ export function WindowApp() {
             taskCard={taskCard}
             onTaskToggle={handleTaskToggle}
           />
-          <TodaySide report={today} />
+          <TodaySide report={today} onOpenBreakdown={() => setTab('breakdown')} />
         </>
       ) : tab === 'breakdown' ? (
         <BreakdownTab screen={breakdown} onScopeChange={setBreakdownScope} />

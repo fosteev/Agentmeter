@@ -124,6 +124,7 @@ export const en = {
     noteHigh: 'More than half the day went to what every session reloaded from scratch.',
     noteMedium: 'A quarter of the day or more went to what every session reloaded.',
     noteLow: 'Most of the day was the work itself, not what loads at startup.',
+    link: 'Breakdown →',
   },
 
   breakdown: {

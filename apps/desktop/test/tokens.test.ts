@@ -115,16 +115,16 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   // в макете они принадлежат разным пунктам списка. Блок тумблеров (1185–1192)
   // делят «Внешний вид» и «Приватность»: в макете это одна группа переключа-
   // телей, разложенная по смыслу на два раздела.
-  'SettingsTab.tsx': [[1119, 1128]],
-  'SettingsSources.tsx': [[1130, 1144]],
-  'SettingsLimits.tsx': [[1146, 1167]],
-  'SettingsAlerts.tsx': [[1169, 1183]],
-  'SettingsAppearance.tsx': [[1185, 1192]],
-  'SettingsPrivacy.tsx': [[1185, 1192]],
-  'PopupEmpty.tsx': [[1203, 1211]],
-  'PopupIndexing.tsx': [[1213, 1224]],
-  'PopupProblem.tsx': [[1226, 1235]],
-  'PopupIdle.tsx': [[1237, 1252]],
+  'SettingsTab.tsx': [[1131, 1140]],
+  'SettingsSources.tsx': [[1142, 1156]],
+  'SettingsLimits.tsx': [[1158, 1179]],
+  'SettingsAlerts.tsx': [[1181, 1195]],
+  'SettingsAppearance.tsx': [[1197, 1204]],
+  'SettingsPrivacy.tsx': [[1197, 1204]],
+  'PopupEmpty.tsx': [[1215, 1223]],
+  'PopupIndexing.tsx': [[1225, 1236]],
+  'PopupProblem.tsx': [[1238, 1247]],
+  'PopupIdle.tsx': [[1249, 1264]],
   'Window.tsx': [
     [564, 564],
     [588, 591],
@@ -163,7 +163,7 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   'BreakdownTab.tsx': [
     [927, 955],
     [959, 1046],
-    [1049, 1107],
+    [1049, 1119],
   ],
   'SpendCategoryTable.tsx': [[971, 1040]],
 }

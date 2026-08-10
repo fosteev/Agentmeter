@@ -289,3 +289,19 @@ describe('правая колонка вкладки «Сегодня»', () => 
     expect(html).not.toContain('Куда ушло сегодня')
   })
 })
+
+/**
+ * Ловит ссылку «Развёртка →», нарисованную без обработчика: переход на вкладку,
+ * которую никто не откроет, — обещание, а не навигация, и нажмут его один раз.
+ * Проверяются оба конца: с обработчиком ссылка есть, без него её нет вовсе.
+ */
+it('ссылка на развёртку появляется только вместе с переходом', () => {
+  const withLink = renderToStaticMarkup(
+    <TodaySide report={today as DayReport} onOpenBreakdown={() => undefined} />,
+  )
+  const without = renderToStaticMarkup(<TodaySide report={today as DayReport} />)
+
+  expect(withLink).toContain('data-spend-link')
+  expect(withLink).toContain('Развёртка')
+  expect(without).not.toContain('data-spend-link')
+})

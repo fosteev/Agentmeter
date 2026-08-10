@@ -17,6 +17,12 @@ import { hatch } from '../paint.ts'
  */
 export interface SpendBarProps {
   split: SpendSplit
+  /**
+   * Переход на «Развёртку» (строка 777 макета). Ссылки нет, пока обработчика
+   * не дали: ссылка на вкладку, которой не будет открыто, — обещание, а не
+   * навигация, и человек нажмёт её один раз.
+   */
+  onOpenBreakdown?: () => void
 }
 
 const LABEL: Record<SpendSplit['slices'][number]['kind'], 'split.recurring' | 'split.marginal'> = {
@@ -24,7 +30,7 @@ const LABEL: Record<SpendSplit['slices'][number]['kind'], 'split.recurring' | 's
   marginal: 'split.marginal',
 }
 
-export function SpendBar({ split }: SpendBarProps) {
+export function SpendBar({ split, onOpenBreakdown }: SpendBarProps) {
   return (
     <div
       data-spend-split
@@ -83,6 +89,22 @@ export function SpendBar({ split }: SpendBarProps) {
           }}
         >
           {split.note}
+          {onOpenBreakdown === undefined ? null : (
+            <>
+              {' '}
+              <a
+                data-spend-link
+                href="#breakdown"
+                onClick={(event) => {
+                  event.preventDefault()
+                  onOpenBreakdown()
+                }}
+                style={{ color: 'var(--codex)' }}
+              >
+                {t('split.link')}
+              </a>
+            </>
+          )}
         </div>
       )}
     </div>

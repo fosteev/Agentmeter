@@ -960,7 +960,7 @@
           <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;border-right:1px solid var(--line);background:oklch(0.79 0.14 82 / 0.035)">
             <div style="display:flex;align-items:baseline;justify-content:space-between">
               <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Лежит в начале каждого промпта</span>
-              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--warn);font-variant-numeric:tabular-nums">6.4k → 28.0k за сессию</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--warn);font-variant-numeric:tabular-nums">6.4k → 29.0k за сессию</span>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 90px 74px 84px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding-bottom:2px;border-bottom:1px solid var(--line)">
@@ -1028,7 +1028,7 @@
 
               <div style="display:grid;grid-template-columns:1fr 90px 74px 84px;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:11px">
                 <span style="font-size:12.5px;font-weight:600">Итого до первого слова</span>
-                <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">28.0k</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">29.0k</span>
                 <span></span>
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">638.0k</span>
               </div>
@@ -1046,7 +1046,7 @@
           <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
             <div style="display:flex;align-items:baseline;justify-content:space-between">
               <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Приносится в контекст по вызову</span>
-              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">1 289 вызовов</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">227 вызовов инструментов</span>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 74px 74px 84px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding-bottom:2px;border-bottom:1px solid var(--line)">
@@ -1097,8 +1097,20 @@
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">2.1k</span>
               </div>
               <div style="display:grid;grid-template-columns:1fr 74px 74px 84px;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:11px">
-                <span style="font-size:12.5px;font-weight:600">Итого вызовов</span>
-                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">1 289</span>
+                <span style="font-size:12.5px">Итого вызовов инструментов</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">227</span>
+                <span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">75.6k</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 74px 74px 84px;gap:12px;align-items:center">
+                <span style="font-size:12.5px;color:var(--tx2)">Ответы модели, ваш ввод и чтение контекста <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">1 289 запросов</span></span>
+                <span></span>
+                <span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">203.4M</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 74px 74px 84px;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:11px">
+                <span style="font-size:12.5px;font-weight:600">Разовый расход за день</span>
+                <span></span>
                 <span></span>
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">203.5M</span>
               </div>
@@ -1253,11 +1265,508 @@
       </div>
     </div>
 
+
+    <!-- ============ 8 · ИСТОРИЯ ============ -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">8 · Вкладка «История» · неделя и хитмап «день × час» · тёмная</div>
+
+      <div style="width:1180px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px oklch(0 0 0 / .5)">
+
+        <div style="height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--s1)">
+          <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.65 0.17 27)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.79 0.14 82)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.72 0.13 155)"></div></div>
+          <div style="display:flex;gap:2px;margin-left:12px">
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Сегодня</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Развёртка</div>
+            <div style="padding:6px 12px;border-radius:6px;background:var(--s2);font-size:12.5px;font-weight:500;color:var(--tx)">История</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Настройки</div>
+          </div>
+          <div style="flex:1"></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums">данные с 15 апреля · 116 дней с расходом</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;min-height:0">
+
+          <div style="display:flex;flex-direction:column;border-right:1px solid var(--line)">
+
+            <div style="padding:18px 24px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+              <div style="display:flex;align-items:baseline;gap:14px">
+                <span style="font-size:20px;font-weight:600">3 — 9 августа</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--tx2);font-variant-numeric:tabular-nums">6 дней с данными · 9 августа данных нет</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="display:flex;gap:2px;padding:2px;background:var(--s1);border-radius:6px">
+                  <span style="padding:5px 11px;font-size:11.5px;border-radius:4px;background:var(--s2)">неделя</span>
+                  <span style="padding:5px 11px;font-size:11.5px;border-radius:4px;color:var(--tx2)">30 дней</span>
+                  <span style="padding:5px 11px;font-size:11.5px;border-radius:4px;color:var(--tx2)">всё</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums">844.1M</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">токенов</span></div>
+              </div>
+            </div>
+
+            <div style="padding:6px 24px 16px;display:flex;gap:4px;align-items:flex-end">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx2);font-weight:400">128.4M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:49px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:75;background:var(--claude)"></div><div style="flex:25;background:var(--codex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Пн 3</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx2);font-weight:400">61.2M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:23px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:30;background:var(--claude)"></div><div style="flex:70;background:var(--codex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Вт 4</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx2);font-weight:400">296.7M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:113px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:82;background:var(--claude)"></div><div style="flex:18;background:var(--codex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Ср 5</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx2);font-weight:400">12.9M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:6px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:30;background:var(--claude)"></div><div style="flex:70;background:var(--codex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Чт 6</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--s1);border-radius:6px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx);font-weight:600">344.9M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:130px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:90;background:var(--claude)"></div><div style="flex:10;background:var(--codex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx);font-variant-numeric:tabular-nums">Пт 7</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx3);font-weight:400">0</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:2px;background:var(--tx3);border-radius:1px"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Сб 8</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--tx3);font-weight:400">—</span>
+                <div style="width:100%;max-width:44px;height:130px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--line)"></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Вс 9</span>
+              </div>
+            </div>
+
+            <div style="height:1px;background:var(--line)"></div>
+
+            <div style="flex:1;padding:16px 24px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">День × час</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2)">цвет — агент, насыщенность — объём</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-height:0">
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Пн 3</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.22"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Вт 4</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.22"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Ср 5</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:1"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:1"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.22"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.22"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Чт 6</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.42"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.22"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx);font-variant-numeric:tabular-nums">Пт 7</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:1"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:1"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--codex);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Сб 8</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:var(--s1)"></div></div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:stretch">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Вс 9</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:100%"><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:100%;min-height:24px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)"></div></div>
+            </div>
+            <div style="flex:none;display:grid;grid-template-columns:44px 1fr;gap:10px"><span></span><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></div>
+              </div>
+            <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3)">
+              <div style="display:flex;align-items:center;gap:6px"><span>меньше</span><div style="width:14px;height:10px;border-radius:2px;background:var(--claude);opacity:0.22"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--claude);opacity:0.42"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--claude);opacity:0.68"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--claude);opacity:1"></div><span>больше</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;background:var(--s1)"></div><span>час без расхода — ноль</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--line)"></div><span>данных нет</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;background:var(--claude)"></div><span>Claude</span><div style="width:14px;height:10px;border-radius:2px;background:var(--codex);margin-left:6px"></div><span>Codex</span></div>
+            </div>
+            </div>
+
+            <div style="margin-top:auto;border-top:1px solid var(--line);padding:14px 24px;display:flex;gap:26px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">
+              <span>медиана дня <span style="color:var(--tx)">42.6M</span></span>
+              <span>минимум <span style="color:var(--tx)">1.0M</span></span>
+              <span>максимум <span style="color:var(--tx)">569M</span> · 2 июля</span>
+              <span>постоянный расход: медиана <span style="color:var(--tx)">30.4%</span>, от 9.9% до 99.8%</span>
+            </div>
+          </div>
+
+          <div style="background:var(--s1);display:flex;flex-direction:column">
+            <div style="padding:18px 18px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font-size:15px;font-weight:600">Пятница, 7 августа</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums">344.9M</span>
+              </div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">22 сессии · 22 задачи · 1 289 запросов</span>
+            </div>
+
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px;border-bottom:1px solid var(--line)">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Типы токенов</div>
+                <div style="display:grid;grid-template-columns:1fr 62px 44px;gap:8px;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px">чтение кэша</span><div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:100%;height:100%;background:var(--tx3)"></div></div></div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums">300.2M</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">87.0%</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 62px 44px;gap:8px;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px">запись в кэш</span><div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:14%;height:100%;background:var(--tx3)"></div></div></div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums">41.3M</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">12.0%</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 62px 44px;gap:8px;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px">свежий ввод</span><div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:1%;height:100%;background:var(--tx3)"></div></div></div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums">1.9M</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0.6%</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 62px 44px;gap:8px;align-items:center">
+                  <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px">вывод</span><div style="height:4px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:1%;height:100%;background:var(--tx3)"></div></div></div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums">1.5M</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0.4%</span>
+                </div>
+              <div style="display:grid;grid-template-columns:1fr 62px 44px;gap:8px;border-top:1px solid var(--line);padding-top:9px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums"><span style="font-family:'IBM Plex Sans',sans-serif;font-size:12px">итого</span><span style="text-align:right">344.9M</span><span style="text-align:right">100%</span></div>
+            </div>
+
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--line)">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Провайдеры</div>
+              <div style="display:flex;height:8px;border-radius:3px;overflow:hidden"><div style="width:89.6%;background:var(--claude)"></div><div style="width:10.4%;background:var(--codex)"></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">Claude</span><span>308.9M <span style="color:var(--tx3)">89.6%</span></span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">Codex</span><span>36.0M <span style="color:var(--tx3)">10.4%</span></span></div>
+            </div>
+
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--line)">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Постоянный и разовый</div>
+              <div style="display:flex;height:8px;border-radius:3px;overflow:hidden"><div style="width:41%;background:repeating-linear-gradient(115deg, var(--warn) 0 3px, oklch(0.79 0.14 82 / 0.32) 3px 7px)"></div><div style="width:59%;background:var(--codex)"></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">постоянный</span><span>141.4M <span style="color:var(--tx3)">41%</span></span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">разовый</span><span>203.5M <span style="color:var(--tx3)">59%</span></span></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);line-height:1.5">медиана за 116 дней — 30.4%</div>
+            </div>
+
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Проекты</div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">ollama-bar</span><span>156.2M</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">Projects</span><span>87.3M</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">pilot</span><span>36.0M</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">ollama-bench</span><span>13.6M</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums"><span style="color:var(--tx2)">+ 4 проекта</span><span>51.8M</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- светлая версия -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">8б · Та же неделя в светлой теме</div>
+        <div style="width:820px;background:var(--lbg);border:1px solid var(--lline);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--lline);background:var(--ls1)">
+            <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.72 0.16 27)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.84 0.13 82)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.78 0.13 155)"></div></div>
+            <div style="display:flex;gap:2px;margin-left:12px">
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--ltx2)">Сегодня</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--ltx2)">Развёртка</div>
+            <div style="padding:6px 12px;border-radius:6px;background:var(--ls2);font-size:12.5px;font-weight:500;color:var(--ltx)">История</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--ltx2)">Настройки</div>
+            </div>
+            <div style="flex:1"></div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ltx3);font-variant-numeric:tabular-nums">116 дней с расходом</span>
+          </div>
+          <div style="padding:16px 20px 10px;display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font-size:16px;font-weight:600;color:var(--ltx)">3 — 9 августа</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ltx);font-variant-numeric:tabular-nums">844.1M</span>
+          </div>
+          <div style="padding:0 20px 14px;display:flex;gap:4px;align-items:flex-end">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx2);font-weight:400">128.4M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:49px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:75;background:var(--lclaude)"></div><div style="flex:25;background:var(--lcodex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Пн 3</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx2);font-weight:400">61.2M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:23px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:30;background:var(--lclaude)"></div><div style="flex:70;background:var(--lcodex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Вт 4</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx2);font-weight:400">296.7M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:113px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:82;background:var(--lclaude)"></div><div style="flex:18;background:var(--lcodex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Ср 5</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx2);font-weight:400">12.9M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:6px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:30;background:var(--lclaude)"></div><div style="flex:70;background:var(--lcodex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Чт 6</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--ls2);border-radius:6px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx);font-weight:600">344.9M</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:130px;border-radius:3px;overflow:hidden;display:flex;flex-direction:column"><div style="flex:90;background:var(--lclaude)"></div><div style="flex:10;background:var(--lcodex)"></div></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx);font-variant-numeric:tabular-nums">Пт 7</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx3);font-weight:400">0</span>
+                <div style="width:100%;max-width:44px;height:130px;display:flex;flex-direction:column;justify-content:flex-end"><div style="height:2px;background:var(--ltx3);border-radius:1px"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Сб 8</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-variant-numeric:tabular-nums;color:var(--ltx3);font-weight:400">—</span>
+                <div style="width:100%;max-width:44px;height:130px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--lline)"></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Вс 9</span>
+              </div>
+          </div>
+          <div style="border-top:1px solid var(--lline);padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Пн 3</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.22"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Вт 4</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.22"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Ср 5</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:1"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:1"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.22"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.22"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Чт 6</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.42"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.22"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx);font-variant-numeric:tabular-nums">Пт 7</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:1"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:1"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lcodex);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Сб 8</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div><div style="height:15px;border-radius:2px;background:var(--ls2)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ltx3);font-variant-numeric:tabular-nums">Вс 9</span>
+              <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:2px"><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div><div style="height:15px;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--lline)"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px"><span></span><div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ltx3);font-variant-numeric:tabular-nums"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ltx3)">
+              <div style="display:flex;align-items:center;gap:6px"><span>меньше</span><div style="width:14px;height:10px;border-radius:2px;background:var(--lclaude);opacity:0.22"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--lclaude);opacity:0.42"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--lclaude);opacity:0.68"></div><div style="width:14px;height:10px;border-radius:2px;background:var(--lclaude);opacity:1"></div><span>больше</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;background:var(--ls2)"></div><span>час без расхода — ноль</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--lline)"></div><span>данных нет</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:10px;border-radius:2px;background:var(--lclaude)"></div><span>Claude</span><div style="width:14px;height:10px;border-radius:2px;background:var(--lcodex);margin-left:6px"></div><span>Codex</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============ 9 · УВЕДОМЛЕНИЯ ============ -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">9 · Уведомления · содержимое (рамку рисует ОС)</div>
+
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:388px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);line-height:1.5">Порог предупреждения · 75% · Claude — оценка</div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--bg);background:var(--claude);border-radius:3px;padding:2px 5px;flex:none;margin-top:2px">CL</div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font-size:13px;font-weight:600">Claude Code — ≈76% пятичасового окна</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;flex:none"><span style="color:var(--warn)">≈76%</span></span>
+                </div>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Окно закроется в 18:40, через 1 ч 20 мин. Сейчас работают 2 агента.</div>
+              </div>
+            </div>
+            <div style="height:6px;border-radius:3px;background:var(--s2);overflow:hidden"><div style="width:76%;height:100%;background:repeating-linear-gradient(115deg, var(--warn) 0 3px, oklch(0.79 0.14 82 / 0.32) 3px 7px)"></div></div>
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;">Открыть окно</span><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;color:var(--tx2)">Не напоминать до сброса</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:388px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);line-height:1.5">Порог тревоги · 92% · Codex — точно</div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--bg);background:var(--codex);border-radius:3px;padding:2px 5px;flex:none;margin-top:2px">CX</div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font-size:13px;font-weight:600">Codex — 94% недельного лимита</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;flex:none"><span style="color:var(--alarm)">94%</span></span>
+                </div>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Сброс в понедельник, 10 августа, 09:00 — через 2 дня 16 ч.</div>
+              </div>
+            </div>
+            <div style="height:6px;border-radius:3px;background:var(--s2);overflow:hidden"><div style="width:94%;height:100%;background:var(--alarm)"></div></div>
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;">Открыть окно</span><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;color:var(--tx2)">Не напоминать до сброса</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:388px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);line-height:1.5">Сессия дороже заданного числа токенов · порог 50M</div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--bg);background:var(--claude);border-radius:3px;padding:2px 5px;flex:none;margin-top:2px">CL</div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font-size:13px;font-weight:600">Сессия дороже 50M</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;flex:none">62.1M</span>
+                </div>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">ollama-bar · main · без названия. 238 запросов, начало 11:31.</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;">Открыть задачу</span><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;color:var(--tx2)">Изменить порог</span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;width:388px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);line-height:1.5">Агент закончил работу или ждёт ответа</div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--bg);background:var(--codex);border-radius:3px;padding:2px 5px;flex:none;margin-top:2px">CX</div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font-size:13px;font-weight:600">Codex закончил — pilot</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;flex:none">10.4M</span>
+                </div>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">GARM-808 · 9 мин · 86 запросов.</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;">Открыть задачу</span><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;color:var(--tx2)">Закрыть</span></div>
+          </div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--bg);background:var(--claude);border-radius:3px;padding:2px 5px;flex:none;margin-top:2px">CL</div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font-size:13px;font-weight:600">Claude ждёт ответа — pilot</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums;flex:none">214k</span>
+                </div>
+                <div style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Вопрос задан 3 мин назад, агент простаивает.</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;">Открыть задачу</span><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px;color:var(--tx2)">Закрыть</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:16px 20px;width:820px;font-size:12.5px;color:var(--tx2);line-height:1.6;text-wrap:pretty">
+        Процент лимита в уведомлении подчиняется общему правилу: у Claude он вычисляется локально и потому идёт со штриховкой и знаком «≈», у Codex приходит от сервера и рисуется сплошным. Кнопка «Не напоминать до сброса» гасит только этот порог и только до ближайшего сброса окна — других способов отключить уведомление на лету нет.
+      </div>
+    </div>
+
+
+    <!-- ============ 10 · ПЕРЕПЛАТА ЗА ПАУЗУ ============ -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">10 · «Переплата за паузу» — блок во вкладке «Развёртка», под строкой «Пересборка кэша»</div>
+
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+
+        <div style="width:600px;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:15px;font-weight:600">Переплата за паузу</div>
+              <div style="font-size:12px;color:var(--tx2);line-height:1.5;max-width:360px;text-wrap:pretty">Кэш промпта живёт 5 минут. Пауза дольше — и весь стартовый префикс пишется заново: вместо дешёвого чтения платится дорогая запись.</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--alarm);font-variant-numeric:tabular-nums">79.6M</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">23.1% расхода за день</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--line);padding-top:14px">
+            <div style="display:grid;grid-template-columns:1fr 46px 68px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">
+              <span>Пересборки кэша за день</span><span style="text-align:right">Раз</span><span style="text-align:right">Токены</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 46px 68px;gap:12px;align-items:center">
+              <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:var(--tx2)">при старте сессии — неизбежно</span><div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:43.5%;height:100%;background:var(--tx3)"></div></div></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">22</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">61.2M</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 46px 68px;gap:12px;align-items:center">
+              <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:var(--alarm)">после паузы дольше 5 минут</span><div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:56.5%;height:100%;background:var(--alarm)"></div></div></div>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--alarm);font-variant-numeric:tabular-nums">24</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;color:var(--alarm);font-variant-numeric:tabular-nums">79.6M</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 46px 68px;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:10px">
+              <span style="font-size:12.5px;font-weight:600">Всего пересборок</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">46</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">140.8M</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px">
+            <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">
+              <span>Длина паузы</span><span></span><span style="text-align:right">Раз</span><span style="text-align:right">Токены</span>
+            </div>
+              <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;align-items:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums">5 — 10 мин</span>
+                <div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:100%;height:100%;background:var(--alarm)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">11</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">34.1M</span>
+              </div>
+              <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;align-items:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums">10 — 30 мин</span>
+                <div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:73%;height:100%;background:var(--alarm)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">7</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">24.8M</span>
+              </div>
+              <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;align-items:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums">30 — 60 мин</span>
+                <div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:39%;height:100%;background:var(--alarm)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">4</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">13.2M</span>
+              </div>
+              <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;align-items:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2);font-variant-numeric:tabular-nums">больше 60 мин</span>
+                <div style="height:8px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:22%;height:100%;background:var(--alarm)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">2</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">7.5M</span>
+              </div>
+            <div style="display:grid;grid-template-columns:96px 1fr 46px 68px;gap:12px;align-items:center;border-top:1px solid var(--line);padding-top:10px">
+              <span style="font-size:12.5px;font-weight:600">Итого</span><span></span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">24</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;font-weight:600;color:var(--alarm);font-variant-numeric:tabular-nums">79.6M</span>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+              <span style="font-size:12.5px">Самая дорогая пауза — 46 мин</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--alarm);font-variant-numeric:tabular-nums">6.9M</span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">12:58 → 13:44 · ollama-bar · docs/fix</div>
+            <div style="display:flex;gap:8px"><span style="font-size:11.5px;padding:5px 10px;border:1px solid var(--line);border-radius:5px">Показать эти 24 паузы в ленте</span></div>
+          </div>
+        </div>
+
+        <div style="width:420px;display:flex;flex-direction:column;gap:16px">
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:13px;font-weight:600">Почему блок живёт в «Развёртке», а не в карточке задачи</div>
+            <div style="font-size:12.5px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Переплата за паузу — не свойство задачи, а свойство того, как вы работаете за день: одна пересборка внутри задачи выглядит случайностью, двадцать четыре за день — привычкой. Величина сравнивается только с другими постоянными расходами (MCP, скиллы, стартовый оверхед), а они все здесь. Строкой ленты это быть не может: пауза — не задача, у неё нет ни начала работы, ни запросов, и в списке, отсортированном по расходу, она встала бы вторым номером, вытеснив то, что человек действительно делал.</div>
+            <div style="font-size:12.5px;color:var(--tx2);line-height:1.6;border-top:1px solid var(--line);padding-top:12px;text-wrap:pretty">В карточке задачи (раздел 4) остаётся одна строка — «пересборка кэша: 3 раза, 9.8M» — как часть разбора этой задачи, без гистограммы и без итогов дня.</div>
+          </div>
+
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:13px;font-weight:600">Как блок стыкуется с существующим</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2);line-height:1.7;font-variant-numeric:tabular-nums">
+              <div>раздел 5 · «Пересборка кэша» — ×46 · 140.8M</div>
+              <div style="color:var(--tx3)">└ те же 46 пересборок, разобранные по причине</div>
+              <div style="margin-top:8px">22 сессии → 22 неизбежные пересборки</div>
+              <div>46 − 22 = 24 пересборки после паузы</div>
+              <div>61.2M + 79.6M = 140.8M</div>
+            </div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5;border-top:1px solid var(--line);padding-top:12px">Цифры измеренные: время между запросами и объём записи в кэш лежат в логах. Штриховки нет — здесь нечего оценивать.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;claudeColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.755 0.130 62)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.755 0.130 62)&quot;,&quot;oklch(0.760 0.120 30)&quot;,&quot;oklch(0.780 0.140 100)&quot;]},&quot;codexColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.745 0.110 205)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.745 0.110 205)&quot;,&quot;oklch(0.720 0.110 265)&quot;,&quot;oklch(0.760 0.100 175)&quot;]},&quot;alarmColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.650 0.170 27)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.650 0.170 27)&quot;,&quot;oklch(0.680 0.160 10)&quot;,&quot;oklch(0.700 0.150 45)&quot;]},&quot;canvasBg&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.145 0.008 255)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Холст&quot;,&quot;options&quot;:[&quot;oklch(0.145 0.008 255)&quot;,&quot;oklch(0.180 0 0)&quot;,&quot;oklch(0.960 0.003 255)&quot;]}}">
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;claudeColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.755 0.130 62)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.755 0.130 62)&quot;,&quot;oklch(0.760 0.120 30)&quot;,&quot;oklch(0.780 0.140 100)&quot;]},&quot;codexColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.745 0.110 205)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.745 0.110 205)&quot;,&quot;oklch(0.720 0.110 265)&quot;,&quot;oklch(0.760 0.100 175)&quot;]},&quot;alarmColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.650 0.170 27)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Цвета агентов&quot;,&quot;options&quot;:[&quot;oklch(0.650 0.170 27)&quot;,&quot;oklch(0.680 0.160 10)&quot;,&quot;oklch(0.700 0.150 45)&quot;]},&quot;canvasBg&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;oklch(0.145 0.008 255)&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Холст&quot;,&quot;options&quot;:[&quot;oklch(0.145 0.008 255)&quot;,&quot;oklch(0.180 0 0)&quot;,&quot;oklch(0.960 0.003 255)&quot;]}}">
 class Component extends DCLogic {
   applyTheme() {
     const r = document.documentElement.style;
@@ -1271,5 +1780,6 @@ class Component extends DCLogic {
   renderVals() { return {}; }
 }
 </script>
-</body>
-</html>
+
+
+</body></html>

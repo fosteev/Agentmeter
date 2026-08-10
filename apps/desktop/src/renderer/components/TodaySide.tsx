@@ -7,9 +7,11 @@ import { t } from '../format.ts'
 
 export interface TodaySideProps {
   report: DayReport | null
+  /** Переход на «Развёртку» из подписи под полосой (строка 777 макета). */
+  onOpenBreakdown?: () => void
 }
 
-export function TodaySide({ report }: TodaySideProps) {
+export function TodaySide({ report, onOpenBreakdown }: TodaySideProps) {
   const showHours = report !== null && !report.emptyIndex && report.byHour.length > 0
   const showProjects = report !== null && !report.emptyIndex && report.byProject.length > 0
   // Блока нет, когда тикетов нет: пустой список обещал бы разрез, которого за
@@ -67,7 +69,9 @@ export function TodaySide({ report }: TodaySideProps) {
       {(showProjects || showTickets) && showSplit ? (
         <div data-today-side-divider style={{ height: 1, background: 'var(--line)' }} />
       ) : null}
-      {showSplit ? <SpendBar split={split} /> : null}
+      {showSplit ? (
+        <SpendBar split={split} {...(onOpenBreakdown ? { onOpenBreakdown } : {})} />
+      ) : null}
     </aside>
   )
 }
