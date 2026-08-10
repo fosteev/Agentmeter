@@ -187,6 +187,45 @@ describe('buildSpendScreen', () => {
   })
 })
 
+describe('картинки отдельной статьёй (4.5)', () => {
+  /**
+   * Ловит строку картинок, добавленную **поверх** строк инструментов.
+   *
+   * Маржинальная стоимость вызова посчитана один раз, и вторая строка с той же
+   * ценой завысила бы колонку ровно на себя, а «итого вызовов» — на число
+   * картинок. Вызов с картинкой обязан **уйти** из строки своего инструмента.
+   */
+  it('вызов с картинкой уходит из строки инструмента, а не дублируется', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const images = screen.tools.find((row) => row.key === '<images>')!
+    const read = screen.tools.find((row) => row.key === 'Read')
+
+    // В фикстуре `images.jsonl` картинка одна, и она пришла из `Read`.
+    expect(images.calls).toBe(1)
+    expect(images.label).toBe('Картинки и скриншоты')
+    expect(screen.toolCalls).toBe(screen.tools.reduce((sum, row) => sum + row.calls, 0))
+    // `Read` остался — у него есть и обычные вызовы; картинка в них не входит.
+    expect(read === undefined || read.calls >= 1).toBe(true)
+  })
+
+  /**
+   * Ловит ключ, доехавший до экрана как есть. `<images>` — синтетический ключ,
+   * и человек, увидевший его в строке, решит, что так называется инструмент.
+   */
+  it('на экране стоит название, а не служебный ключ', () => {
+    const html = render(buildSpendScreen(db, ALL))
+    const start = html.indexOf('data-spend-tool="&lt;images&gt;"')
+    const cell = html.slice(start, html.indexOf('</span>', start))
+
+    // Ключ остаётся в `data-`-атрибуте — по нему цепляются проверки, — а вот в
+    // тексте строки его быть не должно: человек прочтёт `<images>` как имя
+    // инструмента, которого у него нет.
+    expect(start).toBeGreaterThan(0)
+    expect(cell).toContain('Картинки и скриншоты')
+    expect(cell).not.toContain('&lt;images&gt;</span>')
+  })
+})
+
 describe('переплата за паузу (4.4)', () => {
   /**
    * Ловит блок, который сложили с шапкой.

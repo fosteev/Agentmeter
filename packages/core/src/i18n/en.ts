@@ -161,6 +161,7 @@ export const en = {
     deferredTools: 'Deferred tools',
     userTurn: 'First message',
     other: 'Other',
+    images: 'Images and screenshots',
     adviceHeadline: '{{source}} · {{tools}} · {{calls}}',
     adviceTools_one: '{{count}} tool',
     adviceTools_other: '{{count}} tools',
@@ -246,9 +247,10 @@ export const en = {
     sourceBroken: '{{intact}}{{provider}} numbers for today are incomplete.',
     compaction: 'context compaction',
     rebuild: 'cache rebuild',
-    images_one: '{{count}} image in the result — 13× denser than text, {{tokens}} into the prompt',
+    images_one:
+      '{{count}} image in the result — {{tokens}} into the prompt, and its size does not show it',
     images_other:
-      '{{count}} images in the result — 13× denser than text, {{tokens}} into the prompt',
+      '{{count}} images in the result — {{tokens}} into the prompt, and their size does not show it',
     bigResult: 'large {{tool}} result — {{tokens}} into the prompt',
     bigResultFile: 'large {{tool}} result — {{path}} — {{tokens}} into the prompt',
     spread_one: '{{count}} tool result at once — {{tokens}} into the prompt',
@@ -259,8 +261,10 @@ export const en = {
     costlier_other: '{{count}} requests costlier than the rest — {{tokens}} together',
     marked_one: '{{count}} request stands out — {{tokens}}',
     marked_other: '{{count}} requests stand out — {{tokens}} together',
-    toolImages_one: '{{count}} call with images — 13× denser than text, {{per}} per call',
-    toolImages_other: '{{count}} calls with images — 13× denser than text, {{per}} per call',
+    toolImages_one:
+      '{{count}} call with an image — {{per}} per call, and the result bytes do not show it',
+    toolImages_other:
+      '{{count}} calls with images — {{per}} per call, and the result bytes do not show it',
     toolCostly:
       '{{per}} into the prompt per call against {{average}} on average — {{tool}} costs more',
     reread_one: 'The cache was re-read {{count}} time{{grew}}.',

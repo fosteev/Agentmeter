@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.ts'
 import type { Db, SqlValue } from '../index/db.ts'
 import type { MarginalBasis } from '../sources/types.ts'
 import { taskFilter, taskSessions } from './task.ts'
@@ -68,15 +69,50 @@ export function breakdownReport(db: Db, scope: Scope): BreakdownReport {
   }
 }
 
+/**
+ * Ключ строки «Картинки и скриншоты» (4.5) — раздел 5 макета, строка 1070.
+ *
+ * Синтетический, поэтому со скобками: имени инструмента с такими символами не
+ * бывает, и совпасть с настоящим он не может.
+ */
+export const IMAGE_ROW_KEY = '<images>'
+
+/**
+ * Как строка инструмента называется на экране.
+ *
+ * Одна функция на три потребителя — развёртку, карточку задачи и CLI: имя
+ * инструмента показывается как есть, а синтетическому ключу нужен перевод, и
+ * третий его экземпляр однажды отстал бы от двух первых. Живёт рядом с ключом,
+ * потому что вместе они и есть договорённость.
+ */
+export function toolRowLabel(key: string): string {
+  return key === IMAGE_ROW_KEY ? t('breakdown.images') : key
+}
+
+/**
+ * Вызовы по инструментам, с картинками отдельной статьёй (4.5).
+ *
+ * Вызов с картинкой **уходит** из строки своего инструмента, а не дублируется
+ * рядом: его маржинальная стоимость уже посчитана один раз, и вторая строка
+ * поверх той же цены завысила бы колонку ровно на себя. Отсюда и падение
+ * `Read`: 65 его вызовов на живых логах — это картинки.
+ *
+ * Смысл отдельной строки — в том, что по размеру результата цену картинки не
+ * угадать. Замер по измеренным вызовам (печатает `breakdown-live.ts`, проверка
+ * 8): **250 байт на токен** у картинок против **4.3** у текста, то есть в логе
+ * картинка выглядит почти в шестьдесят раз объёмнее своей цены. При этом сам
+ * вызов вчетверо дороже обычного: медиана 712 токенов против 185.
+ */
 function toolRows(db: Db, filter: { sql: string; params: SqlValue[] }): ToolBreakdownRow[] {
   const rows = db.all<TokenRow>(
-    `SELECT tool_calls.name AS key, tool_calls.marginal_basis AS basis,
+    `SELECT CASE WHEN tool_calls.has_image = 1 THEN '${IMAGE_ROW_KEY}' ELSE tool_calls.name END AS key,
+            tool_calls.marginal_basis AS basis,
             count(*) AS calls, sum(tool_calls.marginal_tokens) AS tokens
      FROM tool_calls
      JOIN requests ON requests.session_id = tool_calls.session_id AND requests.seq = tool_calls.seq
      JOIN sessions ON sessions.id = requests.session_id
      WHERE ${filter.sql}
-     GROUP BY tool_calls.name, tool_calls.marginal_basis`,
+     GROUP BY key, tool_calls.marginal_basis`,
     ...filter.params,
   )
   const grouped = new Map<string, ToolBreakdownRow>()

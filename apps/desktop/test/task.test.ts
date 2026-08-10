@@ -489,8 +489,12 @@ describe('модель выделения запроса', () => {
       ...quiet(4),
     ])
 
+    // «Плотнее текста в тринадцать раз» здесь стояло до 4.5 и не выводилось
+    // ни из одного замера проекта: по одиночным измеренным вызовам картинка
+    // занимает 93.7 байта на токен против 5.1 у текста, то есть в логе она
+    // **объёмнее** своей цены в восемнадцать раз, а не плотнее в тринадцать.
     expect(timeline()[5]!.note).toBe(
-      '1 картинка в результате — плотнее текста в тринадцать раз, 60k в промпт',
+      '1 картинка в результате — 60k в промпт, и по размеру результата этого не видно',
     )
   })
 
@@ -515,7 +519,12 @@ describe('модель выделения запроса', () => {
 
     expect(tools.find((tool) => tool.key === 'Bash')!.note).toBeUndefined()
     expect(tools.find((tool) => tool.key === 'Bash')!.marginal.value).toBeGreaterThan(0)
-    expect(tools.find((tool) => tool.key === 'view_image')!.note).toContain('с картинками')
+    // Вызов с картинкой после 4.5 ушёл из строки своего инструмента в общую
+    // строку картинок: в `view_image` не осталось ничего, а не ноль токенов.
+    expect(tools.find((tool) => tool.key === 'view_image')).toBeUndefined()
+    const images = tools.find((tool) => tool.key === '<images>')!
+    expect(images.label).toBe('Картинки и скриншоты')
+    expect(images.note).toContain('с картинкой')
   })
 
   /**

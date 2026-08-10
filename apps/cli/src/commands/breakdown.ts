@@ -1,5 +1,5 @@
 import type { BreakdownReport } from '@agentmeter/core'
-import { t } from '@agentmeter/core'
+import { t, toolRowLabel } from '@agentmeter/core'
 import { formatNumber, formatTokens, table } from '../format.ts'
 
 export type BreakdownAxis = 'tool' | 'server' | 'skill' | 'agent' | 'model'
@@ -21,7 +21,7 @@ export function renderBreakdown(
         { header: t('cli.columnCalls'), width: 7, align: 'right' },
       ],
       report.tool.map((row) => [
-        row.key,
+        toolRowLabel(row.key),
         formatTokens(row.tokens.measured, locale),
         formatTokens(row.tokens.split, locale),
         formatTokens(row.tokens.unknown, locale),

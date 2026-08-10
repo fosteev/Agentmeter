@@ -19,6 +19,7 @@ import {
   spendSplit,
   sourceCount,
   t,
+  toolRowLabel,
   type CacheRebuildReport,
   type Db,
   type LoadedCategory,
@@ -336,7 +337,7 @@ function toToolRow(row: {
     : { value: tokens, confidence: 'estimate', caveat: t(caveatKey(row.calls)) }
   return {
     key: row.key,
-    label: row.key,
+    label: toolRowLabel(row.key),
     axis: 'tool',
     marginal,
     recurring: { value: 0, confidence: 'exact' },

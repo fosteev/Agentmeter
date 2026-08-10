@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
-import { ingestAll, openDb, type Db } from '../../packages/core/src/index.ts'
+import { IMAGE_ROW_KEY, ingestAll, openDb, type Db } from '../../packages/core/src/index.ts'
 import { buildSpendScreen } from '../../apps/desktop/src/main/breakdown.ts'
 import { buildDayReport } from '../../apps/desktop/src/main/day.ts'
 
@@ -115,6 +115,39 @@ try {
     'строки называются и не уходят в минус',
     `rows=${rows.length} безымянных=${noLabel} отрицательных=${negative}`,
     noLabel === 0 && negative === 0,
+  )
+
+  // 8. Картинки отдельной статьёй (4.5) — и не поверх строк инструментов.
+  //
+  // Правило переписано здесь заново, прямым запросом к индексу: проба,
+  // спрашивающая проверяемую функцию, чем ей следовало ответить, зелена при
+  // любом ответе. Сумма вызовов по строкам обязана совпасть с числом вызовов в
+  // индексе — задвоение поймается ровно здесь, потому что вырастет и она.
+  const screen = buildSpendScreen(db, { scope: 'day', from: 0, to: Date.now() + 86_400_000 })
+  const imageRow = screen.tools.find((row) => row.key === IMAGE_ROW_KEY)
+  const counted = screen.tools.reduce((sum, row) => sum + row.calls, 0)
+  const inIndex = db.get<{ total: number; images: number }>(
+    `SELECT count(*) AS total, sum(CASE WHEN has_image = 1 THEN 1 ELSE 0 END) AS images
+     FROM tool_calls`,
+  )!
+  const density = db.get<{ image: number; text: number }>(
+    `SELECT
+       round(avg(CASE WHEN has_image = 1 THEN result_bytes * 1.0 / marginal_tokens END), 1) AS image,
+       round(avg(CASE WHEN has_image = 0 THEN result_bytes * 1.0 / marginal_tokens END), 1) AS text
+     FROM tool_calls
+     WHERE marginal_basis = 'measured' AND marginal_tokens > 100 AND result_bytes > 0`,
+  )!
+  report(
+    8,
+    'картинки своей строкой и не задвоены',
+    `вызовов в индексе ${inIndex.total}, в строках ${counted}, с картинками ${inIndex.images} ` +
+      `(в строке ${imageRow?.calls ?? 0}, ${imageRow?.label ?? '—'}), ` +
+      `байт на токен: картинка ${density.image}, текст ${density.text}`,
+    inIndex.images > 0 &&
+      counted === inIndex.total &&
+      imageRow !== undefined &&
+      imageRow.calls === inIndex.images &&
+      imageRow.label !== IMAGE_ROW_KEY,
   )
 } finally {
   db.close()

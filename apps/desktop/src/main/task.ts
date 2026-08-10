@@ -48,6 +48,8 @@ import {
   taskDetail,
   taskRows,
   todayReport,
+  toolRowLabel,
+  IMAGE_ROW_KEY,
   type Config,
   type Db,
   type TaskCall,
@@ -310,10 +312,10 @@ function tools(
   calls: readonly TaskCall[],
   locale: string,
 ): BreakdownRow[] {
-  const images = new Map<string, number>()
-  for (const call of calls) {
-    if (call.hasImage) images.set(call.name, (images.get(call.name) ?? 0) + 1)
-  }
+  // Картинки после 4.5 живут своей строкой, и считать их по имени инструмента
+  // больше нельзя: вызов с картинкой ушёл из `Read` в `<images>`, и `Read` про
+  // него ничего не знает.
+  const imageCalls = calls.filter((call) => call.hasImage).length
   const value = (row: ToolBreakdownRow): number =>
     row.tokens.measured + row.tokens.split + row.tokens.unknown
   const count = (row: ToolBreakdownRow): number =>
@@ -327,7 +329,7 @@ function tools(
     const tokens = value(row)
     const result: BreakdownRow = {
       key: row.key,
-      label: row.key,
+      label: toolRowLabel(row.key),
       axis: 'tool',
       marginal: cost(tokens, row),
       // Постоянная стоимость инструмента — это его схема в стартовом префиксе,
@@ -336,7 +338,15 @@ function tools(
       recurring: { value: 0, confidence: 'exact' },
       calls: made,
     }
-    const reason = costly(row.key, tokens, made, average, spend, images.get(row.key) ?? 0, locale)
+    const reason = costly(
+      row.key,
+      tokens,
+      made,
+      average,
+      spend,
+      row.key === IMAGE_ROW_KEY ? imageCalls : 0,
+      locale,
+    )
     if (reason !== undefined) result.note = reason
     return result
   })
