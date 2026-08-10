@@ -1,0 +1,39 @@
+{
+  "at": 1786439520000,
+  "agents": [],
+  "limits": [],
+  "today": {
+    "input": {
+      "value": 1240000,
+      "confidence": "exact"
+    },
+    "output": {
+      "value": 402000,
+      "confidence": "exact"
+    },
+    "cacheWrite": {
+      "value": 3100000,
+      "confidence": "exact"
+    },
+    "cacheRead": {
+      "value": 18600000,
+      "confidence": "exact"
+    },
+    "total": {
+      "value": 23342000,
+      "confidence": "exact"
+    },
+    "requests": 318,
+    "sessions": 4,
+    "projects": 2
+  },
+  "indexing": {
+    "phase": "parsing",
+    "filesDone": 612,
+    "filesTotal": 899,
+    "bytesDone": 376438784,
+    "bytesTotal": 597688320,
+    "etaMs": 40000
+  },
+  "problems": []
+}

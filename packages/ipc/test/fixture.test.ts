@@ -11,12 +11,23 @@ import { IPC_CALLS, IPC_EVENTS } from '../src/index.ts'
  * разбирается приведением к `TraySnapshot`, а приведение молчит и о лишних
  * полях, и о недостающих: `as` — не проверка. Здесь проверка.
  */
-const snapshot = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL('../../../fixtures/popup/snapshot.json', import.meta.url)),
-    'utf8',
-  ),
-) as TraySnapshot
+function fixture(name: string): TraySnapshot {
+  return JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL(`../../../fixtures/popup/${name}.json`, import.meta.url)),
+      'utf8',
+    ),
+  ) as TraySnapshot
+}
+
+const snapshot = fixture('snapshot')
+
+/** Четыре экрана раздела 7 макета — вход 2.8, по файлу на состояние. */
+const STATES = ['empty', 'indexing', 'error', 'nobody'] as const
+const states = Object.fromEntries(STATES.map((name) => [name, fixture(name)])) as Record<
+  (typeof STATES)[number],
+  TraySnapshot
+>
 
 describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
   /**
@@ -25,7 +36,7 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
    */
   it('поля снимка ровно те, что в TraySnapshot', () => {
     expect(Object.keys(snapshot).sort()).toEqual(
-      ['agents', 'at', 'limits', 'nearestLimitPercent', 'today'].sort(),
+      ['agents', 'at', 'limits', 'nearestLimitPercent', 'problems', 'today'].sort(),
     )
     expect(Object.keys(snapshot.today).sort()).toEqual(
       [
@@ -127,6 +138,82 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
         expect(window.unavailableReason).toBeNull()
       }
     }
+  })
+
+  /**
+   * Ловит фикстуру состояния, отставшую от контракта. Разбор приведением молчит
+   * о любых полях, поэтому набор ключей проверяется списком: экран, собранный
+   * по выдуманному полю, покажет пустоту на настоящих данных.
+   */
+  it('фикстуры состояний — те же поля TraySnapshot и ничего сверх', () => {
+    const allowed = new Set([
+      'at',
+      'agents',
+      'limits',
+      'today',
+      'nearestLimitPercent',
+      'indexing',
+      'problems',
+      'lastAgent',
+    ])
+    for (const [name, state] of Object.entries(states)) {
+      const extra = Object.keys(state).filter((key) => !allowed.has(key))
+      expect(extra, `${name}: лишние поля`).toEqual([])
+      expect(typeof state.at, `${name}: нет момента снимка`).toBe('number')
+      expect(Array.isArray(state.problems), `${name}: problems обязателен`).toBe(true)
+    }
+  })
+
+  /**
+   * Ловит вход, на котором два разных экрана неразличимы.
+   *
+   * «Агенты ещё не запускались» и «сейчас никто не работает» — это разные
+   * слова и разная раскладка, а данные у них отличаются ровно одним полем.
+   * Совпади фикстуры — и любая реализация покажет один экран вместо двух.
+   */
+  it('пусто и никого-нет различаются только историей', () => {
+    expect(states.empty.agents).toEqual([])
+    expect(states.nobody.agents).toEqual([])
+    expect(states.empty.lastAgent).toBeUndefined()
+    expect(states.nobody.lastAgent).toBeTruthy()
+    expect(states.nobody.lastAgent!.endedAt).toBeLessThan(states.nobody.at)
+    // У «никого нет» лимиты и сутки на месте: пауза окно не расходует, и
+    // прятать расход за отсутствие живых агентов нечестно.
+    expect(states.nobody.limits.length).toBeGreaterThan(0)
+    expect(states.empty.limits).toEqual([])
+    expect(states.empty.today.total.value).toBe(0)
+  })
+
+  /**
+   * Ловит вход, на котором экран индексирования нечем нарисовать по макету:
+   * там полоса и «359 / 570 МБ» с оценкой оставшегося времени, а не число
+   * файлов. Плюс требование текста макета — сегодняшний день уже доступен.
+   */
+  it('индексирование несёт байты, оценку времени и уже доступные сутки', () => {
+    const indexing = states.indexing.indexing
+    expect(indexing).toBeTruthy()
+    expect(indexing!.phase).toBe('parsing')
+    expect(indexing!.bytesDone).toBeGreaterThan(0)
+    expect(indexing!.bytesDone).toBeLessThan(indexing!.bytesTotal)
+    expect(indexing!.etaMs).toBeGreaterThan(0)
+    expect(states.indexing.today.total.value).toBeGreaterThan(0)
+  })
+
+  /**
+   * Ловит вход, на котором экран ошибки проверяет пустоту. Ошибка здесь
+   * частичная: Codex недоступен, а Claude прочитан — и если в фикстуре нет
+   * второй половины, «данные Claude показываются как обычно» проверить нечем.
+   */
+  it('ошибка названа кодом, путём, последствием — и половина данных цела', () => {
+    const [problem, ...rest] = states.error.problems
+    expect(problem).toBeTruthy()
+    expect(rest).toEqual([])
+    expect(problem!.code).toBeTruthy()
+    expect(problem!.path).toBeTruthy()
+    expect(problem!.consequence).toBeTruthy()
+    expect(states.error.agents.every((agent) => agent.provider !== problem!.provider)).toBe(true)
+    expect(states.error.agents.length).toBeGreaterThan(0)
+    expect(states.error.limits.length).toBeGreaterThan(0)
   })
 
   /**

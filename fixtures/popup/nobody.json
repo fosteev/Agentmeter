@@ -1,82 +1,6 @@
 {
   "at": 1786439520000,
-  "agents": [
-    {
-      "sessionId": "11111111-1111-4111-8111-111111111111",
-      "provider": "claude",
-      "project": "ollama-bar",
-      "cwd": "/Users/probe/Projects/ollama-bar",
-      "branch": "main",
-      "model": "Opus 5",
-      "entrypoint": "vscode",
-      "startedAt": 1786439280000,
-      "state": "working",
-      "tokens": 38000,
-      "approximate": false,
-      "rate": 12400,
-      "context": {
-        "used": 108000,
-        "window": 1000000,
-        "fill": 0.108,
-        "confidence": "estimate",
-        "caveat": "размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6"
-      }
-    },
-    {
-      "sessionId": "22222222-2222-4222-8222-222222222222",
-      "provider": "claude",
-      "project": "pilot/flutter-pulse-mobile",
-      "cwd": "/Users/probe/Projects/pilot/flutter-pulse-mobile",
-      "branch": "GARM-810",
-      "model": "Opus 5",
-      "entrypoint": "cli",
-      "startedAt": 1786438800000,
-      "state": "waiting",
-      "tokens": 214000,
-      "approximate": true,
-      "rate": 0,
-      "context": {
-        "used": 870000,
-        "window": 1000000,
-        "fill": 0.87,
-        "confidence": "estimate",
-        "caveat": "размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6"
-      }
-    },
-    {
-      "sessionId": "44444444-4444-4444-8444-444444444444",
-      "provider": "claude",
-      "project": "dotfiles",
-      "cwd": "/Users/probe/Projects/dotfiles",
-      "entrypoint": "cli",
-      "startedAt": 1786439100000,
-      "state": "idle",
-      "tokens": 4200,
-      "approximate": false,
-      "rate": 0
-    },
-    {
-      "sessionId": "33333333-3333-4333-8333-333333333333",
-      "provider": "codex",
-      "project": "troy",
-      "cwd": "/Users/probe/Projects/troy",
-      "branch": "exec",
-      "model": "gpt-5-codex",
-      "entrypoint": "exec",
-      "startedAt": 1786439460000,
-      "state": "done",
-      "endedAt": 1786439400000,
-      "tokens": 12000,
-      "approximate": false,
-      "rate": 0,
-      "context": {
-        "used": 129200,
-        "window": 258400,
-        "fill": 0.5,
-        "confidence": "exact"
-      }
-    }
-  ],
+  "agents": [],
   "limits": [
     {
       "provider": "codex",
@@ -167,5 +91,10 @@
     "projects": 8
   },
   "nearestLimitPercent": 68,
-  "problems": []
+  "problems": [],
+  "lastAgent": {
+    "provider": "codex",
+    "project": "troy",
+    "endedAt": 1786438440000
+  }
 }

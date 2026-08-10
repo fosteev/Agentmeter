@@ -19,7 +19,14 @@ import {
   type LiveLayer,
   type Totals,
 } from '@agentmeter/core'
-import type { ContextUsage, DayTotals, LiveAgent, Measured, TraySnapshot } from '@agentmeter/ipc'
+import type {
+  ContextUsage,
+  DayTotals,
+  LastAgent,
+  LiveAgent,
+  Measured,
+  TraySnapshot,
+} from '@agentmeter/ipc'
 
 export function buildSnapshot(
   db: Db,
@@ -36,6 +43,17 @@ export function buildSnapshot(
     agents: liveSnapshot.agents.map(toAgent),
     limits,
     today: toDayTotals(today.totals, today.approximate, today.sessions, today.projects.length),
+    // Пустой список — это утверждение «источники прочитаны», а не молчание.
+    // Настоящий сбор проблем чтения приезжает вместе с 2.8.
+    problems: [],
+  }
+
+  // Кого видели последним — только когда сейчас никого нет: попапу это нужно
+  // ровно для одного экрана, а лишний запрос на каждый опрос трея не нужен
+  // никому.
+  if (snapshot.agents.length === 0) {
+    const last = lastAgent(db)
+    if (last !== undefined) snapshot.lastAgent = last
   }
 
   // Ближайший к потолку — только среди окон с известным процентом. У Claude до
@@ -47,6 +65,26 @@ export function buildSnapshot(
   if (known.length > 0) snapshot.nearestLimitPercent = Math.max(...known)
 
   return snapshot
+}
+
+/**
+ * Последняя закончившаяся сессия — для экрана «никого нет» (2.8).
+ *
+ * Сабагенты исключены: своего процесса у них нет, и «последним работал
+ * general-purpose» — это не то, что человек видел на экране. Ищется по концу
+ * сессии, а не по началу: последней начатой могла быть та, что оборвалась
+ * первой.
+ */
+function lastAgent(db: Db): LastAgent | undefined {
+  const row = db.get<{ provider: string; project: string; ended_at: number }>(
+    `SELECT provider, project, ended_at
+     FROM sessions
+     WHERE parent_session_id IS NULL AND is_sidechain = 0
+     ORDER BY ended_at DESC
+     LIMIT 1`,
+  )
+  if (row === undefined) return undefined
+  return { provider: row.provider as LastAgent['provider'], project: row.project, endedAt: row.ended_at }
 }
 
 function toAgent(agent: CoreLiveAgent): LiveAgent {
