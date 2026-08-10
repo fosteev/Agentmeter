@@ -217,6 +217,65 @@ export const ru = {
     seconds: '{{count}} с',
   },
 
+  /**
+   * Замечания загрузчика конфига (3.6). Их читает человек на экране настроек,
+   * поэтому они текст, а не диагностика: путь поля остаётся как есть — это имя
+   * ключа в файле, — а всё вокруг переводится.
+   */
+  config: {
+    root: '<корень>',
+    badJson: '{{path}}: не разбирается как JSON ({{message}}), взяты значения по умолчанию',
+    expectedObject: '{{path}}: ожидался объект, взято значение по умолчанию',
+    badType: '{{path}}: ожидалось {{expected}}, пришло {{got}} — взят дефолт',
+    badValue: '{{path}}: допустимо {{expected}}, пришло {{got}} — взят дефолт',
+    warnAboveDanger:
+      'alerts: предупреждение на {{warn}}% стоит выше тревоги на {{danger}}% — оба порога взяты по умолчанию',
+    typeList: 'список',
+    typeNumber: 'число',
+    typeString: 'строка',
+    typeBoolean: 'да/нет',
+  },
+
+  /** Экран настроек — раздел 6 макета. */
+  settings: {
+    tabSources: 'Источники данных',
+    tabLimits: 'Лимиты',
+    tabAlerts: 'Уведомления',
+    tabAppearance: 'Внешний вид',
+    tabPrivacy: 'Приватность',
+    logPaths: 'Пути к логам',
+    sourceOk: '✓ {{files}} · {{size}}',
+    sourceMissing: 'каталог не найден',
+    files_one: '{{count}} файл',
+    files_few: '{{count}} файла',
+    files_many: '{{count}} файлов',
+    megabytes: '{{value}} МБ',
+    caps: 'Потолки лимитов по плану',
+    claudePlan: 'Claude — план',
+    codexPlan: 'Codex — план',
+    capsEstimate: 'оценка по локальным логам',
+    capsExact: 'точные значения приходят от сервера',
+    planNotSet: 'не задан',
+    thresholds: 'Пороги уведомлений',
+    warnAt: 'Предупредить при',
+    dangerAt: 'Тревога при',
+    notifyOnIdle: 'Сообщать, когда агент закончил или ждёт ответа',
+    theme: 'Тема',
+    themeDark: 'тёмная',
+    themeLight: 'светлая',
+    themeSystem: 'системная',
+    language: 'Язык',
+    languageSystem: 'системный',
+    dayStart: 'День начинается в',
+    hour: '{{hour}}:00',
+    hidePrompts: 'Скрыть тексты промптов',
+    hidePromptsNote: '— в ленте останутся только названия задач',
+    hidePaths: 'Скрыть пути к файлам',
+    hidePathsNote: '— карточка задачи покажет только число затронутых файлов',
+    problems: 'Замечания к файлу настроек',
+    autostartLater: 'Запуск при входе в систему появится в 5.3 — тумблера, который ничего не делает, здесь нет',
+  },
+
   /** CLI: заголовки колонок и сообщения команд. */
   cli: {
     emptyIndex: 'индекс пуст, запустите `agentmeter index`',

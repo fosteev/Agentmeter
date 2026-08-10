@@ -48,6 +48,20 @@ function formatter(key: string, options: Intl.DateTimeFormatOptions): Intl.DateT
   return made
 }
 
+/**
+ * Имя языка на нём самом: «Русский», «English».
+ *
+ * Берётся у `Intl`, а не пишется в каталоге: список языков читают глазами те,
+ * кто текущего языка интерфейса не понимает, — иначе они бы его не меняли.
+ * Заведи мы эти два слова ключами каталога, их однажды перевели бы, и в
+ * английском интерфейсе появился бы пункт «Russian», который русскоязычный
+ * человек ищет дольше, чем «Русский».
+ */
+export function languageName(code: 'ru' | 'en'): string {
+  const name = new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code
+  return name.charAt(0).toLocaleUpperCase(code) + name.slice(1)
+}
+
 /** «09:12» — время начала задачи в колонке «Начало». */
 export function clock(at: number): string {
   return formatter('clock', { hour: '2-digit', minute: '2-digit' }).format(at)

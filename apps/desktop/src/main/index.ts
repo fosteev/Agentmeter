@@ -7,8 +7,7 @@
  * запускается той нодой, что несёт Electron, без флагов вроде
  * `--experimental-strip-types`: в Electron их не передашь.
  *
- * Чего здесь намеренно нет: автообновления, меню и запоминания геометрии окна.
- * Это 3.6 и M5.
+ * Чего здесь намеренно нет: автообновления и меню — это M5.
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -41,17 +40,22 @@ import {
   type Config,
   type Db,
   type IngestProgress as CoreIngestProgress,
+  type LiveLayerOptions,
+  type WindowBounds,
   type SourceIssue,
   type LiveLayer,
   type Watcher,
 } from '@agentmeter/core'
 import type {
+  ConfigReport,
+  DeepPartial,
   IndexProgress,
   IpcEventName,
   IpcEvents,
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
+import { configReport, setConfig } from './config.ts'
 import { buildDayReport } from './day.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
@@ -104,6 +108,14 @@ interface Runtime {
   db: Db
   live: LiveLayer
   config: Config
+  /**
+   * Настройки живого слоя — тот же объект, что держит сам слой (3.6). Смена
+   * порогов правит его по месту, и новое значение работает со следующего
+   * снимка; подмена объекта слою не видна, он захватил ссылку при создании.
+   */
+  liveOptions: LiveLayerOptions
+  /** Замечания загрузчика: что в файле настроек не понято и заменено. */
+  configProblems: string[]
   watcher?: Watcher
   /**
    * До чего не добрались на последнем обходе. Держится здесь, а не пересчитыва-
@@ -160,7 +172,9 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     claudeLimits: config.limits.claude,
   }
   const ingested = defer ? undefined : ingestAll(db, sources)
-  const live = createLiveLayer(db, {
+  // Объект живёт дольше вызова: смена порогов в настройках правит его по месту,
+  // и слой видит новое значение на следующем снимке (3.6).
+  const liveOptions: LiveLayerOptions = {
     claudeHome: sources.claudeHome,
     codexHome: sources.codexHome,
     idleMs: config.live.idleMs,
@@ -169,8 +183,18 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     // Журнал замера хвостовых прогревов (долг 1.3) ведёт только приложение:
     // оно одно видит и рождение, и смерть процесса.
     lifetimesPath: lifetimesPath(),
-  })
-  const runtime: Runtime = { db, live, config, issues: ingested?.issues ?? [] }
+  }
+  // Тот же объект, а не его копия: разложи его здесь через `...` — и правка
+  // порогов в настройках меняла бы копию, до которой слою нет дела.
+  const live = createLiveLayer(db, liveOptions)
+  const runtime: Runtime = {
+    db,
+    live,
+    config,
+    liveOptions,
+    configProblems: loaded.problems,
+    issues: ingested?.issues ?? [],
+  }
   if (defer) {
     runtime.pending = ingestSteps(db, { ...sources, progress: true })
     runtime.indexing = {
@@ -184,18 +208,32 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
   }
   // При отложенном проходе вотчер поднимается после него: иначе первое же
   // событие файловой системы дёрнет второй полный `ingestAll` поверх текущего.
-  if (withWatcher && !defer && config.index.watch) {
-    runtime.watcher = watchSources(db, {
-      ...sources,
-      // Недоступный источник может появиться и исчезнуть на ходу: внешний диск
-      // отмонтировали, права поправили. Снимок обязан догонять, а не помнить
-      // первое впечатление.
-      onBatch: (_paths, stats) => {
-        runtime.issues = stats.issues
-      },
-    })
-  }
+  if (withWatcher && !defer && config.index.watch) startWatcher(runtime)
   return runtime
+}
+
+/**
+ * Поднять вотчер по текущему конфигу.
+ *
+ * Одна функция на три места (старт, конец отложенного прохода, включение
+ * настройкой): разойдись они параметрами — наблюдатель после переключения
+ * тумблера следил бы не за тем, за чем следил при запуске, и заметить это
+ * можно было бы только по не обновляющимся цифрам.
+ */
+function startWatcher(runtime: Runtime): void {
+  if (runtime.watcher !== undefined) return
+  runtime.watcher = watchSources(runtime.db, {
+    claudeHome: claudeHome(runtime.config),
+    codexHome: codexHome(runtime.config),
+    extra: runtime.config.sources.extra,
+    claudeLimits: runtime.config.limits.claude,
+    // Недоступный источник может появиться и исчезнуть на ходу: внешний диск
+    // отмонтировали, права поправили. Снимок обязан догонять, а не помнить
+    // первое впечатление.
+    onBatch: (_paths, stats) => {
+      runtime.issues = stats.issues
+    },
+  })
 }
 
 function closeRuntime(runtime: Runtime): void {
@@ -220,6 +258,7 @@ async function runSmoke(): Promise<void> {
   let snapshot: TraySnapshot | undefined
   let trayReport: unknown
   let windowReport: unknown
+  let settingsReport: unknown
   try {
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     registerIpc(
@@ -229,6 +268,7 @@ async function runSmoke(): Promise<void> {
       createHandlers(
         () => runtime,
         () => undefined,
+        (patch) => setConfig(runtime, patch),
       ),
     )
 
@@ -282,7 +322,7 @@ async function runSmoke(): Promise<void> {
     // забыть, `window.html` могло не доехать в сборку, вкладка из адреса могла
     // не читаться. Всё это оставляет `npm run check` зелёным, а кнопку
     // «Открыть окно» — мёртвой.
-    const main = createMainWindow('settings')
+    const main = createMainWindow('settings', runtime.config.ui.window)
     main.webContents.on('preload-error', (_event, path, error) => {
       problems.push(`preload главного окна не загрузился (${path}): ${error.message}`)
     })
@@ -305,6 +345,29 @@ async function runSmoke(): Promise<void> {
     }
     main.destroy()
 
+    // Настройки (3.6) — только под `AGENTMETER_HOME`. Проверка пишет конфиг и
+    // поднимает окно запомненного размера; без подменённого каталога она
+    // затирала бы настройки того, кто её запустил.
+    if (process.env['AGENTMETER_HOME']) {
+      const wanted = { width: 1000, height: 640, x: 40, y: 40 }
+      const written = setConfig(runtime, { ui: { theme: 'dark', window: wanted } })
+      const fromDisk = loadConfig(configPath()).config
+      const restored = createMainWindow('today', fromDisk.ui.window)
+      await new Promise<void>((resolve) => {
+        restored.webContents.once('did-finish-load', () => resolve())
+        setTimeout(resolve, 15_000)
+      })
+      const bounds = restored.getNormalBounds()
+      restored.destroy()
+      settingsReport = {
+        problems: written.problems,
+        theme: fromDisk.ui.theme,
+        wanted,
+        bounds: { width: bounds.width, height: bounds.height },
+        sources: written.sources.map((source) => source.provider),
+      }
+    }
+
     window.destroy()
   } catch (error) {
     problems.push(error instanceof Error ? error.message : String(error))
@@ -320,6 +383,7 @@ async function runSmoke(): Promise<void> {
       problems,
       tray: trayReport,
       window: windowReport,
+      settings: settingsReport,
       snapshot,
     }),
   )
@@ -334,7 +398,11 @@ async function runSmoke(): Promise<void> {
  * результат нужного типа. Данные для них появятся в M3, а незарегистрированный
  * канал давал бы в окне повисший `invoke` без ответа и без ошибки.
  */
-function createHandlers(runtime: () => Runtime, openWindow: (tab: WindowTab) => void): IpcHandlers {
+function createHandlers(
+  runtime: () => Runtime,
+  openWindow: (tab: WindowTab) => void,
+  changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
+): IpcHandlers {
   return {
     'snapshot:get': () =>
       withIndexing(
@@ -343,11 +411,11 @@ function createHandlers(runtime: () => Runtime, openWindow: (tab: WindowTab) => 
       ),
     'limits:get': () =>
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
-    'config:get': () => ({ config: runtime().config, problems: [] }),
-    'today:get': (filter) => buildDayReport(runtime().db, filter),
+    'config:get': () => configReport(runtime()),
+    'today:get': (filter) => buildDayReport(runtime().db, filter, runtime().config.privacy),
     'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
     'breakdown:get': () => [],
-    'config:set': () => ({ problems: [] }),
+    'config:set': ({ patch }) => changeConfig(patch),
     'index:rebuild': () => undefined,
     'doctor:get': () => ({
       cliVersions: [],
@@ -425,17 +493,7 @@ function driveIngest(runtime: Runtime, onProgress: (progress: IndexProgress) => 
   if (done) {
     runtime.pending = undefined
     runtime.indexing = undefined
-    if (runtime.watcher === undefined && runtime.config.index.watch) {
-      runtime.watcher = watchSources(runtime.db, {
-        claudeHome: claudeHome(runtime.config),
-        codexHome: codexHome(runtime.config),
-        extra: runtime.config.sources.extra,
-        claudeLimits: runtime.config.limits.claude,
-        onBatch: (_paths, stats) => {
-          runtime.issues = stats.issues
-        },
-      })
-    }
+    if (runtime.config.index.watch) startWatcher(runtime)
     return
   }
   setImmediate(() => {
@@ -550,10 +608,12 @@ function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWind
  * Вкладка едет параметром адреса, а не событием: окно только что создано, и
  * канала, по которому спросить «на какой вкладке открылось», у него ещё нет.
  */
-function createMainWindow(tab: WindowTab): BrowserWindow {
+function createMainWindow(tab: WindowTab, remembered: WindowBounds): BrowserWindow {
+  const bounds = usableBounds(remembered)
   const window = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
+    width: bounds?.width ?? WINDOW_WIDTH,
+    height: bounds?.height ?? WINDOW_HEIGHT,
+    ...(bounds?.x === undefined ? {} : { x: bounds.x, y: bounds.y }),
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     show: false,
@@ -568,6 +628,34 @@ function createMainWindow(tab: WindowTab): BrowserWindow {
   })
   void window.loadFile(`${WEB}/window.html`, { query: { tab } })
   return window
+}
+
+/**
+ * Годится ли запомненная геометрия сегодня (3.6).
+ *
+ * Экран, на котором окно стояло вчера, мог отвалиться вместе с докой, и
+ * восстановленное окно оказалось бы за краем видимой области — то есть
+ * пропало бы совсем, без единого сообщения. Поэтому позиция принимается,
+ * только если прямоугольник **пересекается** с рабочей областью хоть одного
+ * дисплея; нулевая ширина означает «не запомнено».
+ */
+function usableBounds(
+  bounds: WindowBounds,
+): { width: number; height: number; x?: number; y?: number } | null {
+  if (bounds.width < WINDOW_MIN_WIDTH || bounds.height < WINDOW_MIN_HEIGHT) return null
+  const size = { width: bounds.width, height: bounds.height }
+  const fits = screen.getAllDisplays().some((display) => {
+    const area = display.workArea
+    return (
+      bounds.x < area.x + area.width &&
+      bounds.x + bounds.width > area.x &&
+      bounds.y < area.y + area.height &&
+      bounds.y + bounds.height > area.y
+    )
+  })
+  // Размер переживает пропажу экрана, позиция — нет: без неё окно откроется по
+  // центру, а с ней — за краем видимой области, то есть нигде.
+  return fits ? { ...size, x: bounds.x, y: bounds.y } : size
 }
 
 /**
@@ -678,13 +766,21 @@ function main(): void {
       main.focus()
       return
     }
-    main = createMainWindow(tab)
+    main = createMainWindow(tab, runtime!.config.ui.window)
     main.once('ready-to-show', () => {
       main?.show()
       main?.focus()
       // Снимок сразу, не дожидаясь следующего опроса: иначе шапка окна секунду
       // стоит пустой, и это выглядит как «лимит неизвестен».
       if (runtime !== undefined) main?.webContents.send('live:update', snapshot())
+    })
+    // Геометрия запоминается при закрытии, а не на каждое движение мыши:
+    // писать конфиг двадцать раз в секунду ради «окно поехало вправо» —
+    // это износ диска и гонка с правкой файла руками.
+    main.on('close', () => {
+      if (runtime === undefined || main === undefined || main.isDestroyed()) return
+      const { width, height, x, y } = main.getNormalBounds()
+      changeConfig({ ui: { window: { width, height, x, y } } })
     })
     main.on('closed', () => {
       main = undefined
@@ -741,6 +837,37 @@ function main(): void {
     window.focus()
   }
 
+  /**
+   * Правка настроек: записать, применить, разослать (3.6).
+   *
+   * Здесь живёт та часть применения, которой нужны таймер, вотчер и Electron;
+   * всё остальное делает `main/config.ts`. Событие уходит **после** применения
+   * и всем окнам сразу, включая то, которое правку прислало: главное окно и
+   * попап показывают одни и те же настройки, и разъехаться языку в двух окнах
+   * одного приложения нельзя.
+   */
+  const changeConfig = (patch: DeepPartial<Config>): ConfigReport => {
+    const current = runtime!.config
+    const wasPollMs = current.live.pollMs
+    const wasWatching = current.index.watch
+    const report = setConfig(runtime!, patch)
+    const next = runtime!.config
+    nativeTheme.themeSource = next.ui.theme
+    if (next.live.pollMs !== wasPollMs) {
+      if (timer) clearInterval(timer)
+      timer = setInterval(poll, next.live.pollMs)
+    }
+    if (next.index.watch !== wasWatching) {
+      if (next.index.watch) startWatcher(runtime!)
+      else {
+        runtime!.watcher?.close()
+        delete runtime!.watcher
+      }
+    }
+    emit('config:changed', report)
+    return report
+  }
+
   void app.whenReady().then(() => {
     // Витрина — лист образцов на фикстурах: ни индекса, ни вотчера, ни трея.
     // Открывать ей базу нельзя вдвойне: она запускается **поверх** работающего
@@ -763,7 +890,7 @@ function main(): void {
 
     registerIpc(
       ipcMain,
-      createHandlers(() => runtime!, openMainWindow),
+      createHandlers(() => runtime!, openMainWindow, changeConfig),
     )
 
     window = createPopup(gallery ? 'gallery' : 'index', !windowed)

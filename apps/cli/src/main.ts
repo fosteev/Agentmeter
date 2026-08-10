@@ -15,6 +15,7 @@ import {
   limitsReport,
   loadConfig,
   openDb,
+  locale as currentLocale,
   setLocale,
   t,
   taskRows,
@@ -140,7 +141,7 @@ function runToday(
           to: endRange.to,
         }
   const report = todayReport(db, range, provider === undefined ? {} : { provider })
-  output(common.json ? report : renderToday(report, config.ui.locale), common.json)
+  output(common.json ? report : renderToday(report, currentLocale()), common.json)
   return 0
 }
 
@@ -161,7 +162,7 @@ function runTasks(
   output(
     common.json
       ? value
-      : renderTasks(rows, { emptyIndex, rangeFrom: range.from, locale: config.ui.locale }),
+      : renderTasks(rows, { emptyIndex, rangeFrom: range.from, locale: currentLocale() }),
     common.json,
   )
   return 0
@@ -182,7 +183,7 @@ function runBreakdown(
     : { range: rangeFor(values.get('--day'), config.ui.dayStartsAtHour) }
   const report = breakdownReport(db, scope)
   output(
-    common.json ? { ...report, by: axis } : renderBreakdown(report, axis, config.ui.locale),
+    common.json ? { ...report, by: axis } : renderBreakdown(report, axis, currentLocale()),
     common.json,
   )
   return 0
@@ -199,7 +200,7 @@ function runLimits(
   // то есть выдавал устаревший ответ за честное «план не задан».
   ensureLimitWindows(db, config.limits.claude)
   const report = limitsReport(db, Date.now(), config.limits.claude)
-  output(common.json ? report : renderLimits(report, config.ui.locale), common.json)
+  output(common.json ? report : renderLimits(report, currentLocale()), common.json)
   return 0
 }
 
@@ -220,7 +221,7 @@ function runLive(
     claudeLimits: config.limits.claude,
   })
   const snapshot = live.snapshot()
-  output(common.json ? snapshot : renderLive(snapshot, config.ui.locale), common.json)
+  output(common.json ? snapshot : renderLive(snapshot, currentLocale()), common.json)
   return 0
 }
 
@@ -235,7 +236,7 @@ function runDoctor(
   output(
     common.json
       ? { ...report, configProblems }
-      : renderDoctor(report, config.ui.locale, configProblems),
+      : renderDoctor(report, currentLocale(), configProblems),
     common.json,
   )
   return report.parserErrors > 0 ? 1 : 0

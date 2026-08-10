@@ -203,6 +203,25 @@ describe('buildTaskCard на фикстурах', () => {
   })
 
   /**
+   * Ловит «скрыть пути», спрятавшее сам факт правок (3.6). Число затронутых
+   * файлов — это расход, а не содержимое: спрячь его — и человек перестанет
+   * видеть собственную работу. Прячутся имена, и прячутся в main: уедь путь в
+   * окно, настройка называлась бы «не рисовать».
+   */
+  it('скрытые пути убирают имена, но не число файлов', () => {
+    const open = cards().find((value) => value.files !== undefined)!
+    const hidden = buildTaskCard(
+      db,
+      { sessionId: open.task.sessionId, ...ALL },
+      { ...DEFAULT_CONFIG, privacy: { hidePrompts: false, hidePaths: true } },
+    )!
+
+    expect(hidden.files!.total).toBe(open.files!.total)
+    expect(hidden.files!.paths).toEqual([])
+    expect(open.files!.paths.length).toBeGreaterThan(0)
+  })
+
+  /**
    * Ловит карточку, собранную по одной сессии вместо дерева задачи.
    *
    * Сабагент лежит в индексе отдельной сессией (так и надо, 1.3), а `taskRows`

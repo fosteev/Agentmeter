@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Config } from '@agentmeter/core'
-import type { DayReport, TaskCard, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
+import type {
+  ConfigReport,
+  DayReport,
+  DeepPartial,
+  TaskCard,
+  TodayFilter,
+  TraySnapshot,
+} from '@agentmeter/ipc'
 // Границы дня — из ядра, тем же кодом, что у трея и CLI. Своя копия правила
 // здесь стояла и была верной; опасна не она, а то, что дважды в год день
 // длится 23 или 25 часов, и разойтись две копии могут ровно в этот день —
@@ -9,14 +16,27 @@ import type { DayReport, TaskCard, TodayFilter, TraySnapshot } from '@agentmeter
 // файловой системе не ходит, а `index.ts` тянет `node:sqlite`.
 import { dayRange } from '@agentmeter/core/day'
 import './tokens.css'
+import { SettingsTab } from './components/SettingsTab.tsx'
 import { TodayTab } from './components/TodayTab.tsx'
 import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
 import { setLocale, t } from './format.ts'
 
-function useTheme(): void {
+/**
+ * Тема окна.
+ *
+ * `system` слушает систему, `light`/`dark` ставятся сразу и подписки не
+ * заводят: иначе смена системной темы перебила бы выбранную руками. Main при
+ * этом двигает `nativeTheme.themeSource`, и `prefers-color-scheme` в окне
+ * следует за настройкой — обе половины смотрят на одно и то же значение.
+ */
+function useTheme(theme: Config['ui']['theme']): void {
   useEffect(() => {
+    if (theme !== 'system') {
+      document.documentElement.dataset.theme = theme
+      return
+    }
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const apply = (): void => {
       document.documentElement.dataset.theme = media.matches ? 'dark' : 'light'
@@ -26,7 +46,7 @@ function useTheme(): void {
     return () => {
       media.removeEventListener('change', apply)
     }
-  }, [])
+  }, [theme])
 }
 
 export function tabPlaceholder(tab: WindowTab): ReactElement {
@@ -99,7 +119,8 @@ export function createTaskRequestGuard(
 
 export function WindowApp() {
   const [snapshot, setSnapshot] = useState<TraySnapshot | null>(null)
-  const [config, setConfig] = useState<Config | null>(null)
+  const [configReport, setConfigReport] = useState<ConfigReport | null>(null)
+  const config = configReport?.config ?? null
   const [todayFilter, setTodayFilter] = useState<TodayFilter | null>(null)
   const [today, setToday] = useState<DayReport | null>(null)
   const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
@@ -108,13 +129,13 @@ export function WindowApp() {
   )
   const todayRequest = useRef(0)
   const taskRequest = useRef(createTaskRequestGuard())
-  useTheme()
+  useTheme(config?.ui.theme ?? 'system')
 
   useEffect(() => {
     let alive = true
-    void window.agentmeter['config:get']().then(({ config }) => {
-      setLocale((config as Config).ui.locale)
-      if (alive) setConfig(config as Config)
+    void window.agentmeter['config:get']().then((report) => {
+      setLocale(report.config.ui.locale)
+      if (alive) setConfigReport(report)
     })
     void window.agentmeter['snapshot:get']().then((first) => {
       if (alive) setSnapshot(first)
@@ -122,11 +143,33 @@ export function WindowApp() {
     const off = window.agentmeter['on:live:update']((next) => {
       setSnapshot(next)
     })
+    // Настройки мог сменить кто угодно — соседнее окно, попап, сам main при
+    // закрытии окна. Язык и тема у двух окон одного приложения обязаны быть
+    // одни, поэтому окно слушает событие, а не помнит то, что отправило само.
+    const offConfig = window.agentmeter['on:config:changed']((report) => {
+      setLocale(report.config.ui.locale)
+      setConfigReport(report)
+    })
     return () => {
       alive = false
       off()
+      offConfig()
     }
   }, [])
+
+  /**
+   * Правка настройки: отправить и принять ответ.
+   *
+   * Своё состояние не правится «на опережение»: значение могло быть отвергнуто
+   * загрузчиком, и показать переключённым то, что не сохранилось, — это ровно
+   * тот молчаливый обман, ради которого у ответа есть список замечаний.
+   */
+  const changeConfig = (patch: DeepPartial<Config>): void => {
+    void window.agentmeter['config:set']({ patch }).then((report) => {
+      setLocale(report.config.ui.locale)
+      setConfigReport(report)
+    })
+  }
 
   useEffect(() => {
     if (config === null || snapshot === null) return
@@ -168,6 +211,8 @@ export function WindowApp() {
           />
           <TodaySide report={today} />
         </>
+      ) : tab === 'settings' && configReport !== null ? (
+        <SettingsTab report={configReport} onChange={changeConfig} />
       ) : (
         tabPlaceholder(tab)
       )}

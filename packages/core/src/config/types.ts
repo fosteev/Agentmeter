@@ -80,7 +80,27 @@ export interface Config {
      * русский интерфейс, не имея способа догадаться, откуда он взялся.
      */
     locale: LocaleSetting
+    /**
+     * Запомненная геометрия главного окна (3.6, долг 3.1).
+     *
+     * Нулевая ширина означает «не запомнена»: окно откроется размером по
+     * умолчанию. Отдельного флага нет потому, что окна нулевой ширины не
+     * бывает, а вот позиция `x: 0, y: 0` — обычный левый верхний угол, и
+     * пометить «не задано» ею было бы нельзя.
+     *
+     * Лежит в конфиге, а не в отдельном файле состояния: другого места для
+     * настроек у приложения нет, а заводить второе ради четырёх чисел значит
+     * получить два файла, которые расходятся при копировании профиля.
+     */
+    window: WindowBounds
   }
+}
+
+export interface WindowBounds {
+  width: number
+  height: number
+  x: number
+  y: number
 }
 
 export interface ClaudeLimits {
@@ -120,5 +140,10 @@ export const DEFAULT_CONFIG: Config = {
   index: { retentionDays: 90, watch: true },
   live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },
   privacy: { hidePrompts: false, hidePaths: false },
-  ui: { theme: 'system', dayStartsAtHour: 0, locale: 'system' },
+  ui: {
+    theme: 'system',
+    dayStartsAtHour: 0,
+    locale: 'system',
+    window: { width: 0, height: 0, x: 0, y: 0 },
+  },
 }

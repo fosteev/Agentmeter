@@ -205,6 +205,23 @@ describe('buildDayReport', () => {
   })
 
   /**
+   * Ловит «скрыть промпты», сделанное в рендерере (3.6): текст обязан не
+   * доехать до окна вовсе, а не остаться в памяти нарисованным мимо экрана.
+   * Проверка не вакуумная — во входе есть задача с промптом.
+   */
+  it('скрытые промпты не уезжают в контракт', () => {
+    const open = buildDayReport(db, ALL)
+    expect(open.tasks.some((task) => task.firstPrompt !== undefined)).toBe(true)
+
+    const hidden = buildDayReport(db, ALL, { hidePrompts: true, hidePaths: false })
+
+    expect(hidden.tasks.every((task) => task.firstPrompt === undefined)).toBe(true)
+    // Названия задач при этом остаются — макет обещает ровно это.
+    expect(hidden.tasks.some((task) => task.title !== null)).toBe(true)
+    expect(hidden.totals.total.value).toBe(open.totals.total.value)
+  })
+
+  /**
    * Ловит хвост проектов, покрашенный в чей-то цвет, и именованную строку без
    * провайдера: первое приписывает расход не тому, второе оставляет полосу
    * серой там, где ответ известен.

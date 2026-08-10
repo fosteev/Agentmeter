@@ -10,7 +10,7 @@
  * точности. Renderer не считает расход сам — иначе одна и та же цифра
  * окажется посчитанной дважды и разойдётся.
  */
-import type { Entrypoint, LimitReportRow, LimitWindow, Provider } from '@agentmeter/core'
+import type { Config, Entrypoint, LimitReportRow, LimitWindow, Provider } from '@agentmeter/core'
 
 /** Агент, работающий прямо сейчас. */
 export interface LiveAgent {
@@ -248,6 +248,43 @@ export interface IndexProgress {
  * Голый `boolean` дал бы красный столбик, про который нельзя спросить, чем он
  * красный.
  */
+
+/**
+ * Настройки и состояние источников — раздел 6 макета (строки 1115–1196).
+ *
+ * Отчёт один на чтение, запись и событие: три разных формы одного и того же
+ * состояния разъехались бы полем, которое видно только на одном из трёх путей.
+ */
+export interface ConfigReport {
+  config: Config
+  /**
+   * Что в файле настроек не понято и заменено — список от загрузчика (3.6).
+   * Пусто значит «принято всё»: молчание про отброшенную настройку и есть та
+   * поломка, ради которой список заведён.
+   */
+  problems: string[]
+  /** Строки блока «Пути к логам»: где искали и что нашли. */
+  sources: SourceStatus[]
+}
+
+export interface SourceStatus {
+  provider: Provider
+  /** Путь, по которому приложение читает логи этого провайдера. */
+  path: string
+  /** Каталог существует и читается. `false` — всё остальное в строке про прошлое. */
+  readable: boolean
+  /** Разобранных файлов в индексе и их суммарный размер — из индекса, не с диска. */
+  files: number
+  bytes: number
+}
+
+/**
+ * Частичная правка: любое поддерево конфига можно прислать кусочком.
+ * Массивы целиком — список путей заменяется, а не дополняется.
+ */
+export type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends readonly unknown[] ? T[K] : T[K] extends object ? DeepPartial<T[K]> : T[K]
+}
 
 /** Вкладки главного окна — шапка раздела 3 макета (строки 568–573). */
 export type WindowTab = 'today' | 'breakdown' | 'history' | 'settings'
@@ -550,8 +587,19 @@ export interface IpcCalls {
     result: BreakdownRow[]
   }
   'limits:get': { arg: void; result: LimitReportRow[] }
-  'config:get': { arg: void; result: { config: unknown; problems: string[] } }
-  'config:set': { arg: { patch: unknown }; result: { problems: string[] } }
+  'config:get': { arg: void; result: ConfigReport }
+  /**
+   * Записать правку настроек (3.6).
+   *
+   * Аргумент — **часть** конфига, а не конфиг целиком: окно правит один
+   * тумблер, и отправка всего объекта означала бы, что настройка, изменённая в
+   * это же время другим окном или руками в файле, затирается молча.
+   *
+   * В ответ приезжает тот же отчёт, что у `config:get`, — уже с применённой
+   * правкой и с замечаниями, если что-то из присланного не принято. Пустой
+   * список замечаний это «принято всё», а не «ошибок не проверяли».
+   */
+  'config:set': { arg: { patch: DeepPartial<Config> }; result: ConfigReport }
   'index:rebuild': { arg: void; result: void }
   'doctor:get': { arg: void; result: DoctorReport }
   /**
@@ -569,7 +617,16 @@ export interface IpcEvents {
   'index:progress': IndexProgress
   'alert:limit': { provider: Provider; kind: LimitWindow['kind']; usedPercent: number }
   'alert:session': { sessionId: string; tokens: number; reason: 'idle' | 'expensive' | 'question' }
-  'config:changed': { problems: string[] }
+  /**
+   * Настройки изменились — тем же отчётом, что отдаёт `config:get`.
+   *
+   * Событие нужно окнам, которые правку **не** делали: попап и главное окно
+   * живут одновременно, и язык с темой у них обязан быть один. Тот, кто
+   * отправил `config:set`, получит отчёт ответом и это событие тоже — второй
+   * раз применить то же состояние безвредно, а исключение отправителя
+   * потребовало бы знать, кто он.
+   */
+  'config:changed': ConfigReport
 }
 
 export type IpcCallName = keyof IpcCalls

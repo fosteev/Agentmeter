@@ -110,6 +110,17 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
     [355, 355],
     [415, 415],
   ],
+  // Настройки (3.6). Рама, список разделов и правая колонка — в `SettingsTab`;
+  // каждая группа стоит в своём файле и сверяется со своим блоком, потому что
+  // в макете они принадлежат разным пунктам списка. Блок тумблеров (1185–1192)
+  // делят «Внешний вид» и «Приватность»: в макете это одна группа переключа-
+  // телей, разложенная по смыслу на два раздела.
+  'SettingsTab.tsx': [[1119, 1128]],
+  'SettingsSources.tsx': [[1130, 1144]],
+  'SettingsLimits.tsx': [[1146, 1167]],
+  'SettingsAlerts.tsx': [[1169, 1183]],
+  'SettingsAppearance.tsx': [[1185, 1192]],
+  'SettingsPrivacy.tsx': [[1185, 1192]],
   'PopupEmpty.tsx': [[1203, 1211]],
   'PopupIndexing.tsx': [[1213, 1224]],
   'PopupProblem.tsx': [[1226, 1235]],
@@ -162,6 +173,11 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
  */
 const OFF_SPEC: Record<string, number[]> = {
   'LimitBar.tsx': [3],
+  // Ноль — сброс браузерного отступа у `input`, а не значение из макета:
+  // ползунок и тумблер нарисованы своими прямоугольниками, а системный элемент
+  // лежит поверх невидимым. Довод — в `design-implementation.md`.
+  'SettingsAlerts.tsx': [0],
+  'SettingsPrivacy.tsx': [0],
 }
 
 const lines = html.split('\n')

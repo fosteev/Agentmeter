@@ -42,6 +42,7 @@ import {
   changedFiles,
   dayRange,
   formatTokens,
+  locale as currentLocale,
   t,
   taskDetail,
   taskRows,
@@ -92,11 +93,15 @@ export function buildTaskCard(db: Db, arg: TaskArg, config: Config): TaskCard | 
   const row = taskRows(db, range).find((task) => task.sessionId === arg.sessionId)
   if (row === undefined) return null
 
-  const locale = config.ui.locale
+  // Разрешённый язык, а не настройка: в `config.ui.locale` лежит `system`, и
+  // `Intl` такую метку молча принимает как незнакомую, форматируя числа по
+  // своему усмотрению. Получалось «1.2M» английским разделителем внутри
+  // русской фразы — и только при значении по умолчанию (3.6).
+  const locale = currentLocale()
   const detail = taskDetail(db, arg.sessionId, range)
   const total = row.totals.total
   const card: TaskCard = {
-    task: toTaskRow(row),
+    task: toTaskRow(row, config.privacy),
     dayShare: dayShare(db, row.totals.total, range, config.ui.dayStartsAtHour),
     timeline: timeline(detail.requests, detail.calls, locale),
     tokens: slices(row.totals, row.approximate),
@@ -113,7 +118,13 @@ export function buildTaskCard(db: Db, arg: TaskArg, config: Config): TaskCard | 
   if (observation !== undefined) card.note = { text: observation }
   const files = changedFiles(db, arg.sessionId, range)
   if (files.length > 0) {
-    card.files = { total: files.length, paths: files.slice(0, KEEP_PATHS).map((file) => file.path) }
+    // «Скрыть пути к файлам» (3.6) прячет **имена**, а не сам факт правок:
+    // число затронутых файлов — это расход, а не содержимое, и вырезать его
+    // значит спрятать от человека его же работу.
+    const paths = config.privacy.hidePaths
+      ? []
+      : files.slice(0, KEEP_PATHS).map((file) => file.path)
+    card.files = { total: files.length, paths }
   }
   return card
 }

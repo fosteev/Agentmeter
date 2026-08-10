@@ -63,6 +63,7 @@ export type { Watcher } from './index/watch.ts'
 export { openDb } from './index/db.ts'
 export type { Db } from './index/db.ts'
 export {
+  applyPatch,
   claudeHome,
   codexHome,
   configDir,
@@ -73,8 +74,9 @@ export {
   saveConfig,
 } from './config/load.ts'
 export { DEFAULT_CONFIG } from './config/types.ts'
-export type { ClaudeLimits, Config } from './config/types.ts'
+export type { ClaudeLimits, Config, WindowBounds } from './config/types.ts'
 export type { LoadResult } from './config/load.ts'
+export { RULES, rulePathsInDefaults } from './config/validate.ts'
 export * from './query/index.ts'
 /**
  * Формат чисел живёт и отдельной точкой входа (`@agentmeter/core/format`):

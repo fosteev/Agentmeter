@@ -9,7 +9,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { dirname, join } from 'node:path'
+import { t } from '../i18n/index.ts'
 import { DEFAULT_CONFIG, type Config } from './types.ts'
+import { RULES } from './validate.ts'
 
 /** Каталог настроек приложения. `AGENTMETER_HOME` перекрывает всё — нужен тестам. */
 export function configDir(): string {
@@ -66,12 +68,28 @@ export function loadConfig(path = configPath()): LoadResult {
   } catch (e) {
     return {
       config: structuredClone(DEFAULT_CONFIG),
-      problems: [
-        `${path}: не разбирается как JSON (${(e as Error).message}), взяты значения по умолчанию`,
-      ],
+      problems: [t('config.badJson', { path, message: (e as Error).message })],
     }
   }
   return merge(raw)
+}
+
+/**
+ * Применить частичную правку к живому конфигу (3.6, канал `config:set`).
+ *
+ * Тем же обходом, что и загрузка, только основой берётся текущий конфиг, а не
+ * дефолт: поля, которых в правке нет, остаются как были, а непонятое значение
+ * откатывается к **текущему**, а не к заводскому. Второй обход рядом означал
+ * бы, что настройка, пришедшая из окна, проверяется не так, как та же
+ * настройка, прочитанная с диска, — и однажды окно запишет то, чего файл не
+ * принимает.
+ */
+export function applyPatch(current: Config, patch: unknown): LoadResult {
+  const problems: string[] = []
+  const result = walk(current as unknown as Record<string, unknown>, patch, '', problems)
+  const config = result as unknown as Config
+  crossChecks(config, current, problems)
+  return { config, problems }
 }
 
 export function saveConfig(config: Config, path = configPath()): void {
@@ -87,7 +105,30 @@ export function saveConfig(config: Config, path = configPath()): void {
 function merge(raw: unknown): LoadResult {
   const problems: string[] = []
   const result = walk(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw, '', problems)
-  return { config: result as unknown as Config, problems }
+  const config = result as unknown as Config
+  crossChecks(config, DEFAULT_CONFIG, problems)
+  return { config, problems }
+}
+
+/**
+ * Проверки, которых не видно по одному полю.
+ *
+ * Порог тревоги ниже порога предупреждения — не опечатка в типе и не выход за
+ * диапазон: оба числа допустимы порознь. Вместе они означают, что приложение
+ * сначала бьёт тревогу, а потом предупреждает, и объяснить это на экране
+ * нечем. Откатывается пара целиком — правильного значения из двух неверных не
+ * выводится.
+ */
+function crossChecks(config: Config, fallback: Config, problems: string[]): void {
+  if (config.alerts.warnAtPercent <= config.alerts.dangerAtPercent) return
+  problems.push(
+    t('config.warnAboveDanger', {
+      warn: config.alerts.warnAtPercent,
+      danger: config.alerts.dangerAtPercent,
+    }),
+  )
+  config.alerts.warnAtPercent = fallback.alerts.warnAtPercent
+  config.alerts.dangerAtPercent = fallback.alerts.dangerAtPercent
 }
 
 function walk(
@@ -98,7 +139,7 @@ function walk(
 ): Record<string, unknown> {
   const source = isPlainObject(value) ? value : {}
   if (value !== undefined && !isPlainObject(value)) {
-    problems.push(`${path || '<корень>'}: ожидался объект, взято значение по умолчанию`)
+    problems.push(t('config.expectedObject', { path: path || t('config.root') }))
   }
   const out: Record<string, unknown> = {}
   for (const [key, def] of Object.entries(defaults)) {
@@ -113,13 +154,25 @@ function walk(
       continue
     }
     if (!typeMatches(def, got)) {
-      problems.push(`${here}: ожидалось ${describe(def)}, пришло ${describe(got)} — взят дефолт`)
+      problems.push(t('config.badType', { path: here, expected: describe(def), got: describe(got) }))
+      out[key] = structuredClone(def)
+      continue
+    }
+    // Тип совпал — теперь значение. Без этой проверки `"theme": "chartreuse"`
+    // и `"locale": "de"` проходили молча: обе строки — строки (3.6).
+    const rule = RULES[here]
+    if (rule !== undefined && !rule.ok(got)) {
+      problems.push(t('config.badValue', { path: here, expected: rule.expected, got: show(got) }))
       out[key] = structuredClone(def)
       continue
     }
     out[key] = got
   }
   return out
+}
+
+function show(value: unknown): string {
+  return typeof value === 'string' ? `"${value}"` : String(value)
 }
 
 /** `null` в дефолте означает «значение неизвестно», а не «тип null». */
@@ -131,7 +184,10 @@ function typeMatches(def: unknown, got: unknown): boolean {
 
 function describe(v: unknown): string {
   if (v === null) return 'null'
-  if (Array.isArray(v)) return 'список'
+  if (Array.isArray(v)) return t('config.typeList')
+  if (typeof v === 'number') return t('config.typeNumber')
+  if (typeof v === 'string') return t('config.typeString')
+  if (typeof v === 'boolean') return t('config.typeBoolean')
   return typeof v
 }
 

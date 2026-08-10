@@ -8,11 +8,12 @@
  * в нём работает. Зелёный `npm run check` про приложение не говорит ничего: там
  * ни одного запуска Electron нет.
  *
- * Восемь проверок, каждая названа по поломке, которую обязана поймать.
+ * Девять проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 
@@ -203,6 +204,51 @@ report(
     ? 'приложение не отчиталось о главном окне'
     : `страница ${mainWindow.page}, вкладка ${mainWindow.tab}`,
   windowOk,
+)
+
+// 9. Ловит: настройки, которые сохраняются только в память, и окно, забывшее
+//    свой размер (3.6). Юнит-тесты проверяют запись файла и сборку отчёта без
+//    Electron, но геометрию восстанавливает `BrowserWindow`, и промах здесь
+//    тихий: окно просто всегда открывается размером по умолчанию. Прогон идёт
+//    с подменённым `AGENTMETER_HOME` — иначе проверка писала бы в настройки
+//    того, кто её запустил.
+const home = mkdtempSync(join(tmpdir(), 'agentmeter-smoke-home-'))
+const settingsRun = built
+  ? runElectron({ AGENTMETER_HOME: home })
+  : { status: 1, stdout: '', stderr: 'сборки нет' }
+let settings:
+  | {
+      problems?: string[]
+      theme?: string
+      wanted?: { width: number; height: number }
+      bounds?: { width: number; height: number }
+      sources?: string[]
+    }
+  | undefined
+try {
+  settings = (
+    JSON.parse(settingsRun.stdout.trim().split('\n').at(-1) ?? '{}') as {
+      settings?: typeof settings
+    }
+  ).settings
+} catch {
+  settings = undefined
+}
+rmSync(home, { recursive: true, force: true })
+const settingsOk =
+  settings !== undefined &&
+  settings.problems?.length === 0 &&
+  settings.theme === 'dark' &&
+  settings.bounds?.width === settings.wanted?.width &&
+  settings.bounds?.height === settings.wanted?.height &&
+  settings.sources?.length === 2
+report(
+  9,
+  'настройки пишутся на диск, окно открывается запомненным размером',
+  settings === undefined
+    ? `приложение не отчиталось о настройках; exit=${settingsRun.status}`
+    : `тема с диска ${settings.theme}, окно ${settings.bounds?.width}×${settings.bounds?.height} против ${settings.wanted?.width}×${settings.wanted?.height}, источников ${settings.sources?.length}`,
+  settingsOk,
 )
 
 process.exit(failed ? 1 : 0)

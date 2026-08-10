@@ -15,6 +15,7 @@ import {
   type HourSplit,
   type ProjectSplit,
   type Provider,
+  type Config,
   type RequestScope,
   type TaskRow as CoreTaskRow,
   type Totals,
@@ -32,6 +33,16 @@ import type {
 } from '@agentmeter/ipc'
 
 /**
+ * Настройки приватности, доехавшие до сборки экрана (3.6).
+ *
+ * Отдельным маленьким типом, а не целым `Config`: сборщику ленты нужны ровно
+ * два флага, и передача всего конфига открыла бы ему потолки лимитов и пути к
+ * логам — то есть дала бы возможность считать что-нибудь ещё. Тумблер,
+ * который ничего не меняет в данных, был бы враньём на экране настроек.
+ */
+export type Privacy = Pick<Config['privacy'], 'hidePrompts' | 'hidePaths'>
+
+/**
  * Ниже какой доли расхода задача уходит в хвост.
  *
  * Число живёт здесь, а не в конфиге: настройка была бы догадкой о потребности,
@@ -47,7 +58,7 @@ const MIN_FOLDED = 2
 /** Сколько проектов показываем поимённо; остальные — строкой «+ N проектов». */
 const KEEP_PROJECTS = 4
 
-export function buildDayReport(db: Db, filter: TodayFilter): DayReport {
+export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): DayReport {
   const range = { from: filter.from, to: filter.to }
   const scope: RequestScope = {}
   if (filter.provider !== undefined) scope.provider = filter.provider
@@ -57,7 +68,9 @@ export function buildDayReport(db: Db, filter: TodayFilter): DayReport {
   const splits = daySplits(db, range, scope)
   const sort = filter.sort ?? 'tokens'
   const options = filter.foldSubagents === false ? { foldSubagents: false } : {}
-  const tasks = sortTasks(taskRows(db, range, scope, options), sort).map((row) => toTaskRow(row))
+  const tasks = sortTasks(taskRows(db, range, scope, options), sort).map((row) =>
+    toTaskRow(row, privacy),
+  )
 
   return {
     range,
@@ -93,7 +106,7 @@ function sortTasks(rows: readonly CoreTaskRow[], sort: NonNullable<TodayFilter['
  * над ней: собери её вторым похожим кодом — и однажды они разойдутся полем,
  * которое видно на экране дважды.
  */
-export function toTaskRow(row: CoreTaskRow): TaskRow {
+export function toTaskRow(row: CoreTaskRow, privacy?: Privacy): TaskRow {
   const task: TaskRow = {
     sessionId: row.sessionId,
     title: row.title,
@@ -105,14 +118,17 @@ export function toTaskRow(row: CoreTaskRow): TaskRow {
     toolCalls: row.toolCalls,
     tokens: measured(row.totals.total, row.approximate),
   }
-  if (row.firstPrompt !== null) task.firstPrompt = row.firstPrompt
+  // «Скрыть тексты промптов» (3.6): поля просто нет, и безымянная задача
+  // остаётся безымянной. Пустая строка вместо него была бы промптом нулевой
+  // длины — то есть данными, которых не было.
+  if (row.firstPrompt !== null && privacy?.hidePrompts !== true) task.firstPrompt = row.firstPrompt
   if (row.branch !== null) task.branch = row.branch
   if (row.model.length > 0) task.model = row.model
   if (row.agentType !== null) task.agentType = row.agentType
   // Тем же переводом, что и родитель: строка ребёнка показывается в карточке
   // рядом с его расходом, и собери её вторым похожим кодом — однажды они
   // разойдутся полем, которое видно на экране дважды.
-  if (row.children.length > 0) task.children = row.children.map((child) => toTaskRow(child))
+  if (row.children.length > 0) task.children = row.children.map((child) => toTaskRow(child, privacy))
   return task
 }
 
