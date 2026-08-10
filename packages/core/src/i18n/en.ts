@@ -188,6 +188,33 @@ export const en = {
     calls_other: '{{count}} calls',
   },
 
+  rebuild: {
+    title: 'Paying for the pause',
+    subtitle:
+      'The prompt cache lives {{ttl}}. Pause longer and the whole prompt goes in again as a write instead of a cheap read.',
+    caveat:
+      'This added no tokens to the day — the same ones went in as a write rather than a read. Whether that costs more, and how much more, depends on the price list and is not in the logs.',
+    share: '{{percent}}% of the period',
+    tableTitle: 'Cache rebuilds in this period',
+    columnTimes: 'Times',
+    columnTokens: 'Tokens',
+    start: 'at session start — unavoidable',
+    pause: 'after a pause longer than {{ttl}}',
+    early: 'cache gone before its time — the log does not say why',
+    compact: 'context compacted',
+    total: 'Rebuilds total',
+    pauseTitle: 'Pause length',
+    bucketRange: '{{from}} — {{to}}',
+    bucketOver: 'over {{from}}',
+    bucketTotal: 'Total',
+    worst_one: 'Costliest pause — {{duration}}',
+    worst_other: 'Costliest pause — {{duration}}',
+    worstWhere: '{{from}} → {{to}} · {{project}}',
+    worstWhereBranch: '{{from}} → {{to}} · {{project}} · {{branch}}',
+    card_one: 'Cache rebuild — {{count}} time, {{tokens}}',
+    card_other: 'Cache rebuild — {{count}} times, {{tokens}}',
+  },
+
   card: {
     untitled: 'Untitled',
     timeline: 'Request timeline · height = request tokens',
@@ -218,6 +245,7 @@ export const en = {
     sourceIntact: '{{names}} data is shown as usual, ',
     sourceBroken: '{{intact}}{{provider}} numbers for today are incomplete.',
     compaction: 'context compaction',
+    rebuild: 'cache rebuild',
     images_one: '{{count}} image in the result — 13× denser than text, {{tokens}} into the prompt',
     images_other:
       '{{count}} images in the result — 13× denser than text, {{tokens}} into the prompt',

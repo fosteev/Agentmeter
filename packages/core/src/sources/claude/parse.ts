@@ -30,6 +30,8 @@ interface RequestDraft {
   cacheWrite1h?: number
   skill?: string
   isSidechain: boolean
+  /** Провайдер отметил компакт перед этим запросом записью `compact_boundary`. */
+  compactMarked: boolean
   tools: ToolCall[]
   toolIds: Set<string>
   interjectedBytes: number
@@ -64,6 +66,15 @@ interface ParseState {
   prefixMemoryPaths: Set<string>
   userTurnBytes: number
   toolsDeferred: boolean
+  /**
+   * Видели `compact_boundary` и ещё не отдали его запросу (4.4).
+   *
+   * Слово провайдера сильнее вывода: где запись есть, гадать по числам не надо.
+   * Пара к `compactedPending` у Codex — там компакт размечен всегда, здесь
+   * только с той версии CLI, что научилась писать эту запись (на живых логах
+   * она встречается один раз на 590 транскриптов).
+   */
+  compactPending: boolean
 }
 
 const KNOWN_RECORD_TYPES = new Set([
@@ -147,6 +158,7 @@ function parseLines(path: string, lines: string[], options: ParseOptions): Parse
     prefixMemoryPaths: new Set(),
     userTurnBytes: 0,
     toolsDeferred: false,
+    compactPending: false,
   }
 
   for (const line of lines) {
@@ -211,6 +223,12 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
         const prompt = stringField(record, 'lastPrompt')
         if (prompt) state.firstPrompt = prompt
       }
+      return
+    case 'system':
+      // Единственная запись, которой провайдер сам называет компакт (4.4).
+      // Отдаётся следующему запросу, а не ближайшему по времени: метки времени
+      // внутри файла не хронологические (2.2), а порядок записей — да.
+      if (stringField(record, 'subtype') === 'compact_boundary') state.compactPending = true
       return
     default:
       return
@@ -452,10 +470,12 @@ function getDraft(
     cacheWrite: 0,
     cacheRead: 0,
     isSidechain,
+    compactMarked: state.compactPending,
     tools: [],
     toolIds: new Set(),
     interjectedBytes: 0,
   }
+  state.compactPending = false
   state.drafts.set(requestId, draft)
   return draft
 }
@@ -488,7 +508,8 @@ function buildRequests(state: ParseState): Request[] {
           tools: [],
         })
       }
-      current.compacted = looksCompacted(expectedCacheRead, current.cacheRead)
+      current.compacted =
+        current.compacted || looksCompacted(previous.contextTokens, current.contextTokens)
     }
     current.seq = requests.length
     requests.push(current)
@@ -499,15 +520,26 @@ function buildRequests(state: ParseState): Request[] {
 }
 
 /**
- * Компакт — это обвал префикса, а не любое его уменьшение.
+ * Компакт — это обвал **контекста**, а не обвал кэша (4.4).
  *
- * Кэш живёт своей жизнью: часть префикса может не дочитаться и без сжатия
- * контекста, и такие мелкие просадки компактом называть нельзя — иначе
- * «контекст сжали» будет написано там, где ничего не сжимали. На живых логах
- * все настоящие компакты роняют префикс до 8–23% от прежнего.
+ * До 4.4 здесь стояло `cacheRead < 0.6 × (prev.cacheRead + prev.cacheWrite)`, и
+ * это тот же след, который оставляет истёкший кэш: промпт переписывается
+ * заново, чтение проваливается до 8–23% от прежнего префикса. Разница в том,
+ * что происходит с самим промптом — при компакте разговор заменён пересказом и
+ * контекст падает вместе с кэшем, при пересборке контекст остаётся на месте.
+ *
+ * Замер по живым логам: из 91 обвала кэша контекст сохранился у **90**
+ * (отношение `ctx(N)/ctx(N−1)` в 0.95–1.05 у 77 из них), то есть прежнее
+ * правило называло компактом пересборку в 90 случаях из 91 — и карточка задачи
+ * писала «сжатие контекста» там, где никто ничего не сжимал.
+ *
+ * Ложных срабатываний у нынешнего правила ноль: падений контекста больше чем на
+ * 40% при прежнем выше 10k на всех логах ровно одно, и у него есть запись
+ * `compact_boundary` от самого провайдера. Порог `> 10_000` остался прежним —
+ * он отсекает начало сессии, где контекст растёт с нуля рывками.
  */
-function looksCompacted(previousPrefix: number, cacheRead: number): boolean {
-  return previousPrefix > 10_000 && cacheRead < previousPrefix * 0.6
+function looksCompacted(previousContext: number, context: number): boolean {
+  return previousContext > 10_000 && context < previousContext * 0.6
 }
 
 function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
@@ -533,7 +565,7 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
     cacheRead: draft.cacheRead,
     contextTokens: draft.input + draft.cacheRead + draft.cacheWrite,
     isSidechain: draft.isSidechain,
-    compacted: false,
+    compacted: draft.compactMarked,
     synthetic: false,
     interjectedBytes: draft.interjectedBytes,
     tools,

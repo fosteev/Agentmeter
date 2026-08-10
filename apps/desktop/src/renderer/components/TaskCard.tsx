@@ -1,5 +1,5 @@
 import type { TaskCard as TaskCardData } from '@agentmeter/ipc'
-import { t } from '../format.ts'
+import { formatTokens, t } from '../format.ts'
 import { BreakdownRow } from './BreakdownRow.tsx'
 import { TaskCardHeader } from './TaskCardHeader.tsx'
 import { TaskFiles } from './TaskFiles.tsx'
@@ -47,6 +47,19 @@ export function TaskCard({ card }: { card: TaskCardData }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 0 }}>
         <div data-token-split="" style={{ ...COLUMN, borderRight: '1px solid var(--line)' }}>
           <TokenSplit tokens={card.tokens} note={card.note} />
+          {/*
+            Одна строка, без гистограммы и без итогов дня — решение дизайна
+            (макет, строки 1749–1752): переплата за паузу это свойство того, как
+            идёт день, а не задачи. Гистограмма живёт в «Развёртке».
+          */}
+          {card.rebuilds === undefined ? null : (
+            <div data-task-rebuilds style={{ fontSize: 11.5, color: 'var(--tx2)' }}>
+              {t('rebuild.card', {
+                count: card.rebuilds.count,
+                tokens: `${card.rebuilds.tokens.confidence === 'exact' ? '' : '≈'}${formatTokens(card.rebuilds.tokens.value)}`,
+              })}
+            </div>
+          )}
           <TaskSubagents {...(card.task.children === undefined ? {} : { children: card.task.children })} />
         </div>
         <div style={COLUMN}>

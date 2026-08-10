@@ -254,7 +254,7 @@
       "cacheRead": 20628,
       "contextTokens": 58416,
       "isSidechain": false,
-      "compacted": true,
+      "compacted": false,
       "synthetic": false,
       "interjectedBytes": 42,
       "origin": "log",

@@ -39,6 +39,7 @@
  */
 import {
   breakdownReport,
+  cacheRebuilds,
   changedFiles,
   dayRange,
   formatTokens,
@@ -100,16 +101,36 @@ export function buildTaskCard(db: Db, arg: TaskArg, config: Config): TaskCard | 
   const locale = currentLocale()
   const detail = taskDetail(db, arg.sessionId, range)
   const total = row.totals.total
+  // Пересборки кэша задачи (4.4). Считаются по **всей** сессии и режутся
+  // периодом уже событиями — иначе первый запрос дня объявлялся бы стартом
+  // сессии, начатой вчера.
+  const rebuilds = cacheRebuilds(db, { sessionId: arg.sessionId, range })
+  const rebuilt = new Set(
+    rebuilds.events
+      .filter((event) => event.cause !== 'start')
+      .map((event) => `${event.sessionId} ${event.seq}`),
+  )
   const card: TaskCard = {
     task: toTaskRow(row, config.privacy),
     dayShare: dayShare(db, row.totals.total, range, config.ui.dayStartsAtHour),
-    timeline: timeline(detail.requests, detail.calls, locale),
+    timeline: timeline(detail.requests, detail.calls, rebuilt, locale),
     tokens: slices(row.totals, row.approximate),
     tools: tools(
       breakdownReport(db, { sessionId: arg.sessionId, range }).tool,
       detail.calls,
       locale,
     ),
+  }
+
+  // Строка «пересборка кэша — 3 раза, 9.8M». Старт сессии в неё не входит:
+  // читать при старте было нечего, и назвать это переплатой значит посоветовать
+  // не начинать работу. Гистограмма пауз живёт в «Развёртке» (макет, 1749–1752).
+  const paid = rebuilds.total.count - rebuilds.start.count
+  if (rebuilds.measurable && paid > 0) {
+    card.rebuilds = {
+      count: paid,
+      tokens: measured(rebuilds.total.tokens - rebuilds.start.tokens, row.approximate),
+    }
   }
 
   const caption = timelineNote(card.timeline, locale)
@@ -162,6 +183,7 @@ function dayShare(
 function timeline(
   requests: readonly TaskRequest[],
   calls: readonly TaskCall[],
+  rebuilt: ReadonlySet<string>,
   locale: string,
 ): TimelinePoint[] {
   const byRequest = new Map<string, TaskCall[]>()
@@ -182,7 +204,13 @@ function timeline(
 
   return requests.map((request, index) => {
     const point: TimelinePoint = { ts: request.ts, tokens: request.total }
-    const reason = why(request, growth[index]!, usual, locale)
+    const reason = why(
+      request,
+      rebuilt.has(`${request.sessionId} ${request.seq}`),
+      growth[index]!,
+      usual,
+      locale,
+    )
     if (reason !== undefined) point.note = reason
     return point
   })
@@ -191,18 +219,22 @@ function timeline(
 /**
  * Чем выделен запрос — или ничем.
  *
- * Сжатие контекста стоит первым и порога не имеет: это не оценка величины, а
- * событие из лога. Момент, в котором контекст пересобрали, объясняет и провал
- * столбика, и то, что дальше кэш пишется заново — тот самый расход, который
- * разбирается в 4.4.
+ * События из лога стоят первыми и порога не имеют: это не оценка величины.
+ * Сжатие контекста и пересборка кэша **разные** события, хотя в usage у них
+ * один след — обвал чтения кэша (4.4). Различает их столбик: при сжатии он
+ * проваливается вместе с контекстом, при пересборке стоит на месте. Написать
+ * «сжатие» над непроваленным столбиком значит объяснить человеку то, чего он не
+ * видит, — до 4.4 карточка так и делала в 90 случаях из 91.
  */
 function why(
   request: TaskRequest,
+  rebuilt: boolean,
   growth: { tokens: number; calls: TaskCall[] },
   usual: number,
   locale: string,
 ): string | undefined {
   if (request.compacted) return t('note.compaction')
+  if (rebuilt) return t('note.rebuild')
   if (growth.tokens < GROWTH_FLOOR) return undefined
   if (usual > 0 && growth.tokens < GROWTH_TIMES * usual) return undefined
 

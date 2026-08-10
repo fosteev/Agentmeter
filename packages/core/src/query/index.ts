@@ -1,4 +1,12 @@
 export { breakdownReport } from './breakdown.ts'
+export { CACHE_TTL_1H, CACHE_TTL_5M, PAUSE_BUCKETS, cacheRebuilds } from './cache.ts'
+export type {
+  CacheRebuildReport,
+  PauseBucket,
+  RebuildCause,
+  RebuildEvent,
+  RebuildGroup,
+} from './cache.ts'
 export { dayRange } from './day.ts'
 export { doctorReport } from './doctor.ts'
 export { changedFiles } from './files.ts'

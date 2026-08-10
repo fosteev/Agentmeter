@@ -187,6 +187,68 @@ describe('buildSpendScreen', () => {
   })
 })
 
+describe('переплата за паузу (4.4)', () => {
+  /**
+   * Ловит блок, который сложили с шапкой.
+   *
+   * Пересборка не добавляет периоду ни одного токена: тот же промпт едет либо
+   * чтением, либо записью. Значит её число обязано лежать **внутри** итога, а
+   * доля — считаться от того же итога, что в шапке. Появись у блока свой
+   * знаменатель, на экране оказались бы два ответа на один вопрос.
+   */
+  it('пересборки лежат внутри итога, а доля считается от него', () => {
+    const screen = buildSpendScreen(db, ALL)
+
+    const total = screen.split!.slices.reduce((sum, slice) => sum + slice.tokens.value, 0)
+
+    expect(screen.rebuilds).toBeDefined()
+    expect(screen.rebuilds!.total.tokens.value).toBeLessThan(total)
+    expect(screen.rebuilds!.share).toBeCloseTo(screen.rebuilds!.total.tokens.value / total, 6)
+  })
+
+  /**
+   * Ловит подпись корзины, собранную в main: границы приезжают числами, а «1 —
+   * 2 ч» получается подстановкой их в постоянный шаблон — это работа окна
+   * (правило 3.0). В фикстурах пересборка по паузе одна, 1 ч 55 мин при часовом
+   * сроке, то есть первая корзина.
+   */
+  it('корзина подписана окном из приехавших границ', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const html = render(screen)
+
+    expect(screen.rebuilds!.buckets).toHaveLength(1)
+    expect(screen.rebuilds!.buckets[0]!.fromMs).toBe(60 * 60_000)
+    // «1 ч — 2 ч», а не «1 — 2 ч» как в макете: единица повторяется у обеих
+    // границ, потому что `span()` — общий форматтер длительностей, и учить его
+    // сокращать одинаковые единицы значит заводить формат ради одной строки.
+    expect(html).toContain('1 ч — 2 ч')
+    expect(html).toContain('после паузы дольше 1 ч')
+  })
+
+  /**
+   * Ловит блок из нулей у Codex. Записи в кэш он не сообщает вовсе, и таблица
+   * из четырёх нулей сказала бы «мы посчитали, и пересборок не было».
+   */
+  it('на одном Codex блока нет вовсе', () => {
+    const screen = buildSpendScreen(db, { ...ALL, provider: 'codex' })
+    const html = render(screen)
+
+    expect(screen.rebuilds).toBeUndefined()
+    expect(html).not.toContain('data-cache-rebuilds')
+  })
+
+  /**
+   * Ловит потерянную оговорку. Блок называет число, которое **не** является
+   * лишним расходом, и без этой фразы «23% расхода за период» читается как
+   * «столько можно было сэкономить».
+   */
+  it('блок говорит, что токенов от пересборки не прибавилось', () => {
+    const html = render(buildSpendScreen(db, ALL))
+
+    expect(html).toContain('Токенов в сутках от этого не прибавилось')
+  })
+})
+
 describe('BreakdownTab', () => {
   /**
    * Ловит полосу, посчитанную окном заново от токенов: доля приезжает готовой,

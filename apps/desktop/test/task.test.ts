@@ -250,18 +250,33 @@ describe('buildTaskCard на фикстурах', () => {
   })
 
   /**
-   * Ловит сжатие контекста, оставшееся без пометки: событие есть в логе, и это
-   * единственный вид выделения, который на фикстурах вообще встречается.
+   * Ловит пересборку кэша, названную сжатием контекста.
+   *
+   * В фикстурах есть ровно одно событие такого рода, и до 4.4 карточка писала
+   * над ним «сжатие контекста». На самом деле контекст там **вырос** (58 416
+   * против 55 897) — обвалилось только чтение кэша, потому что перед запросом
+   * была пауза в 1 ч 55 мин при часовом сроке жизни кэша. Столбик при этом
+   * стоит на месте, и слово «сжатие» объясняло провал, которого не видно.
+   *
+   * Настоящего сжатия в фикстурах нет вовсе — оно проверяется на посеянной
+   * сессии в `packages/core/test/query/cache.test.ts`.
    */
-  it('сжатие контекста помечено причиной и попало в подпись', () => {
+  it('пересборка кэша помечена собой, а не сжатием контекста', () => {
     const card = cards().find((value) =>
-      value.timeline.some((point) => point.note === 'сжатие контекста'),
+      value.timeline.some((point) => point.note === 'пересборка кэша'),
     )!
     const marked = card.timeline.filter((point) => point.note !== undefined)
 
-    expect(marked.map((point) => point.note)).toEqual(['сжатие контекста'])
-    expect(card.timelineNote).toContain('сжатие контекста')
-    expect(card.timelineNote).not.toContain('дороже прочих')
+    expect(marked.map((point) => point.note)).toEqual(['пересборка кэша'])
+    expect(cards().every((value) => value.timeline.every((p) => p.note !== 'сжатие контекста'))).toBe(
+      true,
+    )
+    // Оценкой, а не точным числом: в этой сессии есть восстановленные запросы
+    // (1.3), и точность наследуется от итога — как у всех остальных чисел
+    // карточки.
+    expect(card.rebuilds?.count).toBe(1)
+    expect(card.rebuilds?.tokens.value).toBe(37_786)
+    expect(card.rebuilds?.tokens.confidence).toBe('reconstructed')
   })
 })
 

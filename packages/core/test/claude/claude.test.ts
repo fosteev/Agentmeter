@@ -123,7 +123,70 @@ describe('Claude Code parser', () => {
     expect(parseProcStart('Mon Aug 10 07:11:48 2026')).toBe(Date.parse('2026-08-10T07:11:48.000Z'))
     expect(parseProcStart('что-то другое')).toBeUndefined()
   })
+
+  /**
+   * Слово провайдера сильнее вывода по числам (4.4).
+   *
+   * Запись `compact_boundary` встречается на всех живых логах **один раз** — и
+   * в фикстурах её нет вовсе, поэтому случай сеется здесь. Контекст в этом
+   * транскрипте нарочно не падает: вывод по числам такой компакт не увидит, и
+   * поймать потерю разметки может только эта проверка. Обратная половина
+   * правила — на фикстуре `compact.jsonl`, где разметки нет, а числа есть.
+   */
+  it('компакт, размеченный провайдером, не выводится из чисел', () => {
+    tmp = mkdtempSync(join(tmpdir(), 'agentmeter-compact-'))
+    const path = join(tmp, 'marked.jsonl')
+    writeFileSync(
+      path,
+      [
+        assistantLine('req-1', '2026-08-10T10:00:00.000Z', { write: 20_000, read: 0 }),
+        JSON.stringify({
+          type: 'system',
+          subtype: 'compact_boundary',
+          content: 'Conversation compacted',
+          timestamp: '2026-08-10T10:01:00.000Z',
+          compactMetadata: { trigger: 'auto', preTokens: 20_000 },
+        }),
+        assistantLine('req-2', '2026-08-10T10:02:00.000Z', { write: 500, read: 20_000 }),
+      ].join('\n'),
+    )
+
+    const requests = parseSessionFile(path).requests
+
+    expect(requests.map((request) => request.compacted)).toEqual([false, true])
+    // Контекст не падал: 20 000 против 20 500. Правило по числам молчит, и это
+    // ровно то, ради чего разметка провайдера читается отдельно.
+    expect(requests.map((request) => request.contextTokens)).toEqual([20_000, 20_500])
+  })
 })
+
+function assistantLine(
+  requestId: string,
+  timestamp: string,
+  usage: { write: number; read: number },
+): string {
+  return JSON.stringify({
+    type: 'assistant',
+    requestId,
+    timestamp,
+    sessionId: 'marked-session',
+    cwd: '/proj/marked',
+    version: '2.1.226',
+    isSidechain: false,
+    message: {
+      model: 'claude-opus-5',
+      role: 'assistant',
+      content: [],
+      usage: {
+        input_tokens: 0,
+        output_tokens: 10,
+        cache_creation_input_tokens: usage.write,
+        cache_read_input_tokens: usage.read,
+        cache_creation: { ephemeral_1h_input_tokens: usage.write, ephemeral_5m_input_tokens: 0 },
+      },
+    },
+  })
+}
 
 interface ExpectedResult {
   session: Record<string, unknown>

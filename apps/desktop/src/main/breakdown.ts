@@ -12,12 +12,14 @@
  */
 import {
   breakdownReport,
+  cacheRebuilds,
   hasRequests,
   loadedCategories,
   savings,
   spendSplit,
   sourceCount,
   t,
+  type CacheRebuildReport,
   type Db,
   type LoadedCategory,
   type LoadedSource,
@@ -30,6 +32,7 @@ import { measured } from './measured.ts'
 import { toSpendSplit } from './day.ts'
 import type {
   BreakdownRow,
+  CacheRebuilds,
   Measured,
   SpendAdvice,
   SpendCategoryRow,
@@ -111,7 +114,66 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
         approximate,
       ),
     },
+    ...toRebuilds(
+      cacheRebuilds(db, { range, scope }),
+      split.total,
+      approximate,
+      perSession ? sessions : 1,
+    ),
   }
+}
+
+/**
+ * Пересборки кэша (4.4) — блок «Переплата за паузу».
+ *
+ * Поля нет вовсе, когда мерить нечем (`measurable === false`, то есть в периоде
+ * один Codex) **или** когда пересборок не было ни одной: пустая таблица из
+ * четырёх нулей читается как «мы посчитали, и не было», а первое из этих двух —
+ * неправда.
+ *
+ * Доля считается здесь, потому что она видна числом и рядом с ней стоит текст
+ * (правило 3.0). Знаменатель — тот же итог периода, что в шапке (4.1): второго
+ * знаменателя у разложения нет и быть не может. И делится доля **до** масштаба
+ * «за сессию»: доля от неё не зависит, а абсолютные числа зависят.
+ */
+function toRebuilds(
+  report: CacheRebuildReport,
+  total: number,
+  approximate: boolean,
+  divisor: number,
+): { rebuilds?: CacheRebuilds } {
+  if (!report.measurable || report.total.count === 0) return {}
+  const group = (value: { count: number; tokens: number }): CacheRebuilds['start'] => ({
+    count: value.count,
+    tokens: measured(Math.round(value.tokens / divisor), approximate),
+  })
+  const rebuilds: CacheRebuilds = {
+    start: group(report.start),
+    pause: group(report.pause),
+    early: group(report.early),
+    compact: group(report.compact),
+    total: group(report.total),
+    share: total === 0 ? 0 : report.total.tokens / total,
+    buckets: report.buckets.map((bucket) => ({
+      fromMs: bucket.fromMs,
+      toMs: bucket.toMs,
+      count: bucket.count,
+      tokens: measured(Math.round(bucket.tokens / divisor), approximate),
+    })),
+    ttlMs: report.ttlMs,
+  }
+  const worst = report.worst
+  if (worst && worst.pauseMs !== null) {
+    rebuilds.worst = {
+      pauseMs: worst.pauseMs,
+      tokens: measured(worst.tokens, approximate),
+      from: worst.ts - worst.pauseMs,
+      to: worst.ts,
+      project: worst.project,
+      branch: worst.branch,
+    }
+  }
+  return { rebuilds }
 }
 
 /**

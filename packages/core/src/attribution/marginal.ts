@@ -40,7 +40,19 @@ export function attributeMarginal(
     }
 
     if (request.tools.length > 0) {
-      if (!nextLogged || nextLogged.compacted || request.interjectedBytes !== 0) {
+      // Дельта годится, только если **промпт** вырос: тогда мы знаем, что в
+      // него добавилось, а расхождение с `output` — это слак учёта в несколько
+      // десятков токенов, и он честно срезается нулём (эталон 1.6, seq 9:
+      // 23 660 − 22 810 − 900 = −50 при выросшем промпте, `L = 0, measured`).
+      // Упал промпт — из него что-то **убрали**, и разность не говорит ни о
+      // чём: там же, seq 7, 20 010 − 32 411 − 700 = −13 101, `unknown`.
+      //
+      // До 4.4 обе строки различал флаг компакта, то есть правило с порогом.
+      // После 4.4 компакт определяется по обвалу контекста, порог у него свой,
+      // и вешать на него ещё и годность дельты значит связать два независимых
+      // решения одним числом. Условие названо прямо и порога не имеет вовсе.
+      const shrank = nextLogged !== undefined && nextLogged.contextTokens < request.contextTokens
+      if (!nextLogged || nextLogged.compacted || shrank || request.interjectedBytes !== 0) {
         stats.unknown += request.tools.length
       } else {
         const residual = Math.max(

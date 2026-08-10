@@ -1,4 +1,5 @@
 import type { SpendScreen } from '@agentmeter/ipc'
+import { CacheRebuilds } from './CacheRebuilds.tsx'
 import { SpendCategoryTable, CATEGORY_GRID, mono } from './SpendCategoryTable.tsx'
 import { formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
@@ -275,6 +276,11 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
           <ToolTable screen={screen} />
         </div>
       </div>
+      {screen.rebuilds === undefined ? null : (
+        <div style={{ padding: '20px 24px 0' }}>
+          <CacheRebuilds rebuilds={screen.rebuilds} />
+        </div>
+      )}
       <div
         style={{
           padding: '12px 24px 20px',
