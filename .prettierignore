@@ -3,3 +3,7 @@ node_modules/
 design/
 fixtures/
 *.jsonl
+
+# tokens.css хранит oklch-значения макета посимвольно (с trailing zeros вроде
+# 0.650). Prettier срезает нули — посимвольная сверка с макетом ломается.
+apps/desktop/src/renderer/tokens.css

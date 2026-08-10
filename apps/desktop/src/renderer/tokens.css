@@ -1,0 +1,114 @@
+/* Agentmeter · раздел 0 макета. :root перенесён из design/Agentmeter.dc.html
+   посимвольно — тест apps/desktop/test/tokens.test.ts сверяет каждое значение.
+   oklch не переводится: равномерность шкалы тревоги держится на этой системе. */
+
+:root {
+  --bg: oklch(0.185 0.008 255);
+  --s1: oklch(0.225 0.009 255);
+  --s2: oklch(0.265 0.009 255);
+  --line: oklch(0.315 0.010 255);
+  --tx: oklch(0.945 0.004 255);
+  --tx2: oklch(0.725 0.008 255);
+  --tx3: oklch(0.565 0.010 255);
+  --claude: oklch(0.755 0.130 62);
+  --codex: oklch(0.745 0.110 205);
+  --alarm: oklch(0.650 0.170 27);
+  --warn: oklch(0.790 0.140 82);
+  --ok: oklch(0.720 0.130 155);
+  --lbg: oklch(0.970 0.003 255);
+  --ls1: oklch(1 0 0);
+  --ls2: oklch(0.945 0.004 255);
+  --lline: oklch(0.885 0.005 255);
+  --ltx: oklch(0.250 0.010 255);
+  --ltx2: oklch(0.480 0.010 255);
+  --ltx3: oklch(0.615 0.010 255);
+  --lclaude: oklch(0.580 0.140 55);
+  --lcodex: oklch(0.540 0.120 235);
+  --lalarm: oklch(0.540 0.180 27);
+  --lwarn: oklch(0.640 0.140 75);
+  --lok: oklch(0.560 0.130 155);
+
+  /* Структурные токены из строки 107 макета: высоты строки списка и радиусы.
+     Цветовых литералов нет — это размеры, в :root макета их не было. */
+  --row-h: 44px;
+  --row-h-popup: 40px;
+  --r-inner: 6px;
+  --r-card: 10px;
+}
+
+/* Светлая тема — переопределяет семантические имена на --l*-палитру внутри
+   своей области. Оба набора живут в :root одновременно, как в макете. */
+[data-theme='light'] {
+  --bg: var(--lbg);
+  --s1: var(--ls1);
+  --s2: var(--ls2);
+  --line: var(--lline);
+  --tx: var(--ltx);
+  --tx2: var(--ltx2);
+  --tx3: var(--ltx3);
+  --claude: var(--lclaude);
+  --codex: var(--lcodex);
+  --alarm: var(--lalarm);
+  --warn: var(--lwarn);
+  --ok: var(--lok);
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexSans-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexSans-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexMono-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/IBMPlexMono-SemiBold.woff2') format('woff2');
+}
+
+@keyframes am-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}

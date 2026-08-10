@@ -1,0 +1,20 @@
+{
+  "name": "@agentmeter/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Electron-рендерер Agentmeter: витрина компонентов и токены раздела 0",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "cd ../.. && vitest run --project desktop"
+  },
+  "dependencies": {
+    "@agentmeter/core": "*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1"
+  }
+}

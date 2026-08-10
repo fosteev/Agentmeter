@@ -23,6 +23,13 @@ export default defineConfig({
           include: ['test/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'desktop',
+          root: './apps/desktop',
+          include: ['test/**/*.test.ts'],
+        },
+      },
     ],
   },
 })
