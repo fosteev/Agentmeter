@@ -30,6 +30,7 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
       { provider: 'claude', path: '/home/u/.claude', readable: true, files: 412, bytes: 597_688_320 },
       { provider: 'codex', path: '/home/u/.codex', readable: false, files: 88, bytes: 42_991_616 },
     ],
+    startup: { enabled: false, available: true },
   }
 }
 
@@ -72,11 +73,11 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 }
 
 describe('экран настроек', () => {
-  /** Ловит потерянный раздел: их пять, и каждый из макета. */
-  it('рисует пять разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} />)
+  /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
+  it('рисует шесть разделов и открывает первый', () => {
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} />)
 
-    expect(html.split('data-settings-section=').length - 1).toBe(5)
+    expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
     expect(html).toContain('Источники данных')
     expect(html).toContain('Приватность')
@@ -87,7 +88,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -101,7 +102,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')

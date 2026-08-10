@@ -3,6 +3,7 @@ import type { Config } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial } from '@agentmeter/ipc'
 import { t } from '../format.ts'
 import { SettingsAlerts } from './SettingsAlerts.tsx'
+import { SettingsApp } from './SettingsApp.tsx'
 import { SettingsAppearance } from './SettingsAppearance.tsx'
 import { SettingsLimits } from './SettingsLimits.tsx'
 import { SettingsPrivacy } from './SettingsPrivacy.tsx'
@@ -17,11 +18,12 @@ import { SettingsSources } from './SettingsSources.tsx'
  * лимитам, ползунки — уведомлениям). Поэтому каждая группа стоит в своём
  * разделе и свёрстана числами **своего** блока макета.
  *
- * Чего здесь нет и почему: тумблера «Запускать при входе в систему». Автозапуск
- * на трёх платформах — этап 5.3, и тумблер, который переключается, но ничего не
- * включает, врёт заметнее, чем его отсутствие.
+ * Разделов стало шесть: в 5.3 приехал автозапуск, и он не про внешний вид и не
+ * про приватность — он про то, будет ли приложение открыто вообще. Своё место
+ * ему нужно ещё и потому, что состояние он берёт у операционной системы, а не
+ * из файла настроек, — то есть правится другим каналом.
  */
-export type SettingsSection = 'sources' | 'limits' | 'alerts' | 'appearance' | 'privacy'
+export type SettingsSection = 'sources' | 'limits' | 'alerts' | 'appearance' | 'privacy' | 'app'
 
 /** Ключи, а не подписи: `t()` на верхнем уровне застыл бы на языке загрузки. */
 const SECTIONS: ReadonlyArray<{ id: SettingsSection; key: string }> = [
@@ -30,16 +32,22 @@ const SECTIONS: ReadonlyArray<{ id: SettingsSection; key: string }> = [
   { id: 'alerts', key: 'settings.tabAlerts' },
   { id: 'appearance', key: 'settings.tabAppearance' },
   { id: 'privacy', key: 'settings.tabPrivacy' },
+  { id: 'app', key: 'settings.tabApp' },
 ]
 
 export interface SettingsTabProps {
   report: ConfigReport
   onChange: (patch: DeepPartial<Config>) => void
+  /**
+   * Переключить автозапуск. Отдельно от `onChange` намеренно: он пишет файл
+   * настроек, а это — операционную систему (5.3).
+   */
+  onStartup: (enabled: boolean) => void
   /** С какого раздела открыть. Нужен витрине и тестам; по умолчанию первый. */
   section?: SettingsSection
 }
 
-export function SettingsTab({ report, onChange, section = 'sources' }: SettingsTabProps) {
+export function SettingsTab({ report, onChange, onStartup, section = 'sources' }: SettingsTabProps) {
   const [active, setActive] = useState<SettingsSection>(section)
   const { config } = report
 
@@ -106,6 +114,7 @@ export function SettingsTab({ report, onChange, section = 'sources' }: SettingsT
           <SettingsAppearance config={config} onChange={onChange} />
         ) : null}
         {active === 'privacy' ? <SettingsPrivacy config={config} onChange={onChange} /> : null}
+        {active === 'app' ? <SettingsApp startup={report.startup} onToggle={onStartup} /> : null}
       </div>
     </div>
   )

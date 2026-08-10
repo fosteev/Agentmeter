@@ -1,0 +1,40 @@
+name: Release
+
+# Инсталляторы собирает тег вида `v0.1.0`, и собирает каждый на своей ОС:
+# кросс-сборка dmg требует macOS, nsis — Windows или wine, deb — Linux. Ни
+# одной из этих подпорок здесь нет намеренно — приложение, собранное под wine,
+# проверить нечем.
+#
+# Релиз создаётся **черновиком** (`releaseType: draft` в electron-builder.yml):
+# автообновление (5.4) раздаёт то, что опубликовано, и публиковать сборку,
+# которую никто не открывал, значит разослать её всем сразу.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Проверки перед упаковкой, а не после: собранный и выложенный черновик
+      # с красными тестами — это релиз, который кто-то скачает.
+      - run: npm run check
+      - run: npm run -w @agentmeter/desktop build
+      # Подписи нет — это 5.2, сертификатов пока не существует. Здесь об этом
+      # сказано вслух, потому что молчание читается как «подписано».
+      - run: npx --workspace @agentmeter/desktop electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -63,7 +63,7 @@ import type {
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
-import { configReport, setConfig } from './config.ts'
+import { configReport, setConfig, setStartup } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
@@ -72,6 +72,7 @@ import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
+import { readStartup, type StartupHost } from './startup.ts'
 
 const here = fileURLToPath(new URL('./', import.meta.url))
 /**
@@ -127,6 +128,8 @@ interface Runtime {
   liveOptions: LiveLayerOptions
   /** Замечания загрузчика: что в файле настроек не понято и заменено. */
   configProblems: string[]
+  /** Чем спрашивать систему про автозапуск (5.3) — три метода `app`, не больше. */
+  startup: StartupHost
   watcher?: Watcher
   /**
    * До чего не добрались на последнем обходе. Держится здесь, а не пересчитыва-
@@ -204,6 +207,10 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     config,
     liveOptions,
     configProblems: loaded.problems,
+    // Автозапуск спрашивают у системы через `app`, и передаётся он объектом с
+    // тремя методами, а не целиком: `main/config.ts` про Electron не знает и
+    // знать не должен — его проверяют без запуска приложения.
+    startup: app,
     issues: ingested?.issues ?? [],
   }
   if (defer) {
@@ -280,6 +287,9 @@ async function runSmoke(): Promise<void> {
         () => runtime,
         () => undefined,
         (patch) => setConfig(runtime, patch),
+        // Смоук автозапуск не трогает: включить его значило бы записать
+        // приложение в «Объекты входа» того, кто прогнал проверку.
+        () => configReport(runtime),
       ),
     )
 
@@ -395,6 +405,11 @@ async function runSmoke(): Promise<void> {
       tray: trayReport,
       window: windowReport,
       settings: settingsReport,
+      // Автозапуск (5.3) только читается: включить его в проверке значило бы
+      // прописать приложение в «Объекты входа» того, кто её прогнал. В
+      // упакованном приложении здесь `available: true` — это и проверяет
+      // `package-smoke.ts`, потому что в разработке он всегда `false`.
+      startup: readStartup(app),
       snapshot,
     }),
   )
@@ -413,6 +428,7 @@ function createHandlers(
   runtime: () => Runtime,
   openWindow: (tab: WindowTab) => void,
   changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
+  changeStartup: (enabled: boolean) => ConfigReport,
 ): IpcHandlers {
   return {
     'snapshot:get': () =>
@@ -428,6 +444,9 @@ function createHandlers(
     'breakdown:get': (filter) => buildSpendScreen(runtime().db, filter),
     'history:get': (arg) => buildHistoryScreen(runtime().db, arg, runtime().config, Date.now()),
     'config:set': ({ patch }) => changeConfig(patch),
+    // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
+    // знать незачем: ответ тот же отчёт, и рассылается он так же.
+    'startup:set': ({ enabled }) => changeStartup(enabled),
     'index:rebuild': () => undefined,
     'doctor:get': () => ({
       cliVersions: [],
@@ -934,6 +953,21 @@ function main(): void {
     return report
   }
 
+  /**
+   * Автозапуск (5.3): записать в систему и разослать тем же событием.
+   *
+   * Ничего, кроме записи, здесь нет — ни таймеров, ни вотчера: настройка
+   * работает не в этом запуске, а в следующем входе в систему. Событие всё
+   * равно уходит, потому что тумблер стоит в окне, а состояние приезжает из
+   * системы: показать желаемое вместо действительного — то же враньё, что
+   * тумблер без поведения.
+   */
+  const changeStartup = (enabled: boolean): ConfigReport => {
+    const report = setStartup(runtime!, enabled)
+    emit('config:changed', report)
+    return report
+  }
+
   void app.whenReady().then(() => {
     // Витрина — лист образцов на фикстурах: ни индекса, ни вотчера, ни трея.
     // Открывать ей базу нельзя вдвойне: она запускается **поверх** работающего
@@ -956,7 +990,7 @@ function main(): void {
 
     registerIpc(
       ipcMain,
-      createHandlers(() => runtime!, openMainWindow, changeConfig),
+      createHandlers(() => runtime!, openMainWindow, changeConfig, changeStartup),
     )
 
     window = createPopup(gallery ? 'gallery' : 'index', !windowed)

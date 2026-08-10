@@ -1,6 +1,7 @@
 import type { Config } from '@agentmeter/core'
 import type { DeepPartial } from '@agentmeter/ipc'
 import { t } from '../format.ts'
+import { Switch } from './Switch.tsx'
 
 /**
  * «Приватность» — тот же блок тумблеров, строки 1185–1192 макета.
@@ -11,6 +12,9 @@ import { t } from '../format.ts'
  * по IPC и лежать в памяти окна, а настройка называлась бы «не рисовать».
  *
  * Число затронутых файлов при этом остаётся: это расход, а не содержимое.
+ *
+ * Сам тумблер с 5.3 живёт в `Switch.tsx`: переключателей стало три в двух
+ * разделах, и вторая геометрия того же элемента разъехалась бы с первой молча.
  */
 export interface SettingsPrivacyProps {
   config: Config
@@ -43,56 +47,5 @@ export function SettingsPrivacy({ config, onChange }: SettingsPrivacyProps) {
         onChange={(value) => onChange({ privacy: { hidePaths: value } })}
       />
     </div>
-  )
-}
-
-function Switch({
-  name,
-  label,
-  note,
-  checked,
-  onChange,
-}: {
-  name: string
-  label: string
-  note: string
-  checked: boolean
-  onChange: (value: boolean) => void
-}) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: 12.5 }}>
-        {label} <span style={{ color: 'var(--tx3)', fontSize: 11.5 }}>{note}</span>
-      </span>
-      <span
-        style={{
-          width: 34,
-          height: 19,
-          borderRadius: 10,
-          background: checked ? 'var(--ok)' : 'var(--s2)',
-          position: 'relative',
-          flex: 'none',
-        }}
-      >
-        <span
-          style={{
-            position: 'absolute',
-            ...(checked ? { right: 2 } : { left: 2 }),
-            top: 2,
-            width: 15,
-            height: 15,
-            borderRadius: '50%',
-            background: checked ? 'var(--bg)' : 'var(--tx3)',
-          }}
-        />
-        <input
-          type="checkbox"
-          data-setting={name}
-          checked={checked}
-          onChange={(event) => onChange(event.currentTarget.checked)}
-          style={{ position: 'absolute', inset: 0, margin: 0, opacity: 0, cursor: 'pointer' }}
-        />
-      </span>
-    </label>
   )
 }

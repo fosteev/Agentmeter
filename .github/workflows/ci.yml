@@ -24,3 +24,33 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
+
+  package:
+    # Упаковка (5.1) проверяется на всех трёх, и проверяется запуском, а не
+    # фактом сборки. Смысл ровно в этом: `npm run check` не поднимает Electron
+    # ни разу, а поломки упаковки — потерянный preload, файл вне `files`,
+    # зависимость в devDependencies — видны только у запущенного приложения.
+    #
+    # `--dir` вместо инсталляторов: dmg, nsis и AppImage собираются в релизе, а
+    # здесь проверяется содержимое сборки, и оно у них общее.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run -w @agentmeter/desktop package:dir
+      # Окна на Linux-раннере нет вовсе, и Electron там не стартует. Xvfb даёт
+      # экран; без него проверка «поднимается окно и трей» падала бы не по делу.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum node --experimental-strip-types scripts/probe/package-smoke.ts
+      - if: runner.os != 'Linux'
+        run: node --experimental-strip-types scripts/probe/package-smoke.ts

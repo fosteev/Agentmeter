@@ -121,6 +121,9 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   'SettingsAlerts.tsx': [[1181, 1195]],
   'SettingsAppearance.tsx': [[1197, 1204]],
   'SettingsPrivacy.tsx': [[1197, 1204]],
+  'SettingsApp.tsx': [[1197, 1204]],
+  // Тумблер вынесен из «Приватности» в 5.3 — он же стоит в «Приложении».
+  'Switch.tsx': [[1197, 1204]],
   'PopupEmpty.tsx': [[1215, 1223]],
   'PopupIndexing.tsx': [[1225, 1236]],
   'PopupProblem.tsx': [[1238, 1247]],
@@ -208,7 +211,7 @@ const OFF_SPEC: Record<string, number[]> = {
   // ползунок и тумблер нарисованы своими прямоугольниками, а системный элемент
   // лежит поверх невидимым. Довод — в `design-implementation.md`.
   'SettingsAlerts.tsx': [0],
-  'SettingsPrivacy.tsx': [0],
+  'Switch.tsx': [0],
 }
 
 const lines = html.split('\n')

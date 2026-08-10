@@ -381,7 +381,9 @@ export const en = {
     hidePaths: 'Hide file paths',
     hidePathsNote: '— the task card shows the count of files touched only',
     problems: 'Notes on the settings file',
-    autostartLater: 'Launch at login arrives in 5.3 — a toggle that does nothing is not here',
+    launchAtLogin: 'Launch at login',
+    launchUnpackaged: 'available in an installed app only',
+    tabApp: 'Application',
   },
 
   cli: {

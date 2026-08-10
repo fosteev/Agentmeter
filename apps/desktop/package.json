@@ -1,6 +1,6 @@
 {
   "name": "@agentmeter/desktop",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "dist/main/index.js",
@@ -12,19 +12,22 @@
     "dev": "npm run build && node scripts/launch.js --dev",
     "gallery": "npm run build && node scripts/launch.js --gallery",
     "start": "npm run build && node scripts/launch.js",
+    "package": "npm run build && electron-builder --publish never",
+    "package:dir": "npm run build && electron-builder --dir --publish never",
     "test": "cd ../.. && vitest run --project desktop"
   },
   "dependencies": {
     "@agentmeter/core": "*",
-    "@agentmeter/ipc": "*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@agentmeter/ipc": "*"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "vite": "^6.4.3"
   }
 }

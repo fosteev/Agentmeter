@@ -203,6 +203,15 @@ export function WindowApp() {
     })
   }
 
+  /**
+   * Автозапуск (5.3) — свой канал и по той же причине, что у соседа выше:
+   * состояние приезжает **перечитанным у системы**, а не тем, что мы просили.
+   * Система вправе не разрешить, и тумблер обязан показать её ответ.
+   */
+  const changeStartup = (enabled: boolean): void => {
+    void window.agentmeter['startup:set']({ enabled }).then(setConfigReport)
+  }
+
   useEffect(() => {
     if (config === null || snapshot === null) return
     const range = dayRange(snapshot.at, config.ui.dayStartsAtHour)
@@ -283,7 +292,7 @@ export function WindowApp() {
           onSelectDay={setHistoryDay}
         />
       ) : tab === 'settings' && configReport !== null ? (
-        <SettingsTab report={configReport} onChange={changeConfig} />
+        <SettingsTab report={configReport} onChange={changeConfig} onStartup={changeStartup} />
       ) : (
         tabPlaceholder(tab)
       )}

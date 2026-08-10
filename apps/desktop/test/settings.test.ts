@@ -38,6 +38,10 @@ beforeEach(() => {
     config: structuredClone(DEFAULT_CONFIG),
     liveOptions: { idleMs: DEFAULT_CONFIG.live.idleMs, claudeLimits: DEFAULT_CONFIG.limits.claude },
     configProblems: [],
+    // Электрона в тестах нет, а автозапуск спрашивают у него. Хост подменён
+    // объектом с памятью: проверяется поведение — «что система ответила», — а
+    // не то, что мы себе записали.
+    startup: fakeHost(),
   }
 })
 
@@ -46,6 +50,20 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
   delete process.env['AGENTMETER_HOME']
 })
+
+/** Подделка `app`: помнит, что ей записали, и отвечает этим на вопрос. */
+function fakeHost(packaged = true): ConfigTarget['startup'] & { openAtLogin: boolean } {
+  return {
+    isPackaged: packaged,
+    openAtLogin: false,
+    getLoginItemSettings() {
+      return { openAtLogin: this.openAtLogin }
+    },
+    setLoginItemSettings(settings: { openAtLogin: boolean }) {
+      this.openAtLogin = settings.openAtLogin
+    },
+  }
+}
 
 function saved(): Config {
   return loadConfig(join(dir, 'config.json')).config

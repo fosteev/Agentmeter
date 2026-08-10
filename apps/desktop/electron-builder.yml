@@ -1,0 +1,98 @@
+# Упаковка (5.1). Собирается из `apps/desktop`: `npm run -w @agentmeter/desktop package`.
+#
+# Нативных модулей у приложения нет — `node:sqlite` живёт внутри Electron, —
+# поэтому `electron-rebuild` не зовётся вовсе (`npmRebuild: false`). Это решение
+# записано в роадмапе с M1 и стоит здесь строкой, а не подразумевается: без неё
+# сборка на машине без тулчейна падает не в упаковке, а в rebuild, и сообщение
+# говорит про Python.
+appId: dev.agentmeter.app
+productName: Agentmeter
+copyright: Agentmeter, MIT
+
+# Версия Electron записана числом, а не выведена из node_modules, и это
+# вынужденно: пакет лежит в корне монорепо, а упаковщик ищет его рядом с
+# приложением и падает на диапазоне `^43.3.0`. Расходиться ей с установленной
+# нельзя — за этим следит проверка 2 в `scripts/probe/package-smoke.ts`.
+electronVersion: 43.3.0
+
+directories:
+  # Иконка одна на три платформы: `packaging/icon.png` 1024×1024, из неё
+  # electron-builder сам делает .icns и .ico. Рисуется скриптом из токенов
+  # макета — `node --experimental-strip-types scripts/make-icon.ts`. Каталог
+  # называется не `build` намеренно: `build/` лежит в .gitignore как вывод
+  # сборки, и иконка, единственный ассет в репозитории, туда бы не попала.
+  buildResources: packaging
+  output: ../../release
+
+npmRebuild: false
+asar: true
+
+# Что едет внутрь. Ровно собранное приложение: main обычным `tsc`, preload
+# отдельным бандлом, окно — статикой из vite.
+#
+# Три исключения не косметические. `dist/renderer` — это вывод `tsc` для тех же
+# .tsx, которые vite уже собрал в `dist/web`: он не запускается никогда, но
+# весит и путает того, кто полезет внутрь asar. Карты и .d.ts — то же самое.
+# А `gallery.*` — витрина верстальщика: в приложении на неё нет ни одной
+# ссылки, и класть инструмент разработчика пользователю незачем.
+files:
+  - package.json
+  - dist/main/**
+  - dist/preload/**
+  - dist/web/**
+  - '!dist/renderer/**'
+  - '!**/*.map'
+  - '!**/*.d.ts'
+  - '!**/*.tsbuildinfo'
+  - '!dist/web/gallery.html'
+  - '!dist/web/assets/gallery-*'
+  # Рядом с бандлом preload лежит вывод `tsc` для той же папки — он нужен
+  # проверке типов и не загружается никогда: грузится `index.cjs`.
+  - '!dist/preload/*.js'
+  # Пакеты монорепо приезжают целиком, вместе с исходниками на TypeScript.
+  # В приложении они мертвы: main собран, окно собрано, а `.ts` внутри asar
+  # читается как «здесь можно править на месте» — нельзя, это копия.
+  - '!node_modules/@agentmeter/*/src/**'
+  - '!node_modules/@agentmeter/*/tsconfig*'
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Подписи нет — это этап 5.2, а сертификатов пока не существует. `null` здесь
+  # означает «не искать в связке ключей»: без него electron-builder подпишет
+  # первым попавшимся сертификатом разработчика, и сборка на моей машине станет
+  # отличаться от сборки в CI, не сказав об этом ни слова.
+  identity: null
+  # zip рядом с dmg — не «на всякий случай»: electron-updater умеет обновлять
+  # macOS только через zip, и без него 5.4 работал бы на двух платформах из трёх.
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  category: Development
+  synopsis: Локальный счётчик токенов для кодинг-агентов
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+
+publish:
+  provider: github
+  owner: fosteev
+  repo: Agentmeter
+  # Черновик, а не публикация сразу: релиз должен полежать собранным на трёх
+  # платформах прежде, чем автообновление (5.4) начнёт его раздавать.
+  releaseType: draft

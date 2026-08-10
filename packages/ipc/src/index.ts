@@ -265,6 +265,21 @@ export interface ConfigReport {
   problems: string[]
   /** Строки блока «Пути к логам»: где искали и что нашли. */
   sources: SourceStatus[]
+  /**
+   * Автозапуск (5.3) — состояние спрошено у операционной системы, а не взято
+   * из файла настроек. Поля в конфиге у него нет намеренно: человек убирает
+   * приложение из автозапуска системными средствами, и наша копия ответа
+   * разошлась бы с правдой молча.
+   */
+  startup: StartupStatus
+}
+
+export interface StartupStatus {
+  enabled: boolean
+  /** Можно ли переключать: в неустановленном приложении — нет. */
+  available: boolean
+  /** Почему нельзя. Есть ровно тогда, когда `available === false`. */
+  reason?: string
 }
 
 export interface SourceStatus {
@@ -938,6 +953,16 @@ export interface IpcCalls {
    * список замечаний это «принято всё», а не «ошибок не проверяли».
    */
   'config:set': { arg: { patch: DeepPartial<Config> }; result: ConfigReport }
+  /**
+   * Включить или выключить автозапуск (5.3).
+   *
+   * Отдельным каналом, а не полем `config:set`: пишется он не в файл настроек,
+   * а в операционную систему — в «Объекты входа» на macOS, в реестр на Windows
+   * и в `~/.config/autostart` на Linux. Ответ — состояние, **перечитанное у
+   * системы** после записи: она вправе не разрешить, и показывать в тумблере
+   * желаемое вместо действительного значит врать самым проверяемым способом.
+   */
+  'startup:set': { arg: { enabled: boolean }; result: ConfigReport }
   'index:rebuild': { arg: void; result: void }
   'doctor:get': { arg: void; result: DoctorReport }
   /**
@@ -980,6 +1005,7 @@ export const IPC_CALLS = [
   'limits:get',
   'config:get',
   'config:set',
+  'startup:set',
   'index:rebuild',
   'doctor:get',
   'window:open',

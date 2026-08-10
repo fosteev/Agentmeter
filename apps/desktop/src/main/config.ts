@@ -36,6 +36,7 @@ import {
   type LiveLayerOptions,
 } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial, SourceStatus } from '@agentmeter/ipc'
+import { readStartup, writeStartup, type StartupHost } from './startup.ts'
 
 /** Что настройкам нужно от приложения, чтобы примениться без перезапуска. */
 export interface ConfigTarget {
@@ -50,6 +51,12 @@ export interface ConfigTarget {
   liveOptions: LiveLayerOptions
   /** Замечания к файлу настроек — то, что не понято и заменено. */
   configProblems: string[]
+  /**
+   * Чем спрашивать систему про автозапуск (5.3). Не `app` целиком: в тестах
+   * Electron нет, а поведение проверять надо — и именно поведение, а не то,
+   * что мы записали себе в память.
+   */
+  startup: StartupHost
 }
 
 /**
@@ -80,7 +87,20 @@ export function configReport(target: ConfigTarget): ConfigReport {
     config: target.config,
     problems: target.configProblems,
     sources: sourceStatus(target.db, target.config),
+    startup: readStartup(target.startup),
   }
+}
+
+/**
+ * Переключить автозапуск и вернуть отчёт с тем, что вышло.
+ *
+ * Файла настроек это не касается вовсе: состояние живёт в системе. Отчёт
+ * возвращается целиком тот же, что у `config:get`, — окну незачем знать, что
+ * этот тумблер устроен иначе остальных.
+ */
+export function setStartup(target: ConfigTarget, enabled: boolean): ConfigReport {
+  writeStartup(target.startup, enabled)
+  return configReport(target)
 }
 
 /**
