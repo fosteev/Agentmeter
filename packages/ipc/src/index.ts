@@ -10,7 +10,7 @@
  * точности. Renderer не считает расход сам — иначе одна и та же цифра
  * окажется посчитанной дважды и разойдётся.
  */
-import type { Entrypoint, LimitWindow, Provider } from '@agentmeter/core'
+import type { Entrypoint, LimitReportRow, LimitWindow, Provider } from '@agentmeter/core'
 
 /** Агент, работающий прямо сейчас. */
 export interface LiveAgent {
@@ -67,6 +67,16 @@ export interface DayTotals {
   output: Measured
   cacheWrite: Measured
   cacheRead: Measured
+  /**
+   * Сумма всех четырёх видов — то самое число в подвале попапа («344.9M»).
+   *
+   * Лежит здесь готовым не для удобства: сложить четыре поля в рендерере
+   * значит посчитать расход второй раз и вывести из четырёх `confidence`
+   * пятый — то есть завести в окне собственную арифметику точности, которая
+   * разойдётся с CLI на первой же правке. Считает тот, кто считает всё
+   * остальное.
+   */
+  total: Measured
   requests: number
   sessions: number
   /** Подвал попапа: «22 сессии · 8 проектов» (строка 449 макета). */
@@ -83,7 +93,16 @@ export interface TraySnapshot {
    */
   at: number
   agents: LiveAgent[]
-  limits: LimitWindow[]
+  /**
+   * Окна лимита ровно в том виде, в каком их отдаёт `limitsReport` — с
+   * причиной недоступности и прогнозом.
+   *
+   * Голый `LimitWindow` здесь стоял по недосмотру и терял оба поля, которые
+   * попапу и нужны: без `unavailableReason` окно Claude без процента
+   * показывать нечем, кроме пустой полосы, а это ровно та ошибка, ради
+   * которой затевался продукт; без `forecast` пропадала вторая половина 2.3.
+   */
+  limits: LimitReportRow[]
   today: DayTotals
   /** Ближайший к потолку лимит — по нему красится иконка в трее. */
   nearestLimitPercent?: number
@@ -154,7 +173,7 @@ export interface IpcCalls {
     arg: { scope: 'day' | 'session'; sessionId?: string; from?: number; to?: number }
     result: BreakdownRow[]
   }
-  'limits:get': { arg: void; result: LimitWindow[] }
+  'limits:get': { arg: void; result: LimitReportRow[] }
   'config:get': { arg: void; result: { config: unknown; problems: string[] } }
   'config:set': { arg: { patch: unknown }; result: { problems: string[] } }
   'index:rebuild': { arg: void; result: void }

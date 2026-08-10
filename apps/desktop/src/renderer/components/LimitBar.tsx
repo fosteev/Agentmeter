@@ -14,6 +14,12 @@
 // Знак «≈» в тексте стоит всегда: прогноз продлевает темп последних минут, а
 // не измеряет.
 
+// Размер полосы — параметр, а не константа. В разделе 0 она 8px со скруглением
+// 4 (строка 177), в попапе 6px со скруглением 3 (строка 418). Это не расхождение
+// макета: раздел 0 показывает компонент в собственном контексте, попап — в более
+// плотной сетке, оба нарисованы осознанно. Значение по умолчанию равно разделу 0,
+// поэтому витрина и приёмка 2.4 остаются нетронутыми.
+
 export interface LimitBarProps {
   percent: number | null
   approximate: boolean
@@ -21,6 +27,18 @@ export interface LimitBarProps {
   selected?: boolean
   /** Готовая подпись прогноза, например «≈40 мин до упора». Считает не окно. */
   forecast?: string
+  /** Толщина полосы: 8/4 в разделе 0, 6/3 в попапе. */
+  size?: 'panel' | 'popup'
+  /**
+   * Показывать процент справа от полосы. В попапе он стоит строкой выше, и
+   * второй такой же рядом с полосой был бы дублем.
+   */
+  label?: boolean
+}
+
+const SIZE: Record<'panel' | 'popup', { height: number; radius: number }> = {
+  panel: { height: 8, radius: 4 },
+  popup: { height: 6, radius: 3 },
 }
 
 type Level = 'ok' | 'warn' | 'alarm'
@@ -39,46 +57,62 @@ function levelFor(percent: number): Level {
 
 const HATCH = `repeating-linear-gradient(115deg, var(--warn) 0 3px, color-mix(in oklch, var(--warn) 32%, transparent) 3px 7px)`
 
-export function LimitBar({ percent, approximate, selected, forecast }: LimitBarProps) {
+export function LimitBar({
+  percent,
+  approximate,
+  selected,
+  forecast,
+  size = 'panel',
+  label = true,
+}: LimitBarProps) {
   const pct = selected ? 100 : percent
   const known = pct !== null
   const level = known ? levelFor(pct) : 'ok'
   const labelColor = approximate ? 'var(--tx2)' : level === 'alarm' ? 'var(--alarm)' : 'var(--tx)'
   const labelText = known ? `${approximate ? '≈' : ''}${Math.round(pct)}%` : '—'
+  const { height, radius } = SIZE[size]
 
   const bar = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div
         style={{
           flex: 1,
-          height: 8,
-          borderRadius: 4,
+          height,
+          borderRadius: radius,
           background: selected ? 'var(--alarm)' : 'var(--s2)',
           overflow: 'hidden',
         }}
       >
-        {selected ? null : (
+        {/*
+         * Неизвестный процент рисуется пустой полосой без заливки: ширина 0 —
+         * это не «израсходовано нисколько», а «нечего показать». Число и
+         * причина стоят текстом рядом, и путать их нельзя — на этом держится
+         * вся честность продукта.
+         */}
+        {selected || !known ? null : (
           <div
             style={{
-              width: `${pct ?? 0}%`,
+              width: `${pct}%`,
               height: '100%',
               background: approximate ? HATCH : LEVEL_COLOR[level],
             }}
           />
         )}
       </div>
-      <span
-        style={{
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11,
-          width: 46,
-          textAlign: 'right',
-          color: labelColor,
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {labelText}
-      </span>
+      {label ? (
+        <span
+          style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 11,
+            width: 46,
+            textAlign: 'right',
+            color: labelColor,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {labelText}
+        </span>
+      ) : null}
     </div>
   )
 

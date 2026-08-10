@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Политика ужата до того, что попапу действительно нужно. Сеть закрыта
+      целиком: шрифты лежат рядом шестью woff2, данные приезжают по IPC, и
+      единственный внешний запрос, который может здесь появиться, — случайно
+      вернувшийся Google Fonts.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:"
+    />
+    <title>Agentmeter</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

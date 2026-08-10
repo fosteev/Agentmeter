@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./format": {
+      "types": "./dist/format/tokens.d.ts",
+      "default": "./dist/format/tokens.js"
     }
   },
   "main": "./dist/index.js",

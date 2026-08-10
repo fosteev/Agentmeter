@@ -68,3 +68,9 @@ export { DEFAULT_CONFIG } from './config/types.ts'
 export type { ClaudeLimits, Config } from './config/types.ts'
 export type { LoadResult } from './config/load.ts'
 export * from './query/index.ts'
+/**
+ * Формат чисел живёт и отдельной точкой входа (`@agentmeter/core/format`):
+ * рендерер обязан брать его без этого файла, иначе в браузерный бандл уедет
+ * `node:sqlite`. Здесь он для CLI и тестов, которые и так тянут ядро целиком.
+ */
+export { formatTokens } from './format/tokens.ts'

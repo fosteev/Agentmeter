@@ -251,5 +251,8 @@ function addCurrentClaudeRequest(): void {
 }
 
 function maskNumbers(value: string): string {
-  return value.replace(/\d+(?:[.,]\d+)?(?:[KMB])?/g, '#')
+  // Суффикс тысяч строчный — как в макете (2.5). Оставь здесь `K`, и маска
+  // перестанет маскировать суффикс: снапшот начнёт падать по числам, а не по
+  // вёрстке, ради которой он и сделан.
+  return value.replace(/\d+(?:[.,]\d+)?(?:[kMB])?/g, '#')
 }

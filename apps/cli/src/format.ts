@@ -1,24 +1,22 @@
+import { formatTokens } from '@agentmeter/core'
+
 export interface Column {
   header: string
   width?: number
   align?: 'left' | 'right'
 }
 
+/**
+ * Формат токенов общий с попапом — `packages/core/src/format/tokens.ts`.
+ *
+ * Здесь он раньше жил своей копией с суффиксом `K`, а в рендерере — своей с
+ * зашитым `en-US`. Две копии одного договора разошлись бы на первой правке, и
+ * пользователь увидел бы два разных числа на одной машине.
+ */
+export { formatTokens }
+
 export function formatNumber(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value)
-}
-
-export function formatTokens(value: number, locale: string): string {
-  const units = [
-    { size: 1_000_000_000, suffix: 'B' },
-    { size: 1_000_000, suffix: 'M' },
-    { size: 1_000, suffix: 'K' },
-  ]
-  for (const unit of units) {
-    if (Math.abs(value) < unit.size) continue
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value / unit.size)}${unit.suffix}`
-  }
-  return formatNumber(value, locale)
 }
 
 /**

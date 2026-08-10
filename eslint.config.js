@@ -16,6 +16,14 @@ export default tseslint.config(
     },
   },
   {
+    // Обычные .js в репозитории — это скрипты запуска, живущие в ноде.
+    // Для .ts глобалы приезжают из типов, здесь их надо назвать.
+    files: ['**/*.js'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly', Buffer: 'readonly' },
+    },
+  },
+  {
     // Инструменты вокруг репозитория ходят по сырому JSON из чужих логов,
     // где схема заранее неизвестна. Типизировать это — сочинять формат.
     files: ['scripts/**/*.ts'],

@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 const coreSrc = fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url))
+const coreFormat = fileURLToPath(new URL('./packages/core/src/format/tokens.ts', import.meta.url))
+const ipcSrc = fileURLToPath(new URL('./packages/ipc/src/index.ts', import.meta.url))
 
 export default defineConfig({
   test: {
@@ -31,10 +33,20 @@ export default defineConfig({
         },
       },
       {
+        // Рендерер ходит в ядро только за форматтером, и берёт его подпутём:
+        // барель тянет `node:sqlite`, которому в окне делать нечего. Алиасы
+        // уводят оба импорта на исходники, чтобы тесты не ждали сборки.
+        resolve: {
+          alias: [
+            { find: '@agentmeter/core/format', replacement: coreFormat },
+            { find: '@agentmeter/core', replacement: coreSrc },
+            { find: '@agentmeter/ipc', replacement: ipcSrc },
+          ],
+        },
         test: {
           name: 'desktop',
           root: './apps/desktop',
-          include: ['test/**/*.test.ts'],
+          include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
         },
       },
     ],

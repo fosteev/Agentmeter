@@ -13,7 +13,8 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc --build && npm run build:bundles",
+    "build:bundles": "npm run build:preload -w @agentmeter/desktop && npm run build:web -w @agentmeter/desktop",
     "check": "npm run lint && npm run build && npm test",
     "clean": "tsc --build --clean",
     "cli": "node --experimental-strip-types apps/cli/src/main.ts",

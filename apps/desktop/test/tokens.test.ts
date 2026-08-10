@@ -52,11 +52,47 @@ function stripComments(src: string): string {
  * и проверка перестаёт что-либо ловить. Границы блоков — из таблицы в
  * `docs/roadmap/design-implementation.md`.
  */
-const SPEC_LINES: Record<string, [number, number]> = {
-  'AgentRow.tsx': [146, 168],
-  'LimitBar.tsx': [175, 181],
-  'TaskRow.tsx': [186, 189],
-  'BreakdownRow.tsx': [192, 200],
+/**
+ * Блоков у компонента может быть несколько — по одному на каждый контекст,
+ * который он реализует.
+ *
+ * `AgentRow` и `LimitBar` нарисованы в макете дважды: в разделе 0 как
+ * компоненты (строки 146–168 и 175–181) и внутри попапа (351–367 и 413–420), и
+ * числа там разные — попап плотнее. Это не расхождение макета: раздел 0
+ * показывает компонент в собственном контексте, попап — в своём, оба нарисованы
+ * осознанно. Поэтому допустимые значения берутся объединением своих блоков, а
+ * не сведением попапа к разделу 0 и не расширением проверки до «всего макета».
+ */
+const SPEC_LINES: Record<string, Array<[number, number]>> = {
+  'AgentRow.tsx': [
+    [146, 168],
+    [351, 367],
+  ],
+  'LimitBar.tsx': [
+    [175, 181],
+    [413, 420],
+  ],
+  'TaskRow.tsx': [[186, 189]],
+  'BreakdownRow.tsx': [[192, 200]],
+  // Сборка попапа: рама, контейнер списка агентов и контейнер лимитов.
+  // Заголовки разделов сюда попадают потому, что их поля приходят отсюда же
+  // параметром — у списка 14, у лимитов 16, и оба числа из макета.
+  'Popup.tsx': [
+    [332, 333],
+    [342, 350],
+    [406, 412],
+  ],
+  'PopupHeader.tsx': [[334, 340]],
+  'SectionTitle.tsx': [
+    [344, 347],
+    [406, 409],
+  ],
+  'PopupLimit.tsx': [[413, 420]],
+  'PopupFooter.tsx': [[442, 451]],
+  'ProviderBadge.tsx': [
+    [355, 355],
+    [415, 415],
+  ],
 }
 
 /**
@@ -75,22 +111,43 @@ const OFF_SPEC: Record<string, number[]> = {
   'LimitBar.tsx': [3],
 }
 
-function specValues(name: string): Set<number> {
-  const [from, to] = SPEC_LINES[name] ?? [0, 0]
-  const block = html
-    .split('\n')
-    .slice(from - 1, to)
+const lines = html.split('\n')
+
+function block(name: string): string {
+  return (SPEC_LINES[name] ?? [])
+    .map(([from, to]) => lines.slice(from - 1, to).join('\n'))
     .join('\n')
+}
+
+function specValues(name: string): Set<number> {
   return new Set([
-    ...[...block.matchAll(/(?:gap|padding|margin)(?:-[a-z]+)?\s*:\s*([^;"']+)/g)].flatMap(
+    ...[...block(name).matchAll(/(?:gap|padding|margin)(?:-[a-z]+)?\s*:\s*([^;"']+)/g)].flatMap(
       ([, raw]) => [...raw.matchAll(/\d+/g)].map((n) => Number(n[0])),
     ),
     ...(OFF_SPEC[name] ?? []),
   ])
 }
 
-const FONT_SIZES = new Set([11, 12, 13, 15, 20])
-const FONT_WEIGHTS = new Set([400, 600])
+/**
+ * Кегли и насыщенности — тоже из блока компонента, а не из общего списка.
+ *
+ * Раньше здесь стоял один набор на всех (11/12/13/15/20). Попап набран другими
+ * ступенями — 9, 10 и 12.5, — и дописать их в общий список значило бы
+ * разрешить `12.5` компонентам раздела 0, которым он не положен: проверка
+ * ослабла бы ровно там, где уже работала. Правило то же, что у отступов: ответ
+ * даёт свой блок макета.
+ */
+function specFontSizes(name: string): Set<number> {
+  return new Set(
+    [...block(name).matchAll(/font-size\s*:\s*([\d.]+)px/g)].map(([, raw]) => Number(raw)),
+  )
+}
+
+function specFontWeights(name: string): Set<number> {
+  return new Set(
+    [...block(name).matchAll(/font-weight\s*:\s*(\d+)/g)].map(([, raw]) => Number(raw)),
+  )
+}
 
 // Ловит: кто-то поменял цвет в tokens.css или выкинул токен из макета.
 describe('tokens.css :root совпадает с макетом посимвольно', () => {
@@ -156,23 +213,29 @@ describe('в компонентах нет цветовых литералов �
   }
 })
 
-// Ловит: кто-то поставил fontSize:14 или fontWeight:300 — мимо ступеней 0.
-describe('типографика компонентов только из шести ступеней раздела 0', () => {
+// Ловит: кто-то поставил fontSize:14 или fontWeight:300 — кегль, которого нет
+// в блоке этого компонента.
+describe('типографика компонентов только из их блоков макета', () => {
   const SIZE = /\bfontSize\s*:\s*([^,}\n]+)/g
   const WEIGHT = /\bfontWeight\s*:\s*([^,}\n]+)/g
 
   for (const { name, src } of COMPONENTS) {
-    it(`${name}: размер и насыщенность из ступеней`, () => {
+    it(`${name}: размер и насыщенность из своего блока макета`, () => {
+      const sizes = specFontSizes(name)
+      // Пустой набор значил бы, что границы блока съехали и проверять нечего.
+      expect(sizes.size, `${name}: кегли в блоке макета не найдены`).toBeGreaterThan(0)
+      const code = stripComments(src)
       const badSizes: number[] = []
-      for (const [, raw] of src.matchAll(SIZE)) {
-        for (const n of raw.matchAll(/\d+/g)) badSizes.push(Number(n[0]))
+      for (const [, raw] of code.matchAll(SIZE)) {
+        for (const n of raw.matchAll(/[\d.]+/g)) badSizes.push(Number(n[0]))
       }
+      const weights = specFontWeights(name)
       const badWeights: number[] = []
-      for (const [, raw] of src.matchAll(WEIGHT)) {
+      for (const [, raw] of code.matchAll(WEIGHT)) {
         for (const n of raw.matchAll(/\d+/g)) badWeights.push(Number(n[0]))
       }
-      expect(badSizes.filter((n) => !FONT_SIZES.has(n))).toEqual([])
-      expect(badWeights.filter((n) => !FONT_WEIGHTS.has(n))).toEqual([])
+      expect(badSizes.filter((n) => !sizes.has(n))).toEqual([])
+      expect(badWeights.filter((n) => !weights.has(n))).toEqual([])
     })
   }
 })
