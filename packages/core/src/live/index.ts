@@ -24,6 +24,15 @@ export { DEFAULT_LIVE_OPTIONS } from './agents.ts'
 export type { LiveAgent, LiveSnapshot, LiveState, SessionLifetime } from './types.ts'
 export { loadLifetimes, appendLifetimes } from './lifetimes.ts'
 export { processState, processStartTimes } from './process.ts'
+export { claudeTurn, codexTurn, deriveState, readTurn } from './state.ts'
+export type { StateInput, TurnKind, TurnRead } from './state.ts'
+export {
+  DEFAULT_RATE_WINDOW_MS,
+  RATE_FLOOR_MS,
+  observedSpan,
+  perMinute,
+  windowTokens,
+} from './rate.ts'
 
 export interface LiveLayerOptions extends LiveOptions {
   /** Куда пишется журнал замера. Пустая строка — не писать (тесты, `--json`). */
@@ -85,6 +94,11 @@ export function createLiveLayer(db: Db, opts: LiveLayerOptions = {}): LiveLayer 
     const immediate: SessionLifetime[] = []
 
     for (const agent of snapshot.agents) {
+      // Завершившиеся висят в снимке ещё `doneGraceMs` — ради гашеной строки
+      // «завершился 2 мин назад» в макете. Замер 1.3 их живыми считать не
+      // должен: иначе `endedAt` в журнале уезжает на всю выдержку, а это
+      // единственные данные проекта, которые задним числом не восстановить.
+      if (agent.state === 'done') continue
       alive.add(agent.sessionId)
       const previous = known.get(agent.sessionId)
       if (previous === undefined) {

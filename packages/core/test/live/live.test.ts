@@ -119,6 +119,26 @@ describe('живой слой', () => {
   })
 
   /**
+   * Ловит правило 2.1 «тишина = простой», применённое к законченному ходу.
+   * Фикстура кончается ответом модели с `end_turn`, за которым лежат три
+   * учётные записи `system` — то есть проверяется и пропуск учётных, и вывод
+   * состояния из хода. Метка снимка на час позже последней записи: по тишине
+   * это был бы «простой», по ходу — «ждёт ответа», и правильно второе.
+   */
+  it('видит законченный ход как ожидание человека, а не как простой', () => {
+    ingestClaude('plain')
+    const sessionId = sessionIdOf()
+    const live = createLiveLayer(db, {
+      claudeHome: claudeHomeWith(sessionId),
+      codexHome: join(tmp, 'нет'),
+    })
+
+    const agent = live.snapshot(Date.now() + 3_600_000).agents[0]!
+    expect(agent.turn).toBe('turn-end')
+    expect(agent.state).toBe('waiting')
+  })
+
+  /**
    * Ловит долг 1.10: пересборку окон из читающего пути. Раньше её делал
    * `limitsReport`, то есть полный проход по запросам Claude плюс скрытая
    * запись при каждом опросе трея — раз в секунду.
@@ -142,6 +162,111 @@ describe('живой слой', () => {
     for (let i = 0; i < 20; i += 1) live.snapshot()
 
     expect(readLimitWindows(db)).toHaveLength(before + 1)
+  })
+})
+
+describe('завершившийся агент', () => {
+  /**
+   * Ловит «процесса нет — строки нет». Макет держит гашеную строку
+   * «завершился 2 мин назад» (строки 164–169), и без выдержки попап терял бы
+   * агента ровно в тот момент, когда человек подходит посмотреть, чем кончилось.
+   */
+  it('держится в снимке выдержку и исчезает после неё', () => {
+    ingestClaude('plain')
+    const home = claudeHomeWith(sessionIdOf())
+    const live = createLiveLayer(db, {
+      claudeHome: home,
+      codexHome: join(tmp, 'нет'),
+      doneGraceMs: 60_000,
+    })
+
+    live.snapshot(1_000_000)
+    rmSync(join(home, 'sessions'), { recursive: true, force: true })
+
+    const justDied = live.snapshot(1_010_000).agents[0]!
+    expect(justDied.state).toBe('done')
+    expect(justDied.endedAt).toBe(1_010_000)
+    // Темп мёртвого — ноль: «жжёт 40k/мин» под «завершился» читается как
+    // «всё ещё жжёт».
+    expect(justDied.rate).toBe(0)
+
+    // Момент смерти не переставляется на каждом опросе, иначе строка навсегда
+    // осталась бы «завершился только что».
+    expect(live.snapshot(1_050_000).agents[0]!.endedAt).toBe(1_010_000)
+    expect(live.snapshot(1_100_000).agents).toHaveLength(0)
+  })
+
+  /**
+   * Ловит самое дорогое из возможного здесь: сдвиг замера 1.3 на выдержку.
+   * Завершившийся агент остаётся в снимке `doneGraceMs`, и если считать его
+   * живым, `endedAt` в журнале уедет на всю выдержку. Журнал хвостовых
+   * прогревов — единственные данные проекта, которые задним числом не
+   * восстановить: индекс перечитывается из логов, а это нет.
+   */
+  it('не сдвигает смерть в журнале на выдержку показа', () => {
+    ingestClaude('plain')
+    const path = join(tmp, 'lifetimes.jsonl')
+    const home = claudeHomeWith(sessionIdOf())
+    const live = createLiveLayer(db, {
+      claudeHome: home,
+      codexHome: join(tmp, 'нет'),
+      lifetimesPath: path,
+      doneGraceMs: 600_000,
+    })
+
+    live.snapshot(1_000_000)
+    rmSync(join(home, 'sessions'), { recursive: true, force: true })
+    live.snapshot(1_010_000)
+    live.snapshot(1_020_000)
+
+    const record = live.lifetimes()[0]!
+    expect(record.endedAt).toBe(1_010_000)
+    expect(record.lastSeenAt).toBe(1_000_000)
+  })
+})
+
+describe('темп', () => {
+  /**
+   * Ловит знаменатель: расход сессии, делённый на окно усреднения вместо
+   * прожитого времени, и наоборот. Фикстура целиком лежит в прошлом, поэтому в
+   * хвостовое окно не попадает ни один запрос — темп обязан быть нулём, а не
+   * «весь расход за пять минут».
+   */
+  it('не выдаёт весь расход сессии за темп последних минут', () => {
+    ingestClaude('plain')
+    const live = createLiveLayer(db, {
+      claudeHome: claudeHomeWith(sessionIdOf()),
+      codexHome: join(tmp, 'нет'),
+    })
+
+    const agent = live.snapshot(Date.now()).agents[0]!
+    expect(agent.tokens).toBeGreaterThan(0)
+    expect(agent.rate).toBe(0)
+  })
+
+  /**
+   * Ловит пол усреднения: одна точка темпа не образует, а сессия возрастом в
+   * секунду с запросом на 200k при делении на её возраст даёт 12M/мин.
+   */
+  it('считает темп по прожитому времени, обрезанному окном', () => {
+    ingestClaude('plain')
+    const startedAt = Date.now()
+    // Опрос на три минуты позже старта: сессия моложе окна усреднения, значит
+    // знаменателем должен стать её возраст, а не окно.
+    const at = startedAt + 180_000
+    db.run('UPDATE requests SET ts = ?', at - 60_000)
+    const tokens = db.get<{ tokens: number }>(
+      `SELECT sum(input + output + cache_write + cache_read) AS tokens FROM requests`,
+    )!.tokens
+
+    const live = createLiveLayer(db, {
+      claudeHome: claudeHomeWith(sessionIdOf(), startedAt),
+      codexHome: join(tmp, 'нет'),
+      rateWindowMs: 300_000,
+    })
+
+    const agent = live.snapshot(at).agents[0]!
+    expect(agent.rate).toBe(Math.round((tokens * 60_000) / 180_000))
   })
 })
 

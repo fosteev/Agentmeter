@@ -10,6 +10,7 @@ import {
   ensureLimitWindows,
   ingestFile,
   limitsReport,
+  readLimitWindows,
   taskRows,
   todayReport,
   type DayRange,
@@ -132,6 +133,74 @@ describe('query reports', () => {
         (window) => window.unavailableReason === 'вес cache_read не откалиброван, этап 1.9',
       ),
     ).toBe(true)
+  })
+
+  /**
+   * Ловит прогноз, посчитанный из воздуха: пока процент окна неизвестен,
+   * продлевать в будущее нечего. У Claude это состояние сегодня штатное — вес
+   * `cache_read` не откалиброван (1.9), — и «упрёшься через 40 минут» рядом с
+   * прочерком в проценте было бы выдумкой на пустом месте.
+   */
+  it('без процента окна прогноза нет', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    const report = limitsReport(db, Date.parse('2026-07-28T13:00:00.000Z'), config.limits.claude)
+
+    const claude = report.windows.filter((window) => window.provider === 'claude')
+    expect(claude).not.toHaveLength(0)
+    expect(claude.every((window) => window.forecast === null)).toBe(true)
+  })
+
+  /**
+   * Ловит перевёрнутое деление и потерянный «сбросится раньше». Потолка в
+   * токенах нет ни у одного провайдера, поэтому остаток считается через цену
+   * процента: сколько токенов мы насчитали за окно на каждый его процент.
+   * Проверяется в обе стороны — растёт темп, падает время до упора, — и то,
+   * что упор дальше сброса окна упором не называется.
+   */
+  it('считает время до упора по цене процента и отличает сброс от упора', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+
+    const codex = readLimitWindows(db).find(
+      (window) => window.provider === 'codex' && (window.usedPercent ?? 0) > 0,
+    )!
+    const at = codex.startsAt + 600_000
+    // Расход сессии переносится внутрь окна: у фикстуры Codex запросы и окно
+    // приезжают из одного файла, но на разных метках.
+    db.run(
+      `UPDATE requests SET ts = ?
+       WHERE session_id IN (SELECT id FROM sessions WHERE provider = 'codex')`,
+      at - 120_000,
+    )
+
+    const window = limitsReport(db, at, config.limits.claude, 300_000).windows.find(
+      (row) => row.provider === 'codex' && row.startsAt === codex.startsAt,
+    )!
+    const forecast = window.forecast!
+
+    expect(forecast.tokensPerMinute).toBeGreaterThan(0)
+    // Цена процента × остаток процентов ÷ темп — то же число, посчитанное иначе.
+    const spent = db.get<{ tokens: number }>(
+      `SELECT sum(input + output + cache_write + cache_read) AS tokens FROM requests
+       JOIN sessions ON sessions.id = requests.session_id WHERE sessions.provider = 'codex'`,
+    )!.tokens
+    expect(forecast.minutesToCap).toBe(
+      Math.round(
+        ((spent / window.usedPercent!) * (100 - window.usedPercent!)) / forecast.tokensPerMinute,
+      ),
+    )
+    expect(forecast.resetsFirst).toBe(forecast.minutesToCap! * 60_000 > window.resetsAt - at)
+
+    // Тот же расход, размазанный вдвое дольше, — вдвое медленнее и вдвое
+    // дальше до упора.
+    const slower = limitsReport(db, at, config.limits.claude, 600_000).windows.find(
+      (row) => row.provider === 'codex' && row.startsAt === codex.startsAt,
+    )!.forecast!
+    expect(slower.tokensPerMinute).toBeLessThan(forecast.tokensPerMinute)
+    expect(slower.minutesToCap!).toBeGreaterThan(forecast.minutesToCap!)
   })
 
   it('doctor отличает ошибки парсера от нормального дрейфа формата', () => {

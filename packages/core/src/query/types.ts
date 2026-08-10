@@ -73,8 +73,28 @@ export interface BreakdownReport {
   model: TotalsRow[]
 }
 
+/**
+ * Прогноз «когда упрёмся» — вторая половина 2.3.
+ *
+ * Это оценка и ничем иным быть не может: она продлевает в будущее темп
+ * последних минут. Помечается как оценка везде, где показывается.
+ */
+export interface LimitForecast {
+  /** Наш замер расхода за хвостовое окно, токенов в минуту. */
+  tokensPerMinute: number
+  /**
+   * Через сколько минут расход упрётся в потолок. `null` — темп нулевой,
+   * упираться нечем.
+   */
+  minutesToCap: number | null
+  /** Окно сбросится раньше, чем кончится лимит. Тогда упор не наступит. */
+  resetsFirst: boolean
+}
+
 export interface LimitReportRow extends LimitWindow {
   unavailableReason: string | null
+  /** `null` — процент окна неизвестен, продлевать нечего. */
+  forecast: LimitForecast | null
 }
 
 export interface LimitsReport {

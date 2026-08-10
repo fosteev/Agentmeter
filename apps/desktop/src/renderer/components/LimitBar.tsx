@@ -5,11 +5,22 @@
 // var(--warn) через color-mix, без цветовых литералов: прозрачный промежуток
 // между штрихами — это warn на 32% альфы, как oklch(0.79 0.14 82 / 0.32) в макете.
 
+// Подпись с прогнозом (2.3) макетом не нарисована — по
+// design-implementation.md она вписывается сюда. Своего ответа у блока полосы
+// на неё нет, поэтому взят ответ макета на то же отношение «строка и её тихая
+// подпись» из блока AgentRow (строки 148–153): вертикальный зазор 3, mono 11 в
+// tx3. Кегль 10 из макета сюда не годится — им набраны пояснения **к макету**
+// («20/600», «думает (пульс)»), а не интерфейс, и в шести ступенях его нет.
+// Знак «≈» в тексте стоит всегда: прогноз продлевает темп последних минут, а
+// не измеряет.
+
 export interface LimitBarProps {
   percent: number | null
   approximate: boolean
   /** Состояние «выбран 100»: полоса целиком alarm, без внутреннего fill. */
   selected?: boolean
+  /** Готовая подпись прогноза, например «≈40 мин до упора». Считает не окно. */
+  forecast?: string
 }
 
 type Level = 'ok' | 'warn' | 'alarm'
@@ -28,14 +39,14 @@ function levelFor(percent: number): Level {
 
 const HATCH = `repeating-linear-gradient(115deg, var(--warn) 0 3px, color-mix(in oklch, var(--warn) 32%, transparent) 3px 7px)`
 
-export function LimitBar({ percent, approximate, selected }: LimitBarProps) {
+export function LimitBar({ percent, approximate, selected, forecast }: LimitBarProps) {
   const pct = selected ? 100 : percent
   const known = pct !== null
   const level = known ? levelFor(pct) : 'ok'
   const labelColor = approximate ? 'var(--tx2)' : level === 'alarm' ? 'var(--alarm)' : 'var(--tx)'
   const labelText = known ? `${approximate ? '≈' : ''}${Math.round(pct)}%` : '—'
 
-  return (
+  const bar = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div
         style={{
@@ -67,6 +78,24 @@ export function LimitBar({ percent, approximate, selected }: LimitBarProps) {
         }}
       >
         {labelText}
+      </span>
+    </div>
+  )
+
+  if (forecast === undefined) return bar
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {bar}
+      <span
+        style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 11,
+          color: 'var(--tx3)',
+          letterSpacing: '.06em',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {forecast}
       </span>
     </div>
   )

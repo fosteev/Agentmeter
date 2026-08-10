@@ -12,6 +12,7 @@
 | `marginal-attribution.py` | стоимость каждого тул-колла через дельту кэша | модуль атрибуции (1.6) |
 | `ground-truth-check.py` | сверка с эталоном самого Claude Code | `agentmeter verify` (1.3) |
 | `verify-live.ts` | та же сверка, но нашим парсером из `packages/core` | `agentmeter verify` (1.3) |
+| `states-live.ts` | чей ход по хвосту лога, состояния и темп | 2.2 и 2.3, закрыты |
 
 ```bash
 python3 scripts/probe/ground-truth-check.py            # сейчас падает — это ожидаемо

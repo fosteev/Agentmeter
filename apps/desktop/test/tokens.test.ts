@@ -59,17 +59,34 @@ const SPEC_LINES: Record<string, [number, number]> = {
   'BreakdownRow.tsx': [192, 200],
 }
 
+/**
+ * Отступы элементов, которых в макете нет вовсе, — и откуда взято значение.
+ *
+ * Такой элемент ровно один и он назван в design-implementation.md («Чего в
+ * макете нет»): подпись прогноза под полосой лимита, этап 2.3. Своего ответа
+ * блок полосы на неё не даёт — в нём только зазоры между полосами. Взят ответ
+ * макета на то же отношение из блока строки агента: там строка и её тихая
+ * подпись стоят на 3.
+ *
+ * Список закрытый и требует строки в документе: без него правило «отступы из
+ * своего блока» превращается в «любое число, если написать комментарий».
+ */
+const OFF_SPEC: Record<string, number[]> = {
+  'LimitBar.tsx': [3],
+}
+
 function specValues(name: string): Set<number> {
   const [from, to] = SPEC_LINES[name] ?? [0, 0]
   const block = html
     .split('\n')
     .slice(from - 1, to)
     .join('\n')
-  return new Set(
-    [...block.matchAll(/(?:gap|padding|margin)(?:-[a-z]+)?\s*:\s*([^;"']+)/g)].flatMap(([, raw]) =>
-      [...raw.matchAll(/\d+/g)].map((n) => Number(n[0])),
+  return new Set([
+    ...[...block.matchAll(/(?:gap|padding|margin)(?:-[a-z]+)?\s*:\s*([^;"']+)/g)].flatMap(
+      ([, raw]) => [...raw.matchAll(/\d+/g)].map((n) => Number(n[0])),
     ),
-  )
+    ...(OFF_SPEC[name] ?? []),
+  ])
 }
 
 const FONT_SIZES = new Set([11, 12, 13, 15, 20])

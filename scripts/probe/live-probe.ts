@@ -220,12 +220,18 @@ try {
   const appearMs = performance.now() - appearStarted + DEFAULT_CONFIG.live.pollMs
   rmSync(join(fakeHome, 'sessions', `${process.pid}.json`), { force: true })
   const vanishStarted = performance.now()
-  const vanished = watcher.snapshot().agents.length === 0
+  // С 2.2 смерть видна не пропажей строки, а состоянием: макет держит гашеное
+  // «завершился 2 мин назад» ещё `doneGraceMs`. Задержка та же самая — важно,
+  // что следующий же снимок знает о смерти, — но требовать пустого списка
+  // теперь значит требовать, чтобы попап терял агента ровно тогда, когда
+  // человек подходит посмотреть, чем кончилось.
+  const afterDeath = watcher.snapshot().agents
+  const vanished = afterDeath.length === 1 && afterDeath[0]!.state === 'done'
   const vanishMs = performance.now() - vanishStarted + DEFAULT_CONFIG.live.pollMs
   report(
     9,
     'появление и исчезновение укладываются в критерий',
-    `pollMs=${DEFAULT_CONFIG.live.pollMs} видна за ${appearMs.toFixed(0)} мс (порог 2000) исчезла за ${vanishMs.toFixed(0)} мс (порог 5000)`,
+    `pollMs=${DEFAULT_CONFIG.live.pollMs} видна за ${appearMs.toFixed(0)} мс (порог 2000) смерть замечена за ${vanishMs.toFixed(0)} мс (порог 5000), состояние=${afterDeath[0]?.state ?? 'строки нет'}`,
     emptyBefore === 0 && appeared && vanished && appearMs < 2_000 && vanishMs < 5_000,
   )
 

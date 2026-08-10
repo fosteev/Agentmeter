@@ -366,11 +366,19 @@ function ComponentCards() {
       <Card
         title="Строка агента — состояния"
         width={420}
-        note="думает (пульс) · ждёт (контур) · завершён (гашение)"
+        note="думает (пульс) · ждёт (контур) · молчит (контур tx3) · завершён (гашение)"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <AgentRow provider="claude" project="ollama-bar" status="thinking" tokens={38_000} />
+          <AgentRow
+            provider="claude"
+            project="ollama-bar"
+            status="thinking"
+            tokens={38_000}
+            rate={12_400}
+          />
           <AgentRow provider="claude" project="pilot" status="waiting" tokens={214_000} />
+          {/* Состояния макетом не нарисовано — добавлено в 2.2, см. AgentRow. */}
+          <AgentRow provider="codex" project="troy" status="idle" tokens={51_000} />
           <AgentRow
             provider="codex"
             project="troy"
@@ -389,7 +397,7 @@ function ComponentCards() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <LimitBar percent={5} approximate={false} />
           <LimitBar percent={68} approximate={true} />
-          <LimitBar percent={94} approximate={false} />
+          <LimitBar percent={94} approximate={false} forecast="≈40 мин до упора" />
           <LimitBar percent={100} approximate={false} selected={true} />
         </div>
       </Card>

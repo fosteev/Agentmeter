@@ -12,7 +12,14 @@ import type { Db, SqlValue } from '../index/db.ts'
 import { defaultClaudeHome, defaultCodexHome } from '../index/paths.ts'
 import { readLiveSessions, type ProcessStartCache } from '../sources/claude/live.ts'
 import type { Entrypoint, LiveSession, Provider } from '../sources/types.ts'
-import type { LiveAgent, LiveSnapshot, LiveState } from './types.ts'
+import {
+  DEFAULT_RATE_WINDOW_MS,
+  observedSpan,
+  perMinute,
+  windowTokens,
+} from './rate.ts'
+import { deriveState, readTurn, type TurnRead } from './state.ts'
+import type { LiveAgent, LiveSnapshot } from './types.ts'
 
 export interface LiveOptions {
   claudeHome?: string
@@ -27,20 +34,38 @@ export interface LiveOptions {
    * процессов у Codex нет, и это единственный доступный признак.
    */
   codexSilenceMs?: number
-  /** Сколько байт хвоста читать. Не парсинг — одна последняя запись. */
+  /** Сколько байт хвоста читать. Не парсинг — поиск последней значимой записи. */
   tailBytes?: number
+  /**
+   * Сколько держать в снимке агента, чей процесс уже исчез. Макет показывает
+   * такую строку гашеной, с подписью «завершился 2 мин назад» (строки 164–169),
+   * поэтому смерть — не повод немедленно убрать строку из попапа.
+   */
+  doneGraceMs?: number
+  /** Окно усреднения темпа (2.3). */
+  rateWindowMs?: number
 }
 
 export const DEFAULT_LIVE_OPTIONS = {
   idleMs: 90_000,
   codexSilenceMs: 5 * 60_000,
   tailBytes: 64 * 1024,
+  doneGraceMs: 5 * 60_000,
+  rateWindowMs: DEFAULT_RATE_WINDOW_MS,
 } as const
 
 interface TailState {
   mtime: number
   at: number
   kind?: string
+  turn?: TurnRead
+}
+
+/** Агент, которого уже нет: помним, пока не истечёт `doneGraceMs`. */
+interface Remembered {
+  agent: LiveAgent
+  /** Первый опрос, на котором процесса не стало. `null` — ещё жив. */
+  endedAt: number | null
 }
 
 /** Кэш между опросами: путь транскрипта, разобранный хвост, проверенные pid. */
@@ -48,10 +73,16 @@ export interface LiveCache {
   transcripts: Map<string, string | null>
   tails: Map<string, TailState>
   processStarts: ProcessStartCache
+  recent: Map<string, Remembered>
 }
 
 export function createLiveCache(): LiveCache {
-  return { transcripts: new Map(), tails: new Map(), processStarts: new Map() }
+  return {
+    transcripts: new Map(),
+    tails: new Map(),
+    processStarts: new Map(),
+    recent: new Map(),
+  }
 }
 
 export function collectAgents(
@@ -71,9 +102,17 @@ export function collectAgents(
     opts.codexSilenceMs ?? DEFAULT_LIVE_OPTIONS.codexSilenceMs,
   )
 
-  const ids = [...claude.sessions.map((s) => s.sessionId), ...codex.map((r) => r.sessionId)]
+  const liveIds = new Set([
+    ...claude.sessions.map((s) => s.sessionId),
+    ...codex.map((r) => r.sessionId),
+  ])
+  const graveyard = harvestGone(cache, liveIds, at, opts.doneGraceMs ?? DEFAULT_LIVE_OPTIONS.doneGraceMs)
+
+  const ids = [...liveIds, ...graveyard.map((entry) => entry.agent.sessionId)]
   const meta = sessionMeta(db, ids)
   const usage = usageFor(db, ids)
+  const rateWindowMs = opts.rateWindowMs ?? DEFAULT_LIVE_OPTIONS.rateWindowMs
+  const recent = windowTokens(db, ids, at - rateWindowMs, at)
 
   const agents: LiveAgent[] = []
 
@@ -98,6 +137,8 @@ export function collectAgents(
         cache,
         meta,
         usage,
+        recent,
+        rateWindowMs,
       }),
     )
   }
@@ -119,8 +160,19 @@ export function collectAgents(
         cache,
         meta,
         usage,
+        recent,
+        rateWindowMs,
       }),
     )
+  }
+
+  for (const agent of agents) cache.recent.set(agent.sessionId, { agent, endedAt: null })
+
+  // Завершившиеся собираются после живых: их расход берётся из индекса заново
+  // — последний кусок транскрипта вотчер дочитывает уже после смерти процесса,
+  // и замороженное число было бы меньше настоящего.
+  for (const entry of graveyard) {
+    agents.push(doneAgent(entry, usage.get(entry.agent.sessionId)))
   }
 
   forgetGone(
@@ -133,6 +185,51 @@ export function collectAgents(
     agents: agents.sort((a, b) => a.startedAt - b.startedAt),
     warnings: claude.warnings,
   }
+}
+
+/**
+ * Кого уже нет, но кого ещё показываем.
+ *
+ * Момент смерти ставится один раз — на первом опросе, где процесса не стало.
+ * Пересчитывать его от текущего опроса нельзя: строка «завершился 2 мин назад»
+ * навсегда осталась бы «завершился только что».
+ */
+function harvestGone(
+  cache: LiveCache,
+  liveIds: ReadonlySet<string>,
+  at: number,
+  graceMs: number,
+): Array<{ agent: LiveAgent; endedAt: number }> {
+  const out: Array<{ agent: LiveAgent; endedAt: number }> = []
+  for (const [sessionId, entry] of cache.recent) {
+    if (liveIds.has(sessionId)) continue
+    const endedAt = entry.endedAt ?? at
+    if (at - endedAt > graceMs) {
+      cache.recent.delete(sessionId)
+      continue
+    }
+    entry.endedAt = endedAt
+    out.push({ agent: entry.agent, endedAt })
+  }
+  return out
+}
+
+function doneAgent(entry: { agent: LiveAgent; endedAt: number }, usage: Usage | undefined): LiveAgent {
+  const agent: LiveAgent = {
+    ...entry.agent,
+    state: 'done',
+    endedAt: entry.endedAt,
+    // Темп мёртвого агента — ноль, а не последний замеренный: «жжёт 40k/мин»
+    // под строкой «завершился» читается как «всё ещё жжёт».
+    rate: 0,
+  }
+  if (usage !== undefined) {
+    agent.tokens = usage.tokens
+    agent.requests = usage.requests
+    agent.approximate = usage.reconstructed > 0
+    agent.lastRequestTs = usage.lastRequestTs
+  }
+  return agent
 }
 
 interface BuildInput {
@@ -152,6 +249,8 @@ interface BuildInput {
   cache: LiveCache
   meta: Map<string, SessionMeta>
   usage: Map<string, Usage>
+  recent: Map<string, number>
+  rateWindowMs: number
 }
 
 function buildAgent(input: BuildInput): LiveAgent {
@@ -160,6 +259,7 @@ function buildAgent(input: BuildInput): LiveAgent {
   const tail = input.transcript
     ? readTail(
         input.transcript,
+        input.provider,
         input.opts.tailBytes ?? DEFAULT_LIVE_OPTIONS.tailBytes,
         input.cache,
       )
@@ -184,9 +284,19 @@ function buildAgent(input: BuildInput): LiveAgent {
     entrypoint: input.entrypoint === 'unknown' ? (meta?.entrypoint ?? 'unknown') : input.entrypoint,
     startedAt: input.startedAt,
     lastActivityAt,
-    state: stateFor(input.at, lastActivityAt, input.idleMs),
+    state: deriveState({
+      at: input.at,
+      lastActivityAt,
+      idleMs: input.idleMs,
+      turn: tail?.turn?.kind,
+      alive: true,
+    }),
     tokens: usage?.tokens ?? 0,
     requests: usage?.requests ?? 0,
+    rate: perMinute(
+      input.recent.get(input.sessionId) ?? 0,
+      observedSpan(input.at, input.startedAt, input.rateWindowMs),
+    ),
     approximate: (usage?.reconstructed ?? 0) > 0,
     liveness: input.liveness,
   }
@@ -197,18 +307,11 @@ function buildAgent(input: BuildInput): LiveAgent {
   else if (meta?.cliVersion) agent.cliVersion = meta.cliVersion
   if (input.name !== undefined) agent.name = input.name
   if (tail?.kind !== undefined) agent.lastEventKind = tail.kind
+  if (tail?.turn !== undefined) {
+    agent.turn = tail.turn.kind
+    if (tail.turn.tool !== undefined) agent.pendingTool = tail.turn.tool
+  }
   return agent
-}
-
-/**
- * Грубое правило 2.1: тишина дольше порога — простой.
- *
- * `waiting` и `done` требуют разбора того, чем именно кончился транскрипт, и
- * появляются в 2.2. Показывать «ждёт ответа» по таймауту нельзя: агент,
- * который думает над длинным ответом, ничего в лог не пишет и выглядит так же.
- */
-function stateFor(at: number, lastActivityAt: number, idleMs: number): LiveState {
-  return at - lastActivityAt <= idleMs ? 'working' : 'idle'
 }
 
 interface SessionMeta {
@@ -419,11 +522,17 @@ function projectFromCwd(cwd: string): string {
 }
 
 /**
- * Последняя запись транскрипта. Читается не более `bytes` с конца и **только
- * при сдвинувшемся mtime**: без второго условия десяток живых сессий при
- * опросе раз в секунду даёт постоянные сотни килобайт чтения ни за чем.
+ * Хвост транскрипта: последняя запись и чей сейчас ход. Читается не более
+ * `bytes` с конца и **только при сдвинувшемся mtime**: без второго условия
+ * десяток живых сессий при опросе раз в секунду даёт постоянные сотни
+ * килобайт чтения ни за чем.
  */
-function readTail(path: string, bytes: number, cache: LiveCache): TailState | undefined {
+function readTail(
+  path: string,
+  provider: Provider,
+  bytes: number,
+  cache: LiveCache,
+): TailState | undefined {
   let size: number
   let mtime: number
   try {
@@ -450,24 +559,29 @@ function readTail(path: string, bytes: number, cache: LiveCache): TailState | un
     if (fd !== undefined) closeSync(fd)
   }
 
-  const lines = buffer.toString('utf8').split('\n')
+  const all = buffer.toString('utf8').split('\n')
   // Первая строка куска почти всегда обрезана посередине — её выбрасываем,
   // если читали не с начала файла.
-  const from = length < size ? 1 : 0
-  for (let i = lines.length - 1; i >= from; i -= 1) {
+  const lines = length < size ? all.slice(1) : all
+
+  const state: TailState = { mtime, at: mtime }
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
     const line = lines[i]?.trim()
     if (!line) continue
     const parsed = parseRecord(line)
     if (!parsed) continue
-    const state: TailState = { mtime, at: parsed.at ?? mtime }
+    state.at = parsed.at ?? mtime
     if (parsed.kind !== undefined) state.kind = parsed.kind
-    cache.tails.set(path, state)
-    return state
+    break
   }
 
-  const fallback: TailState = { mtime, at: mtime }
-  cache.tails.set(path, fallback)
-  return fallback
+  // Ход ищется по всему куску, а не по последней записи: после значимой записи
+  // в лог ложатся учётные, и «тип последней записи» отвечает про них (2.2).
+  const turn = readTurn(provider, lines)
+  if (turn !== undefined) state.turn = turn
+
+  cache.tails.set(path, state)
+  return state
 }
 
 function parseRecord(line: string): { at?: number; kind?: string } | undefined {
@@ -476,14 +590,23 @@ function parseRecord(line: string): { at?: number; kind?: string } | undefined {
     if (typeof raw !== 'object' || raw === null) return undefined
     const value = raw as Record<string, unknown>
     const out: { at?: number; kind?: string } = {}
-    const ts = value['timestamp']
+    // `timestamp` у Claude, `ts` у Codex — формат другой, поле другое.
+    const ts = value['timestamp'] ?? value['ts']
     if (typeof ts === 'string') {
       const parsed = Date.parse(ts)
       if (!Number.isNaN(parsed)) out.at = parsed
     } else if (typeof ts === 'number' && Number.isFinite(ts)) {
       out.at = ts
     }
-    if (typeof value['type'] === 'string') out.kind = value['type']
+    // У Codex `type` — это `event_msg`/`response_item` на всех записях подряд,
+    // а разбирать надо `payload.type`: он и есть вид события.
+    const payload = value['payload']
+    const inner =
+      typeof payload === 'object' && payload !== null
+        ? (payload as Record<string, unknown>)['type']
+        : undefined
+    if (typeof inner === 'string') out.kind = inner
+    else if (typeof value['type'] === 'string') out.kind = value['type']
     return out
   } catch {
     return undefined

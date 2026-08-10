@@ -7,15 +7,33 @@ import { formatTokens } from '../format.ts'
 // Codex — холодный. Подписей-дисклеймеров нет: точность видна по штриховке
 // в LimitBar/BreakdownRow, здесь её нет.
 
-export type AgentStatus = 'thinking' | 'waiting' | 'done'
+// Четвёртое состояние — `idle` — макетом не нарисовано и добавлено в 2.2. Оно
+// значит «ход у агента, но в логе тишина дольше порога»: так выглядят зависший
+// инструмент, запрос разрешения и уснувший процесс. Точка у него контурная, но
+// в tx3, а не в warn: warn зовёт человека к машине, а здесь честное «не вижу
+// работы», и звать по нему было бы ложной тревогой.
+
+export type AgentStatus = 'thinking' | 'waiting' | 'idle' | 'done'
 
 export interface AgentRowProps {
   provider: Provider
   project: string
   status: AgentStatus
   tokens: number
+  /**
+   * Темп, токенов в минуту (2.3). Дописывается в ту же вторую строку, а не
+   * добавляет третью: высота строки списка в попапе — 40, и лишняя строка
+   * ломает ритм всего списка. Ноль или `undefined` — не показывается.
+   */
+  rate?: number
   /** Только для status='done': «2 мин назад». */
   endedAgo?: string
+}
+
+const STATUS_LABEL: Record<Exclude<AgentStatus, 'done'>, string> = {
+  thinking: 'думает',
+  waiting: 'ждёт ответа',
+  idle: 'молчит',
 }
 
 const ACCENT: Record<Provider, string> = {
@@ -28,9 +46,12 @@ const LABEL: Record<Provider, string> = {
   codex: 'Codex',
 }
 
-export function AgentRow({ provider, project, status, tokens, endedAgo }: AgentRowProps) {
+export function AgentRow({ provider, project, status, tokens, rate, endedAgo }: AgentRowProps) {
   const done = status === 'done'
   const accent = done ? 'var(--tx3)' : ACCENT[provider]
+  // Темп мёртвого агента не показывается вовсе: «12k/мин» под «завершился»
+  // читается как «всё ещё жжёт».
+  const pace = done || rate === undefined || rate <= 0 ? null : ` · ${formatTokens(rate)}/мин`
 
   return (
     <div
@@ -64,7 +85,8 @@ export function AgentRow({ provider, project, status, tokens, endedAgo }: AgentR
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Dot status={status} />
-              {status === 'thinking' ? 'думает' : 'ждёт ответа'} · {formatTokens(tokens)}
+              {STATUS_LABEL[status]} · {formatTokens(tokens)}
+              {pace}
             </span>
           )}
         </div>
@@ -93,7 +115,7 @@ function Dot({ status }: { status: AgentStatus }) {
         width: 5,
         height: 5,
         borderRadius: '50%',
-        border: '1px solid var(--warn)',
+        border: `1px solid ${status === 'idle' ? 'var(--tx3)' : 'var(--warn)'}`,
         boxSizing: 'border-box',
       }}
     />

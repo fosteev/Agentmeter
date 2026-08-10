@@ -41,6 +41,15 @@ export { createLiveLayer } from './live/index.ts'
 export type { LiveLayer, LiveLayerOptions, LiveOptions } from './live/index.ts'
 export { DEFAULT_LIVE_OPTIONS, appendLifetimes, loadLifetimes, processState } from './live/index.ts'
 export type { LiveAgent, LiveSnapshot, LiveState, SessionLifetime } from './live/index.ts'
+export { claudeTurn, codexTurn, deriveState, readTurn } from './live/index.ts'
+export type { StateInput, TurnKind, TurnRead } from './live/index.ts'
+export {
+  DEFAULT_RATE_WINDOW_MS,
+  RATE_FLOOR_MS,
+  observedSpan,
+  perMinute,
+  windowTokens,
+} from './live/index.ts'
 export { watchSources } from './index/watch.ts'
 export type { Watcher } from './index/watch.ts'
 export { openDb } from './index/db.ts'

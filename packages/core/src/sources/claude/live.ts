@@ -28,6 +28,13 @@ const ENTRYPOINT_ALIASES: Record<string, Entrypoint> = {
   'claude-desktop': 'desktop',
   sdk: 'sdk',
   'claude-sdk': 'sdk',
+  // Живой список пополняется по мере того, как CLI придумывает новые значения:
+  // `sdk-ts` — 6 живых сессий из 20 на момент 2.2, `sdk-cli` — 305 записей в
+  // транскриптах. Обе схлопывались в `unknown`, и выглядело это как свойство
+  // данных, а не как отставший белый список — та же ошибка, что с
+  // `claude-vscode` в 2.1.
+  'sdk-ts': 'sdk',
+  'sdk-cli': 'sdk',
   exec: 'exec',
   'claude-exec': 'exec',
   unknown: 'unknown',

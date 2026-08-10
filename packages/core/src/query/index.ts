@@ -9,6 +9,7 @@ export type {
   DayRange,
   DiagnosticRow,
   DoctorReport,
+  LimitForecast,
   LimitReportRow,
   LimitsReport,
   TaskRow,
