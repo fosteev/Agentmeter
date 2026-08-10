@@ -244,6 +244,44 @@ export const ru = {
    * измерение: 96.5% записанных токенов уехало в `ephemeral_1h`. Срок
    * подставляется, а не зашит: у сабагентов он пятиминутный.
    */
+  /**
+   * Вкладка «История» — разделы 8 и 8б макета (4.6).
+   *
+   * «С данными» и «данных нет» — разные слова про разные вещи, и это главное,
+   * что здесь есть: день с нулём измерен, день без данных не наблюдался.
+   */
+  history: {
+    span7: 'неделя',
+    span30: '30 дней',
+    spanAll: 'всё',
+    tokensWord: 'токенов',
+    since: 'данные с {{date}} · {{days}}',
+    daysWithSpend_one: '{{count}} день с расходом',
+    daysWithSpend_few: '{{count}} дня с расходом',
+    daysWithSpend_many: '{{count}} дней с расходом',
+    covered_one: '{{count}} день с данными',
+    covered_few: '{{count}} дня с данными',
+    covered_many: '{{count}} дней с данными',
+    missing: '{{date}} данных нет',
+    heatmap: 'День × час',
+    heatmapHint: 'цвет — агент, насыщенность — объём',
+    // Ноль — измерение, тире — незнание. Разные знаки, потому что разные вещи.
+    zero: '0',
+    noData: '—',
+    tokenTypes: 'Типы токенов',
+    providers: 'Провайдеры',
+    splitTitle: 'Постоянный и разовый',
+    splitMedian: 'медиана за {{days}} — {{percent}}%',
+    projects: 'Проекты',
+    total: 'итого',
+    counts: '{{sessions}} · {{tasks}} · {{requests}}',
+    emptyIndex: 'Первичное индексирование — история появится после чтения логов',
+    emptyRange: 'За этот период данных нет',
+    foldedProjects_one: '+ {{count}} проект',
+    foldedProjects_few: '+ {{count}} проекта',
+    foldedProjects_many: '+ {{count}} проектов',
+  },
+
   rebuild: {
     title: 'Переплата за паузу',
     subtitle:

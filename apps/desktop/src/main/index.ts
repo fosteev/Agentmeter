@@ -58,6 +58,7 @@ import type {
 import { configReport, setConfig } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
+import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { buildSnapshot } from './snapshot.ts'
@@ -416,6 +417,7 @@ function createHandlers(
     'today:get': (filter) => buildDayReport(runtime().db, filter, runtime().config.privacy),
     'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
     'breakdown:get': (filter) => buildSpendScreen(runtime().db, filter),
+    'history:get': (arg) => buildHistoryScreen(runtime().db, arg, runtime().config, Date.now()),
     'config:set': ({ patch }) => changeConfig(patch),
     'index:rebuild': () => undefined,
     'doctor:get': () => ({

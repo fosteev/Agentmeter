@@ -787,6 +787,87 @@ export interface BreakdownRow {
   note?: string
 }
 
+/**
+ * Вкладка «История» — разделы 8 и 8б макета (4.6).
+ *
+ * Одним запросом по тому же правилу, что «Сегодня» и «Развёртка»: столбики,
+ * хитмап и сводка выбранного дня читаются из одного состояния индекса.
+ *
+ * **Пустот здесь три, и они не схлопываются.** Час без расхода — фон клетки,
+ * день с нулём — измеренный ноль (`tokens: 0`), день без данных —
+ * `tokens: null`. Второе значит «читали логи этих суток и не нашли ни одного
+ * запроса», третье — «этих суток индекс не покрывает». Нарисуй их одинаково, и
+ * суббота, в которую человек отдыхал, станет неотличима от завтрашнего дня.
+ */
+export interface HistoryScreen {
+  span: HistorySpan
+  from: number
+  to: number
+  emptyIndex: boolean
+  /** «данные с 15 апреля» — первый день с расходом. `null` — индекс пуст. */
+  firstDay: number | null
+  /** «116 дней с расходом» — за всё время, а не за показанный период. */
+  daysWithSpend: number
+  days: HistoryDay[]
+  /** Итог периода — «844.1M токенов». Сумма столбиков, а не второй запрос. */
+  total: Measured
+  /**
+   * Сколько дней периода несут данные и какой из показанных пуст — фраза
+   * «6 дней с данными · 9 августа данных нет». Суждение о том, что значит
+   * пустой столбик, собирает тот, кто знает, почему он пуст (правило 3.0).
+   */
+  coverage: string
+  /** Сводка выбранного дня — правая колонка. Нет — в периоде нет данных. */
+  selected?: HistoryDaySummary
+}
+
+export type HistorySpan = 'week' | 'month' | 'all'
+
+export interface HistoryDay {
+  /** Начало суток. Подпись «Пн 3» собирает окно из этой метки. */
+  at: number
+  /** `null` — данных нет вовсе; 0 — измеренный ноль. Разные строки на экране. */
+  tokens: Measured | null
+  /** Куски столбика по провайдерам, по убыванию. Пусто при нуле и при `null`. */
+  byProvider: Array<{ provider: Provider; tokens: number }>
+  /**
+   * Двадцать четыре клетки хитмапа. Пусто, если данных за сутки нет вовсе.
+   *
+   * Насыщенность клетки — это длина полоски внутри своей диаграммы, и считает
+   * её окно (правило 3.0). А вот цвет — суждение «чей это час», и приезжает он
+   * готовым: у клетки цвет один, а провайдеров в часу бывает два.
+   */
+  hours: HistoryHour[]
+}
+
+export interface HistoryHour {
+  hour: number
+  tokens: number
+  /** `null` — расхода не было либо поровну; клетка тогда нейтральная. */
+  provider: Provider | null
+}
+
+/** Правая колонка: выбранный день целиком (строки 1397–1450 макета). */
+export interface HistoryDaySummary {
+  at: number
+  total: Measured
+  sessions: number
+  tasks: number
+  requests: number
+  /** Четыре вида токенов в порядке макета — как в карточке задачи. */
+  tokens: TokenSlice[]
+  providers: Array<{ provider: Provider; tokens: Measured; share: number }>
+  /** Постоянное против разового. Нет при нулевом расходе — как у `DayReport`. */
+  split?: SpendSplit
+  /**
+   * «медиана за 116 дней — 30.4%»: с чем сравнивать долю постоянного этого дня.
+   * Нет, когда сравнивать не с чем — дней с расходом меньше двух.
+   */
+  splitMedian?: number
+  /** Проекты дня, со свёрнутым хвостом — те же правила, что в «Сегодня». */
+  projects: ProjectRow[]
+}
+
 export interface DoctorReport {
   cliVersions: string[]
   unknownRecordTypes: Record<string, number>
@@ -836,6 +917,13 @@ export interface IpcCalls {
     arg: { scope: 'day' | 'session'; from: number; to: number; provider?: Provider; project?: string }
     result: SpendScreen
   }
+  /**
+   * Вкладка «История» (4.6). `at` — какой день раскрыт в правой колонке; нет —
+   * последний день периода с расходом. Период считает main: «неделя» и
+   * «30 дней» отсчитываются от сегодняшних суток, а окно о том, где кончается
+   * сегодня, не знает — граница дня настраивается (`ui.dayStartsAtHour`).
+   */
+  'history:get': { arg: { span: HistorySpan; at?: number }; result: HistoryScreen }
   'limits:get': { arg: void; result: LimitReportRow[] }
   'config:get': { arg: void; result: ConfigReport }
   /**
@@ -888,6 +976,7 @@ export const IPC_CALLS = [
   'today:get',
   'task:get',
   'breakdown:get',
+  'history:get',
   'limits:get',
   'config:get',
   'config:set',

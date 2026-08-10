@@ -6,6 +6,8 @@ import type {
   DayReport,
   DeepPartial,
   SpendScreen,
+  HistoryScreen,
+  HistorySpan,
   TaskCard,
   TodayFilter,
   TraySnapshot,
@@ -20,6 +22,7 @@ import './tokens.css'
 import { SettingsTab } from './components/SettingsTab.tsx'
 import { TodayTab } from './components/TodayTab.tsx'
 import { BreakdownTab } from './components/BreakdownTab.tsx'
+import { HistoryTab } from './components/HistoryTab.tsx'
 import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
@@ -145,11 +148,18 @@ export function WindowApp() {
   const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
   const [breakdown, setBreakdown] = useState<SpendScreen | null>(null)
   const [breakdownScope, setBreakdownScope] = useState<'day' | 'session'>('day')
+  const [history, setHistory] = useState<HistoryScreen | null>(null)
+  const [historySpan, setHistorySpan] = useState<HistorySpan>('week')
+  // Какой день раскрыт справа. `null` — выбирает main: последний день периода
+  // с расходом. Хранить здесь «сегодня» нельзя — окно не знает, где кончаются
+  // сутки: граница настраивается (`ui.dayStartsAtHour`).
+  const [historyDay, setHistoryDay] = useState<number | null>(null)
   const [tab, setTab] = useState<WindowTab>(() =>
     initialTab(typeof location === 'undefined' ? '' : location.search),
   )
   const todayRequest = useRef(0)
   const breakdownRequest = useRef(0)
+  const historyRequest = useRef(0)
   const taskRequest = useRef(createTaskRequestGuard())
   useTheme(config?.ui.theme ?? 'system')
 
@@ -224,6 +234,18 @@ export function WindowApp() {
     })
   }, [tab, todayFilter, breakdownScope])
 
+  useEffect(() => {
+    if (tab !== 'history') return
+    const request = ++historyRequest.current
+    setHistory(null)
+    void window.agentmeter['history:get']({
+      span: historySpan,
+      ...(historyDay === null ? {} : { at: historyDay }),
+    }).then((screen) => {
+      if (request === historyRequest.current) setHistory(screen)
+    })
+  }, [tab, historySpan, historyDay])
+
   const handleTaskToggle = (sessionId: string): void => {
     if (todayFilter === null) return
     setTaskCard(null)
@@ -248,6 +270,18 @@ export function WindowApp() {
         </>
       ) : tab === 'breakdown' ? (
         <BreakdownTab screen={breakdown} onScopeChange={setBreakdownScope} />
+      ) : tab === 'history' ? (
+        <HistoryTab
+          screen={history}
+          onSpanChange={(span) => {
+            setHistorySpan(span)
+            // Выбранный день сбрасывается вместе с периодом: он мог остаться за
+            // его краем, и правая колонка показывала бы день, которого на
+            // экране больше нет.
+            setHistoryDay(null)
+          }}
+          onSelectDay={setHistoryDay}
+        />
       ) : tab === 'settings' && configReport !== null ? (
         <SettingsTab report={configReport} onChange={changeConfig} />
       ) : (

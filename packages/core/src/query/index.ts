@@ -8,6 +8,8 @@ export type {
   RebuildGroup,
 } from './cache.ts'
 export { dayRange } from './day.ts'
+export { historyReport } from './history.ts'
+export type { HistoryDay as CoreHistoryDay, HistoryHour as CoreHistoryHour, HistoryReport } from './history.ts'
 export { doctorReport } from './doctor.ts'
 export { changedFiles } from './files.ts'
 export type { ChangedFile } from './files.ts'
