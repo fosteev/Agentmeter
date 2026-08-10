@@ -1,0 +1,8 @@
+{
+  "name": "agentmeter-shots",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "main.js",
+  "description": "Инструмент разработки: снимки экранов из макета для README (5.5)"
+}

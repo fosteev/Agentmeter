@@ -1,123 +1,133 @@
 # Agentmeter
 
-Счётчик токенов для кодинг-агентов — Claude Code и Codex. Живёт в трее,
-показывает, кто работает прямо сейчас, сколько осталось до упора в лимит и на
-что ушёл день. Всё считается из логов на диске: сессии, задачи, инструменты,
-MCP-серверы, скиллы и сабагенты.
+A token meter for coding agents — Claude Code and Codex. It lives in the tray,
+shows who is working right now, how much is left before you hit a limit, and
+where the day went. Everything is computed from the logs already on your disk:
+sessions, tasks, tools, MCP servers, skills and subagents.
 
-Главный вопрос, ради которого он написан, — **сколько стоит то, что просто
-включено**. Сервер MCP, который вы не звали ни разу, всё равно грузится в
-каждую сессию и перечитывается на каждом запросе; на живых логах таких серверов
-нашлось 19 из 22, и стоили они 11.4M токенов.
+The question it was written to answer is **what your setup costs when you are
+not using it**. An MCP server you never called still loads into every session
+and is re-read on every request; on real logs 19 servers out of 22 turned out
+to be never called, and they cost 11.4M tokens.
 
-![Попап в трее](docs/screenshots/popup.png)
+![Tray popup](docs/screenshots/popup.png)
 
-## Что он показывает
+## What it shows
 
-- **Кто работает сейчас** — попап из трея: агент, проект, состояние (думает,
-  ждёт ответа, молчит), темп в токенах в минуту, остаток контекстного окна.
-- **Лимиты** — пятичасовое и недельное окно. У Codex проценты точные, они
-  приходят от сервера; у Claude помечены знаком `≈` (см. «Чего он не знает»).
-- **День целиком** — лента задач с раскрывающейся карточкой: таймлайн запросов,
-  виды токенов, инструменты, затронутые файлы, сабагенты. Разрезы по часам,
-  проектам и тикетам.
-- **Развёртку расхода** — что лежит в промпте до вашего первого слова и что
-  агент реально вызывал, с советами вида «сервер jira не звали ни разу за 34
-  сессии, выключение вернёт 194.7k».
-- **Историю** — календарная неделя, 30 дней или всё время, с хитмапом
-  «день × час».
+- **Who is working right now** — the tray popup: agent, project, state
+  (thinking, waiting for you, silent), pace in tokens per minute, and how much
+  of the context window is left.
+- **Limits** — the 5-hour and weekly windows. Codex reports exact percentages
+  from the server; Claude's are marked with `≈` (see “What it does not know”).
+- **The whole day** — a feed of tasks with an expandable card: request
+  timeline, token kinds, tools, files touched, subagents. Plus breakdowns by
+  hour, project and ticket.
+- **Where the spend went** — what sits in the prompt before your first word
+  versus what the agent actually called, with advice like “the jira server was
+  never called across 34 sessions; turning it off returns 194.7k”.
+- **History** — a calendar week, 30 days or all time, with a day × hour heatmap.
 
-![Развёртка расхода](docs/screenshots/breakdown.png)
+![Spend breakdown](docs/screenshots/breakdown.png)
 
-## Установка
+The screens above come from the project's design reference, so the labels in
+them are Russian. The app itself ships with **both English and Russian**
+interfaces and follows your system language by default.
 
-Сборки лежат на [странице релизов](https://github.com/fosteev/Agentmeter/releases):
-`.dmg` для macOS, `.exe` для Windows, `.AppImage` и `.deb` для Linux.
+![Today](docs/screenshots/today.png)
 
-**Сборки пока не подписаны.** Это честное состояние, а не забытая галочка:
-подпись — этап 5.2, сертификатов у проекта ещё нет. Что это значит на практике:
+## Install
 
-- **macOS** скажет «программу невозможно открыть, так как её автор не может
-  быть подтверждён». Открыть можно так: правый клик по приложению → «Открыть» →
-  «Открыть» в диалоге. Либо один раз в терминале:
-  `xattr -dr com.apple.quarantine /Applications/Agentmeter.app`.
-- **Windows** покажет синее окно SmartScreen: «Подробнее» → «Выполнить в любом
-  случае».
-- **Linux** ничего не спросит. Для `.AppImage` не забудьте `chmod +x`.
+Builds live on the [releases page](https://github.com/fosteev/Agentmeter/releases):
+`.dmg` for macOS, `.exe` for Windows, `.AppImage` and `.deb` for Linux.
 
-## Что он делает с вашими данными
+**The builds are not signed yet.** That is the honest state of things, not a
+forgotten checkbox: signing is a separate stage and the project has no
+certificates yet. In practice:
 
-Ничего не отправляет. Логи читаются с диска, разбираются локально и лежат в
-SQLite-индексе в каталоге настроек приложения.
+- **macOS** will say the app “cannot be opened because the developer cannot be
+  verified”. Right-click the app → “Open” → “Open” in the dialog. Or once, in a
+  terminal: `xattr -dr com.apple.quarantine /Applications/Agentmeter.app`.
+- **Windows** shows the blue SmartScreen prompt: “More info” → “Run anyway”.
+- **Linux** asks nothing. Remember `chmod +x` for the `.AppImage`.
 
-**Единственный сетевой вызов — проверка обновлений** (раз в шесть часов, к
-релизам этого репозитория). Выключается в «Настройки → Приложение».
+## What it does with your data
 
-В настройках есть два переключателя приватности: «скрыть тексты промптов» и
-«скрыть пути к файлам». Оба убирают данные **из ответа** приложения, а не из
-разметки: спрятанный текст не уезжает в окно вовсе.
+Nothing leaves your machine. Logs are read from disk, parsed locally and kept
+in a SQLite index inside the app's config directory.
 
-## Чего он не знает — и говорит об этом
+**The only network call is the update check** (every six hours, against this
+repository's releases). It can be turned off in Settings → Application.
 
-Продукт измерительный, поэтому неизмеренное помечено, а не заглажено. Всё, что
-оценка, показано со знаком `≈`.
+Two privacy switches are there as well: “hide prompt texts” and “hide file
+paths”. Both remove data **from the app's response**, not from the markup — a
+hidden prompt never travels to the window at all.
 
-- **Часть запросов к API в транскрипт не пишется.** Они восстанавливаются по
-  разрыву цепочки кэша; остаток — хвостовые прогревы после последнего ответа,
-  следа они не оставляют. Такие сессии помечены `≈`, расхождение ≤ 3.3% и
-  всегда в меньшую сторону.
-- **Вес прочитанного из кэша токена в лимите подписки Claude неизвестен.**
-  Разница между «считать» и «не считать» — два порядка, поэтому проценты
-  Claude помечены оценкой до ручной калибровки по `/usage`. У Codex проценты
-  приходят от сервера и точны.
-- **Служебные вызовы Haiku** (заголовки сессий, сводки «пока вас не было») в
-  транскриптах отсутствуют вовсе. В эталоне это 1.3% расхода в целом, но до 30%
-  на маленьких проектах: цена стоит по разу на сессию, а не по проценту от
-  работы. Оценивать их числом значило бы придумать коэффициент.
-- **Claude Code удаляет свои транскрипты сам** (`cleanupPeriodDays`, по
-  умолчанию 30 суток). Индекс их переживает и ничего не забывает, но за сутки
-  **до** первого уцелевшего лога расход показан нижней границей со знаком `≈`,
-  а сутки без записей — «данных нет», а не «работы не было».
-- **Размер контекстного окна Claude в логи не пишется.** Он выведен из
-  наблюдений и помечен оценкой; у Codex он приходит в каждом запросе.
+## What it does not know — and says so
 
-## Командная строка
+This is a measuring instrument, so anything unmeasured is marked rather than
+smoothed over. Everything that is an estimate carries an `≈`.
 
-Те же цифры без графики — поверх того же ядра:
+- **Some API requests are never written to the transcript.** They are
+  reconstructed from the break in the cache chain; what remains are trailing
+  warm-ups after the last answer, which leave no trace at all. Such sessions are
+  marked `≈`, the gap is ≤ 3.3% and always downward.
+- **The weight of a cache-read token against the Claude subscription limit is
+  unknown.** The difference between counting it and ignoring it is two orders of
+  magnitude, so Claude percentages stay marked as estimates until they are
+  calibrated by hand against `/usage`. Codex percentages come from the server
+  and are exact.
+- **Claude's housekeeping Haiku calls** (session titles, “while you were away”
+  summaries) are absent from transcripts entirely. Against Claude Code's own
+  numbers that is 1.3% of the spend overall — but up to 30% on small projects,
+  because the cost is per session rather than per token. Putting a number on
+  them would mean inventing a coefficient.
+- **Claude Code deletes its own transcripts** (`cleanupPeriodDays`, 30 days by
+  default). The index outlives them and forgets nothing, but for days *before*
+  the oldest surviving log the spend is shown as a lower bound with `≈`, and
+  days with no records at all read “no data” rather than “no work”.
+- **Claude does not log its context window size.** It is inferred from
+  observations and marked as an estimate; Codex reports it on every request.
+
+![History](docs/screenshots/history.png)
+
+## Command line
+
+The same numbers without the graphics, on top of the same core:
 
 ```bash
-agentmeter today                     # итог дня, разрезы, лимиты
-agentmeter tasks --day 2026-08-10    # лента задач
-agentmeter breakdown --by server     # развёртка: инструменты, MCP, скиллы
-agentmeter limits                    # окна лимитов
-agentmeter doctor                    # что прочитано, что не понято, калибровка
-agentmeter export --grain task       # выгрузка в CSV или JSON
+agentmeter today                     # day total, breakdowns, limits
+agentmeter tasks --day 2026-08-10    # task feed
+agentmeter breakdown --by server     # breakdown: tools, MCP, skills
+agentmeter limits                    # limit windows
+agentmeter doctor                    # what was read, what was not understood
+agentmeter export --grain task       # export to CSV or JSON
 ```
 
-## Сборка из исходников
+## Building from source
 
-Нужна Node 22.12 или новее.
+Node 22.12 or newer.
 
 ```bash
 npm ci
-npm run check                                  # линт, сборка, тесты
-npm run -w @agentmeter/desktop start           # запустить из трея
-npm run -w @agentmeter/desktop package         # собрать инсталляторы
+npm run check                                  # lint, build, tests
+npm run -w @agentmeter/desktop start           # run from the tray
+npm run -w @agentmeter/desktop package         # build the installers
 ```
 
-Нативных модулей нет: SQLite берётся из `node:sqlite`, который есть в самом
-Electron, — поэтому `electron-rebuild` не нужен и в упаковку не поедет.
+There are no native modules: SQLite comes from `node:sqlite`, which ships
+inside Electron itself — so `electron-rebuild` is not needed and never runs.
 
-## Как это устроено
+## How it is put together
 
-Ядро (`packages/core`) не знает про Electron: разбор логов, индекс, атрибуция,
-лимиты и агрегаты живут там, а CLI и приложение — два его потребителя. Так
-цифры проверяются в терминале, не запуская GUI.
+The core (`packages/core`) knows nothing about Electron: log parsing, the
+index, attribution, limits and the screen aggregates all live there, and the
+CLI and the app are two consumers of it. That way the numbers can be checked in
+a terminal without starting a GUI.
 
-Что лежит в логах, как считается расход и почему именно так — в
-[`docs/plan.md`](docs/plan.md) и [`CLAUDE.md`](CLAUDE.md). Вехи и статусы — в
-[`docs/roadmap.md`](docs/roadmap.md).
+What is in the logs, how the spend is computed and why — in
+[`docs/plan.md`](docs/plan.md) and [`CLAUDE.md`](CLAUDE.md) (both in Russian).
+Milestones and status live in [`docs/roadmap.md`](docs/roadmap.md).
 
-## Лицензия
+## License
 
 MIT — [`LICENSE`](LICENSE).

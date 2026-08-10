@@ -20,7 +20,13 @@ export default tseslint.config(
     // Для .ts глобалы приезжают из типов, здесь их надо назвать.
     files: ['**/*.js'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly', URL: 'readonly', Buffer: 'readonly' },
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+      },
     },
   },
   {
