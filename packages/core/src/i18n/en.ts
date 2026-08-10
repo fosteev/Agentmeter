@@ -189,6 +189,17 @@ export const en = {
     calls_other: '{{count}} calls',
   },
 
+  notify: {
+    limitTitle: '{{provider}} — {{percent}} of the {{window}}',
+    limitBody: 'Resets at {{reset}}. Working now: {{agents}}.',
+    sessionTitle: 'Session over {{limit}}',
+    sessionBody: '{{project}} — {{tokens}} in the prompt.',
+    doneTitle: '{{provider}} finished — {{project}}',
+    waitingTitle: '{{provider}} is waiting for you — {{project}}',
+    agentBody: '{{branch}} · {{tokens}}',
+    noBranch: 'no branch',
+  },
+
   history: {
     span7: 'week',
     span30: '30 days',

@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   BrowserWindow,
+  Notification,
   Tray,
   app,
   ipcMain,
@@ -61,6 +62,7 @@ import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
+import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 
@@ -799,6 +801,21 @@ function main(): void {
       buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
     )
 
+  const notifyState = emptyNotifyState()
+  /**
+   * Показ уведомления. Всё решение — в `notify.ts`; здесь только вызов ОС и
+   * клик, открывающий окно. `isSupported` спрашивается каждый раз, а не при
+   * старте: на Linux служба уведомлений может подняться позже приложения.
+   */
+  const show = (notices: readonly Notice[]): void => {
+    if (notices.length === 0 || !Notification.isSupported()) return
+    for (const notice of notices) {
+      const item = new Notification({ title: notice.title, body: notice.body })
+      item.on('click', () => openMainWindow('today'))
+      item.show()
+    }
+  }
+
   const poll = (): void => {
     tick += 1
     const shown = listeners().length > 0
@@ -811,6 +828,10 @@ function main(): void {
     const current = snapshot()
     paintTray(current)
     if (shown) emit('live:update', current)
+    // Уведомления смотрят на **каждый** снимок, а не только на видимые: попап
+    // закрыт как раз тогда, когда человек занят чем-то другим, и молчать в этот
+    // момент значит молчать всегда, когда уведомление и нужно.
+    show(planNotifications(notifyState, current, runtime!.config))
   }
 
   const paintTray = (current: TraySnapshot): void => {
