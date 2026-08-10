@@ -98,7 +98,22 @@ describe('agentmeter CLI', () => {
       #:#    #       #
       #:#  #       #
       #:#    #       #
-      #:#  #        #"
+      #:#  #        #
+
+      Куда ушло сегодня
+      Имя                         Токены  Доля
+      ──────────────────────────  ──────  ────
+      постоянный                    #   #%
+      разовый                       #   #%
+        system (остаток)            #   #%
+        skills                    #    #%
+        userTurn                  #    #%
+        toolSchemas (остаток)     #    #%
+        agents                     #    #%
+        system                     #    #%
+        deferredTools              #    #%
+        memory                      #    #%
+        mcpInstructions · lorem     #    #%"
     `)
   })
 

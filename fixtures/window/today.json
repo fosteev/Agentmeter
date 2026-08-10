@@ -543,5 +543,28 @@
       "provider": null,
       "folded": 4
     }
-  ]
+  ],
+  "split": {
+    "slices": [
+      {
+        "kind": "recurring",
+        "tokens": {
+          "value": 141400000,
+          "confidence": "reconstructed",
+          "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+        },
+        "share": 0.409974
+      },
+      {
+        "kind": "marginal",
+        "tokens": {
+          "value": 203500000,
+          "confidence": "reconstructed",
+          "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+        },
+        "share": 0.590026
+      }
+    ],
+    "note": "Четверть дня и больше ушла на то, что перезагружалось в каждую сессию."
+  }
 }

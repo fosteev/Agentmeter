@@ -59,6 +59,15 @@ export const LIMITS = {
   'tokens.cacheWrite': 16,
   'tokens.cacheRead': 16,
   'tokens.output': 16,
+  // «Куда ушло сегодня» (4.1) стоит в правой колонке шириной 300 px; за вычетом
+  // полей 18 px остаётся 264. Заголовок — mono 10 px с разрядкой .14em, то есть
+  // 7 px на знак: 37 знаков. Строка доли — mono 11 px (6.6 px на знак): подпись
+  // слева и «141.4M · 41%» справа делят те же 264, значение занимает 12 знаков,
+  // подписи остаётся 26. Потолки взяты с запасом в три знака.
+  'split.title': 34,
+  'split.recurring': 23,
+  'split.marginal': 23,
+  'split.value': 16,
 } as const
 
 export type LimitedKey = keyof typeof LIMITS

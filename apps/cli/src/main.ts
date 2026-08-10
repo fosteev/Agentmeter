@@ -17,6 +17,7 @@ import {
   openDb,
   locale as currentLocale,
   setLocale,
+  spendSplit,
   t,
   taskRows,
   todayReport,
@@ -140,8 +141,17 @@ function runToday(
           from: dayRange(endRange.from, config.ui.dayStartsAtHour, -(days - 1)).from,
           to: endRange.to,
         }
-  const report = todayReport(db, range, provider === undefined ? {} : { provider })
-  output(common.json ? report : renderToday(report, currentLocale()), common.json)
+  const scope = provider === undefined ? {} : { provider }
+  const report = todayReport(db, range, scope)
+  // Разложение отдельным запросом, а не полем отчёта: `todayReport` зовут пять
+  // мест, и четырём из них постоянный расход не нужен вовсе. Здесь он нужен
+  // ровно затем, зачем весь CLI, — чтобы тождество можно было увидеть числами,
+  // не поднимая окна.
+  const split = spendSplit(db, range, scope)
+  output(
+    common.json ? { ...report, split } : renderToday(report, split, currentLocale()),
+    common.json,
+  )
   return 0
 }
 

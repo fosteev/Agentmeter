@@ -92,21 +92,35 @@ const ENTRYPOINTS = new Set<Entrypoint>([
   'unknown',
 ])
 
-export function parseSessionFile(path: string): ParseResult {
+export interface ParseOptions {
+  /**
+   * Файлы памяти, которые едут в промпт, но в логе не названы: глобальный
+   * `~/.claude/CLAUDE.md` и индекс автопамяти (долг 1.7, закрыт в 4.1). Список
+   * собирает `ingest` из `config.sources` — парсер, сам лезущий в домашний
+   * каталог, сделал бы тесты машинозависимыми.
+   *
+   * Пусто (значение по умолчанию) — поведение до 4.1: эти байты остаются в
+   * остатке `system`.
+   */
+  memoryPaths?: readonly string[]
+}
+
+export function parseSessionFile(path: string, options: ParseOptions = {}): ParseResult {
   const { lines } = readJsonlLines(path, true)
-  return parseLines(path, lines)
+  return parseLines(path, lines, options)
 }
 
 export function parseSubagentFile(
   path: string,
   parentSessionId = parentSessionIdFromSubagentPath(path),
+  options: ParseOptions = {},
 ): ParseResult {
-  const result = parseSessionFile(path)
+  const result = parseSessionFile(path, options)
   markSubagent(result, path, parentSessionId)
   return result
 }
 
-export function parseSubagents(sessionPath: string): ParseResult[] {
+export function parseSubagents(sessionPath: string, options: ParseOptions = {}): ParseResult[] {
   const parentId = basename(sessionPath, extname(sessionPath))
   const dirs = subagentDirs(sessionPath, parentId)
   const results: ParseResult[] = []
@@ -114,14 +128,14 @@ export function parseSubagents(sessionPath: string): ParseResult[] {
   for (const dir of dirs) {
     if (!existsSync(dir) || !statSync(dir).isDirectory()) continue
     for (const sourcePath of subagentFiles(dir)) {
-      results.push(parseSubagentFile(sourcePath, parentId))
+      results.push(parseSubagentFile(sourcePath, parentId, options))
     }
   }
 
   return results
 }
 
-function parseLines(path: string, lines: string[]): ParseResult {
+function parseLines(path: string, lines: string[], options: ParseOptions): ParseResult {
   const sourcePath = resolve(path)
   const state: ParseState = {
     sourcePath,
@@ -143,7 +157,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
   }
 
   const requests = buildRequests(state)
-  const session = buildSession(state, requests)
+  const session = buildSession(state, requests, options)
   attributePrefix(session, requests)
   attributeMarginal(requests, 'claude')
   return { session, requests, diagnostics: state.diagnostics }
@@ -510,17 +524,25 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
   return request
 }
 
-function buildSession(state: ParseState, requests: Request[]): Session {
+function buildSession(state: ParseState, requests: Request[], options: ParseOptions): Session {
   const loggedRequests = requests.filter((request) => request.origin === 'log')
   const firstRequest = loggedRequests[0]
   const lastRequest = loggedRequests.at(-1)
   const cwd = state.cwd ?? ''
   const prefixBlocks = [...state.prefixBlocks]
-  const rootMemory = resolve(cwd, 'CLAUDE.md')
-  if (cwd && !state.prefixMemoryPaths.has(rootMemory) && existsSync(rootMemory)) {
+  // Корневой `CLAUDE.md` проекта и то, что дал вызывающий (глобальный
+  // `CLAUDE.md`, индекс автопамяти). Одним списком, потому что правило у них
+  // одно: файл считается, если его не назвал `nested_memory` и он есть на диске.
+  const memoryFiles = [...(cwd ? [resolve(cwd, 'CLAUDE.md')] : []), ...(options.memoryPaths ?? [])]
+  const seen = new Set<string>()
+  for (const path of memoryFiles) {
+    const full = resolve(path)
+    if (seen.has(full) || state.prefixMemoryPaths.has(full)) continue
+    seen.add(full)
+    if (!existsSync(full)) continue
     prefixBlocks.push({
       category: 'memory',
-      bytes: Buffer.byteLength(readFileSync(rootMemory, 'utf8'), 'utf8'),
+      bytes: Buffer.byteLength(readFileSync(full, 'utf8'), 'utf8'),
       tokens: 0,
       basis: 'estimated',
     })

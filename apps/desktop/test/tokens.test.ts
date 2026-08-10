@@ -157,6 +157,7 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   ],
   'HourChart.tsx': [[738, 749]],
   'ProjectBars.tsx': [[756, 761]],
+  'SpendBar.tsx': [[767, 778]],
 }
 
 /**

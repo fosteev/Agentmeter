@@ -17,7 +17,7 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
@@ -59,7 +59,14 @@ CREATE TABLE IF NOT EXISTS sessions (
   parent_session_id  TEXT,
   parent_tool_use_id TEXT,
   agent_type         TEXT,
-  is_sidechain       INTEGER NOT NULL DEFAULT 0
+  is_sidechain       INTEGER NOT NULL DEFAULT 0,
+  -- Стартовый префикс: сколько токенов лежало в промпте до первого ответа (1.7).
+  -- Ноль — законное значение и означает «записанных запросов в файле нет»: на
+  -- живых логах таких сессий 38 из 617, и расхода на них ровно ноль.
+  prefix_tokens      INTEGER NOT NULL DEFAULT 0,
+  -- В наборе был ToolSearch. Без этого признака совет «отключи сервер» врёт
+  -- на порядок: схемы MCP в отложенном режиме в префикс не едут вовсе.
+  tools_deferred     INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS sessions_started ON sessions (started_at);
@@ -139,6 +146,30 @@ CREATE TABLE IF NOT EXISTS tool_files (
 
 CREATE INDEX IF NOT EXISTS tool_files_session ON tool_files (session_id, action);
 CREATE INDEX IF NOT EXISTS tool_files_path    ON tool_files (path);
+
+-- Раскладка стартового префикса по категориям (1.7), из которой 4.1 собирает
+-- постоянный расход дня: цена блока умножается на число запросов сессии.
+--
+-- Порядковый номер в ключе, а не (категория, источник): у Codex system —
+-- измеренный блок, а toolSchemas — остаток, и однажды остаток и оценка одной
+-- категории окажутся рядом. NULL в составном ключе SQLite считает различными
+-- значениями, то есть уникальность по (category, source) не удержала бы ничего
+-- и промолчала бы об этом.
+CREATE TABLE IF NOT EXISTS prefix_blocks (
+  session_id TEXT    NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
+  idx        INTEGER NOT NULL,
+  category   TEXT    NOT NULL,
+  -- Имя MCP-сервера. По нему 4.3 считает экономию от выключения.
+  source     TEXT,
+  bytes      INTEGER NOT NULL,
+  tokens     INTEGER NOT NULL,
+  -- estimated — посчитано по байтам, residual — измеренный остаток. Разные
+  -- вещи: остаток нельзя посоветовать выключить, он и есть системный промпт.
+  basis      TEXT    NOT NULL,
+  PRIMARY KEY (session_id, idx)
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS prefix_blocks_category ON prefix_blocks (category);
 
 -- Наблюдения лимита из логов Codex: по строке на слот записи token_count.
 -- В индексе лежит вход сборки, а не её результат, и вот почему: окно живёт
@@ -262,6 +293,16 @@ ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
     // завтрашний. Индекс производен от логов целиком, и единственный способ
     // получить его таким, каким его собирает нынешний парсер, — перечитать.
     version: 6,
+    rebuild: true,
+  },
+  {
+    // Появились `prefix_blocks` и два столбца сессии (4.1). Раскладка префикса
+    // до этой версии не хранилась вовсе — она считалась при разборе и жила
+    // только в памяти парсера. Долить её ALTER-ом неоткуда: старая база помнит
+    // файлы разобранными и дочитывать их не станет, а пустая таблица читается
+    // как «префикса не было», то есть «постоянный расход равен нулю» — ровно то
+    // утверждение, которое 3.0 запретил делать нулями.
+    version: 7,
     rebuild: true,
   },
 ]

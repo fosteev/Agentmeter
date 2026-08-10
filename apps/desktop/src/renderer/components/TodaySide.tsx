@@ -2,6 +2,7 @@ import type { DayReport } from '@agentmeter/ipc'
 import { HourChart } from './HourChart.tsx'
 import { ProjectBars } from './ProjectBars.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
+import { SpendBar } from './SpendBar.tsx'
 import { t } from '../format.ts'
 
 export interface TodaySideProps {
@@ -15,6 +16,10 @@ export function TodaySide({ report }: TodaySideProps) {
   // этот день не существует (3.7).
   const tickets = report?.byTicket ?? []
   const showTickets = report !== null && !report.emptyIndex && tickets.length > 0
+  // Тем же правилом, что тикеты: поля нет — блока нет. Пустая полоса «постоянное
+  // против разового» обещала бы разложение, которого за этот день не считали.
+  const split = report?.split
+  const showSplit = report !== null && !report.emptyIndex && split !== undefined
 
   return (
     <aside
@@ -59,6 +64,10 @@ export function TodaySide({ report }: TodaySideProps) {
           <ProjectBars projects={tickets} kind="ticket" />
         </div>
       ) : null}
+      {(showProjects || showTickets) && showSplit ? (
+        <div data-today-side-divider style={{ height: 1, background: 'var(--line)' }} />
+      ) : null}
+      {showSplit ? <SpendBar split={split} /> : null}
     </aside>
   )
 }

@@ -28,6 +28,9 @@ const VALUES: Record<string, Record<string, string | number>> = {
   'limit.untilCap': { reset: 'сброс через 4 ч', span: '52 мин' },
   'limit.idleWindow': { span: '4 ч 37 мин' },
   'card.files': { count: 128 },
+  // Худшее из встречающихся: знак оценки, четыре знака мантиссы и три знака
+  // процента — «≈203.5M · 100%» шире, чем «141.4M · 41%» из макета.
+  'split.value': { tokens: '≈203.5M', percent: 100 },
 }
 
 describe('потолки длины', () => {

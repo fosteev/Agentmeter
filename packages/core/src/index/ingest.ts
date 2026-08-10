@@ -7,8 +7,10 @@ import {
   type SourceIssue,
 } from './discover.ts'
 import { putFailure, putSession, forgetSource } from './store.ts'
+import { defaultClaudeHome } from './paths.ts'
 import type { Db } from './db.ts'
-import { parseSubagentFile } from '../sources/claude/parse.ts'
+import { claudeMemoryPaths } from '../sources/claude/memory.ts'
+import { parseSubagentFile, type ParseOptions } from '../sources/claude/parse.ts'
 import { parseSessionFile } from '../sources/claude/index.ts'
 import { parseRolloutFile } from '../sources/codex/index.ts'
 import type { ParseResult } from '../sources/types.ts'
@@ -104,8 +106,9 @@ export function* ingestSteps(
   const bytesTotal = sizes.reduce((sum, size) => sum + size, 0)
   let bytesDone = 0
 
+  const memory: MemoryOptions = { claudeHome: opts.claudeHome ?? defaultClaudeHome() }
   for (const [index, file] of files.entries()) {
-    const result = ingestOne(db, file)
+    const result = ingestOne(db, file, memory)
     if (result.failed) failed += 1
     else if (result.parsed) parsed += 1
     else skipped += 1
@@ -143,12 +146,27 @@ export function* ingestSteps(
   }
 }
 
-export function ingestFile(db: Db, file: SourceFile): { parsed: boolean; requests: number } {
-  const result = ingestOne(db, file)
+/**
+ * Откуда парсер берёт файлы памяти, которых нет в логе (долг 1.7 → 4.1).
+ *
+ * Без дома — поведение до 4.1: глобальный `CLAUDE.md` и индекс автопамяти не
+ * считаются и остаются в остатке `system`. Так зовут `ingestFile` тесты, и
+ * ровно поэтому их числа не зависят от машины, на которой они идут.
+ */
+export interface MemoryOptions {
+  claudeHome?: string
+}
+
+export function ingestFile(
+  db: Db,
+  file: SourceFile,
+  memory: MemoryOptions = {},
+): { parsed: boolean; requests: number } {
+  const result = ingestOne(db, file, memory)
   return { parsed: result.parsed, requests: result.requests }
 }
 
-function ingestOne(db: Db, file: SourceFile): FileIngestResult {
+function ingestOne(db: Db, file: SourceFile, memory: MemoryOptions): FileIngestResult {
   // Не `existsSync` + `statSync`: между ними файл успевает исчезнуть, и это не
   // теория — Claude Code сам подчищает старые транскрипты по `cleanupPeriodDays`
   // прямо во время прохода. Уронить весь `ingestAll` из-за одного удалённого
@@ -175,7 +193,7 @@ function ingestOne(db: Db, file: SourceFile): FileIngestResult {
   }
 
   try {
-    const result = parseFile(file)
+    const result = parseFile(file, memory)
     putSession(db, result, file, current)
     return { parsed: true, requests: result.requests.length, failed: false }
   } catch (error) {
@@ -185,10 +203,14 @@ function ingestOne(db: Db, file: SourceFile): FileIngestResult {
   }
 }
 
-function parseFile(file: SourceFile): ParseResult {
+function parseFile(file: SourceFile, memory: MemoryOptions): ParseResult {
   if (file.provider === 'codex') return parseRolloutFile(file.path)
-  if (file.kind === 'subagent') return parseSubagentFile(file.path, parentId(file))
-  return parseSessionFile(file.path)
+  const options: ParseOptions =
+    memory.claudeHome === undefined
+      ? {}
+      : { memoryPaths: claudeMemoryPaths(file.path, memory.claudeHome) }
+  if (file.kind === 'subagent') return parseSubagentFile(file.path, parentId(file), options)
+  return parseSessionFile(file.path, options)
 }
 
 function statFile(path: string): Stats | undefined {

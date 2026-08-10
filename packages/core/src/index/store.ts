@@ -43,6 +43,7 @@ export function putSession(db: Db, result: ParseResult, file: SourceFile, stat?:
     db.run('DELETE FROM diagnostics WHERE source_path = ?', file.path)
     db.run('DELETE FROM limit_observations WHERE source_path = ?', file.path)
     insertSession(db, result.session)
+    insertPrefixBlocks(db, result.session)
     for (const request of result.requests) insertRequest(db, request)
     insertDiagnostics(db, file.path, result.diagnostics, result.session.cliVersion)
     putLimitObservations(db, file.path, result.session.provider, result.limits ?? [])
@@ -80,8 +81,8 @@ function insertSession(db: Db, session: Session): void {
     `INSERT INTO sessions (
        id, provider, source_path, cwd, project, branch, model, entrypoint, cli_version,
        title, first_prompt, started_at, ended_at, parent_session_id, parent_tool_use_id,
-       agent_type, is_sidechain
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       agent_type, is_sidechain, prefix_tokens, tools_deferred
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     session.id,
     session.provider,
     session.sourcePath,
@@ -99,7 +100,32 @@ function insertSession(db: Db, session: Session): void {
     session.parentToolUseId ?? null,
     session.agentType ?? null,
     session.isSidechain ? 1 : 0,
+    session.prefixTokens,
+    session.toolsDeferred ? 1 : 0,
   )
+}
+
+/**
+ * Раскладка префикса как её посчитал 1.7 — без пересчёта и без отсева.
+ *
+ * Нулевые блоки тоже пишутся: «сервер стоит ноль токенов» — это ответ (значит
+ * режим отложенный), а отсутствие строки означало бы «сервера не было». Их
+ * различает 4.3, и различить их больше нечем.
+ */
+function insertPrefixBlocks(db: Db, session: Session): void {
+  session.prefixBlocks.forEach((block, idx) => {
+    db.run(
+      `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      session.id,
+      idx,
+      block.category,
+      block.source ?? null,
+      block.bytes,
+      block.tokens,
+      block.basis,
+    )
+  })
 }
 
 function insertRequest(db: Db, request: Request): void {

@@ -116,6 +116,16 @@ export const en = {
     subagents_other: '{{count}} subagents',
   },
 
+  split: {
+    title: 'Where today went',
+    recurring: 'recurring',
+    marginal: 'one-off',
+    value: '{{tokens}} · {{percent}}%',
+    noteHigh: 'More than half the day went to what every session reloaded from scratch.',
+    noteMedium: 'A quarter of the day or more went to what every session reloaded.',
+    noteLow: 'Most of the day was the work itself, not what loads at startup.',
+  },
+
   card: {
     untitled: 'Untitled',
     timeline: 'Request timeline · height = request tokens',
@@ -299,6 +309,8 @@ export const en = {
     columnAgents: 'Agents',
     columnName: 'Name',
     columnHour: 'Hour',
+    columnShare: 'Share',
+    residual: 'residual',
     sectionProviders: 'Providers',
     sectionModels: 'Models',
     sectionProjects: 'Projects',

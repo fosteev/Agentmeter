@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
 import type { TaskRow, TodayFilter } from '@agentmeter/ipc'
-import { buildDayReport, foldTail } from '../src/main/day.ts'
+import { buildDayReport, foldTail, spendNote } from '../src/main/day.ts'
 
 /**
  * `DayReport` на настоящем индексе из фикстур.
@@ -231,6 +231,89 @@ describe('buildDayReport', () => {
 
     expect(report.byTicket).toBeUndefined()
     expect(report.tasks.every((task) => task.ticket === undefined)).toBe(true)
+  })
+
+  /**
+   * Ловит четвёртую сумму, разошедшуюся с шапкой (4.1). Постоянное и разовое —
+   * это разложение того же итога, что стоит над лентой; разойдись оно на токен,
+   * и доля под полосой считалась бы от числа, которого на экране нет.
+   */
+  it('разложение складывается в итог дня, а доли — в единицу', () => {
+    const report = buildDayReport(db, ALL)
+    const split = report.split!
+
+    expect(split.slices.map((slice) => slice.kind)).toEqual(['recurring', 'marginal'])
+    expect(split.slices.reduce((sum, slice) => sum + slice.tokens.value, 0)).toBe(
+      report.totals.total.value,
+    )
+    expect(split.slices.reduce((sum, slice) => sum + slice.share, 0)).toBeCloseTo(1, 12)
+    // Доля обязана совпасть с собственными токенами: полоса и подпись под ней
+    // рисуются из неё, а не из числа рядом.
+    expect(split.slices[0]!.share).toBeCloseTo(
+      split.slices[0]!.tokens.value / report.totals.total.value,
+      12,
+    )
+  })
+
+  /**
+   * Ловит точность, потерянную по дороге: внутри обеих долей лежат
+   * восстановленные запросы (1.3), и доля от неточного целого точной быть не
+   * может. Ловит и обратное — пометку, поставленную на всём подряд.
+   */
+  it('точность долей — та же, что у итога дня', () => {
+    const report = buildDayReport(db, ALL)
+
+    for (const slice of report.split!.slices) {
+      expect(slice.tokens.confidence).toBe(report.totals.total.confidence)
+      expect(slice.tokens.caveat).toBe(report.totals.total.caveat)
+    }
+  })
+
+  /**
+   * Ловит вывод, сползший на соседнюю полосу.
+   *
+   * Проверяется по границам, а не по тому, что выпало на фикстурах: там доля
+   * ниже четверти не встречается ни на одном разрезе (минимум 34.1%), и нижняя
+   * фраза осталась бы непроверенной при любом правиле. На самих фикстурах
+   * заодно видно, что до контракта доезжает та же фраза.
+   */
+  it('вывод под полосой выбирается по границам долей', () => {
+    expect(spendNote(0.5)).toBe(spendNote(1))
+    expect(spendNote(0.25)).toBe(spendNote(0.4999))
+    expect(spendNote(0)).toBe(spendNote(0.2499))
+    expect(new Set([spendNote(0.6), spendNote(0.3), spendNote(0.1)]).size).toBe(3)
+
+    const day = buildDayReport(db, ALL)
+    const project = buildDayReport(db, { ...ALL, project: 'b' })
+    expect(day.split!.note).toBe(spendNote(0.68))
+    expect(project.split!.note).toBe(spendNote(0.341))
+    expect(day.split!.note).not.toBe(project.split!.note)
+  })
+
+  /**
+   * Ловит блок, заполненный нулями. «На префикс ушло ноль» — это утверждение, и
+   * на пустом дне оно ложное: верно «ничего не считали», а его говорят
+   * отсутствием поля, как у тикетов.
+   */
+  it('на дне без расхода разложения нет вовсе, а не разложение из нулей', () => {
+    const report = buildDayReport(db, { from: 0, to: 1 })
+
+    expect(report.split).toBeUndefined()
+  })
+
+  /**
+   * Ловит разложение, посчитанное мимо сужения: шапка сузилась, а полоса под
+   * ней осталась про весь день — и каждое число по себе настоящее (3.2).
+   */
+  it('сужение доезжает до разложения', () => {
+    const all = buildDayReport(db, ALL)
+    const claude = buildDayReport(db, { ...ALL, provider: 'claude' })
+    const codex = buildDayReport(db, { ...ALL, provider: 'codex' })
+
+    expect(claude.split!.slices[0]!.tokens.value + codex.split!.slices[0]!.tokens.value).toBe(
+      all.split!.slices[0]!.tokens.value,
+    )
+    expect(claude.split!.slices[0]!.tokens.value).toBeLessThan(all.split!.slices[0]!.tokens.value)
   })
 
   /**

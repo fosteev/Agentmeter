@@ -9,9 +9,12 @@
 import {
   daySplits,
   hasRequests,
+  spendSplit,
+  t,
   taskRows,
   todayReport,
   type Db,
+  type SpendSplitReport,
   type HourSplit,
   type ProjectSplit,
   type Provider,
@@ -29,6 +32,7 @@ import type {
   HourBucket,
   Measured,
   ProjectRow,
+  SpendSplit,
   TaskRow,
   TicketRow,
   TodayFilter,
@@ -89,10 +93,55 @@ export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): 
     // Поля нет вовсе, когда тикетов не нашлось: пустой блок обещал бы разрез,
     // которого за этот день не существует (3.7).
     ...(splits.tickets.length === 0 ? {} : { byTicket: toTicketRows(splits.tickets) }),
-    // `split` (постоянное против разового) не заполняется: модель постоянной
-    // стоимости сводится в дневной итог в 4.1. Нули здесь были бы утверждением
-    // «на префикс ушло ноль», и оно ложное.
+    // Поля нет, пока за период нет расхода: «на префикс ушло ноль» — это
+    // утверждение, и оно ложное там, где верно «ничего не было» (4.1).
+    ...toSpendSplit(spendSplit(db, range, scope), report.approximate),
   }
+}
+
+/**
+ * «Куда ушло сегодня»: постоянное против разового (4.1, строки 767–778).
+ *
+ * Доли считаются здесь, потому что их видно числом («41%») — правило 3.0.
+ * Ширина полосы под ними в окне берётся из тех же долей, и второго счёта там
+ * нет: полоса и подпись обязаны показывать одно и то же число.
+ *
+ * Округление долей — на разовом, а не на постоянном: сумма процентов обязана
+ * давать сто, а «постоянный» — та величина, вокруг которой строится вывод, и
+ * подгонять надо не её. При нулевом итоге долей не существует вовсе, и блока
+ * нет: ноль процентов — это ответ, которого мы не давали.
+ */
+function toSpendSplit(
+  split: SpendSplitReport,
+  approximate: boolean,
+): { split: SpendSplit } | Record<string, never> {
+  if (split.total === 0) return {}
+  const share = split.recurring / split.total
+  return {
+    split: {
+      slices: [
+        { kind: 'recurring', tokens: measured(split.recurring, approximate), share },
+        { kind: 'marginal', tokens: measured(split.marginal, approximate), share: 1 - share },
+      ],
+      note: spendNote(share),
+    },
+  }
+}
+
+/**
+ * Вывод под полосой: какая из трёх фраз верна при такой доле.
+ *
+ * Экспортируется затем же, зачем `foldTail`, — границы полос это решение, а не
+ * оформление, и проверяются они по границам, а не по тому, что случайно выпало
+ * на фикстурах: доля ниже четверти на них не встречается вовсе.
+ *
+ * Фраз три, а не одна с подстановкой доли: каждая обязана быть правдой во всей
+ * своей полосе. «Почти половина» из макета верна на 41% и уже неправда на 26%,
+ * а полосу обслуживает одну и ту же — поэтому взята самая слабая из верных.
+ */
+export function spendNote(share: number): string {
+  if (share >= 0.5) return t('split.noteHigh')
+  return share >= 0.25 ? t('split.noteMedium') : t('split.noteLow')
 }
 
 function sortTasks(rows: readonly CoreTaskRow[], sort: NonNullable<TodayFilter['sort']>) {

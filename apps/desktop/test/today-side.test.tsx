@@ -210,6 +210,10 @@ describe('правая колонка вкладки «Сегодня»', () => 
     expect(html).not.toContain('data-today-side-divider=')
     expect(html).not.toContain('Расход по часам')
     expect(html).not.toContain('По проектам')
+    // Полоса разложения — четвёртый блок колонки, и своего `data-today-side-block`
+    // у неё нет: без отдельной строки она рисовалась бы поверх непрочитанного
+    // индекса, а две проверки выше этого не заметили бы.
+    expect(html).not.toContain('data-spend-split')
   })
 
   /**
@@ -237,5 +241,51 @@ describe('правая колонка вкладки «Сегодня»', () => 
     expect(html).toContain('GARM-664')
     expect(html).toContain('+ 2 тикета')
     expect(html).not.toContain('+ 2 проекта')
+  })
+
+  /**
+   * Ловит полосу, посчитанную окном от токенов заново (4.1).
+   *
+   * Доля приезжает готовой, потому что её видно числом; посчитай окно ширину
+   * из `tokens.value`, и подпись «41%» встала бы над полосой другой длины —
+   * два ответа на один вопрос, оба похожие на правду.
+   */
+  it('полоса разложения берёт ширину из готовой доли, а не из токенов', () => {
+    const html = renderToStaticMarkup(<TodaySide report={today} />)
+    const share = today.split!.slices
+
+    expect(html).toContain('data-spend-split')
+    expect(html).toContain(`data-spend-fill="recurring" style="width:${share[0]!.share * 100}%`)
+    expect(html).toContain(`data-spend-fill="marginal" style="width:${share[1]!.share * 100}%`)
+    expect(html).toContain(`${formatTokens(141_400_000)} · 41%`)
+    expect(html).toContain(`${formatTokens(203_500_000)} · 59%`)
+    expect(html).toContain(today.split!.note!)
+  })
+
+  /**
+   * Ловит потерянную пометку оценки. Внутри обеих долей лежат восстановленные
+   * запросы (1.3), и доля от неточного целого точной быть не может: без знака
+   * `≈` два восстановленных числа выглядели бы измеренными.
+   */
+  it('обе доли помечены оценкой, раз итог дня восстановлен', () => {
+    const html = renderToStaticMarkup(<TodaySide report={today} />)
+
+    expect(html).toContain(`≈${formatTokens(141_400_000)}`)
+    expect(html).toContain(`≈${formatTokens(203_500_000)}`)
+    expect(html).toContain('разрыву цепочки кэша')
+  })
+
+  /**
+   * Ловит блок, нарисованный нулями. «На префикс ушло ноль» — это утверждение,
+   * и оно ложное там, где верно «за период ничего не считали»: поля просто нет,
+   * как у тикетов.
+   */
+  it('блока разложения нет, когда поля нет', () => {
+    const withoutSplit: DayReport = { ...today }
+    delete withoutSplit.split
+    const html = renderToStaticMarkup(<TodaySide report={withoutSplit} />)
+
+    expect(html).not.toContain('data-spend-split')
+    expect(html).not.toContain('Куда ушло сегодня')
   })
 })
