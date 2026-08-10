@@ -69,7 +69,7 @@ export function TodayFilters({ filter, onChange }: TodayFiltersProps) {
           whiteSpace: 'nowrap',
         }}
       >
-        сортировка:{' '}
+        {t('today.sortPrefix')}{' '}
         <select
           aria-label={t('today.sort')}
           value={filter.sort ?? 'tokens'}
@@ -88,9 +88,9 @@ export function TodayFilters({ filter, onChange }: TodayFiltersProps) {
             cursor: 'pointer',
           }}
         >
-          <option value="tokens">по расходу ↓</option>
-          <option value="started">по времени ↓</option>
-          <option value="requests">по запросам ↓</option>
+          <option value="tokens">{t('today.sortTokens')}</option>
+          <option value="started">{t('today.sortStarted')}</option>
+          <option value="requests">{t('today.sortRequests')}</option>
         </select>
       </label>
     </div>

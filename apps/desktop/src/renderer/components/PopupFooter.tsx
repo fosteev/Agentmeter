@@ -5,6 +5,7 @@
 // вида токенов здесь нельзя: это второй счёт того же расхода, и точность
 // суммы пришлось бы выводить из четырёх чужих — в контракте для этого есть
 // `DayTotals.total`.
+import { t } from '../format.ts'
 
 export interface PopupFooterProps {
   /** Готовое число за сутки, например «344,9M» или «≈344,9M». */
@@ -36,7 +37,7 @@ export function PopupFooter({ total, summary, onOpenWindow }: PopupFooterProps) 
             color: 'var(--tx3)',
           }}
         >
-          Сегодня
+          {t('popup.footerToday')}
         </span>
         <span
           style={{
@@ -74,7 +75,7 @@ export function PopupFooter({ total, summary, onOpenWindow }: PopupFooterProps) 
             cursor: 'pointer',
           }}
         >
-          Открыть окно ⌘⏎
+          {t('popup.openWindow')}
         </button>
       </div>
     </div>

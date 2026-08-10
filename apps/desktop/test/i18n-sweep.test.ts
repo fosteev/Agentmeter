@@ -49,10 +49,20 @@ function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 }
 
-function literals(source: string): string[] {
+/**
+ * Ищется **кириллица где угодно вне комментария**, а не текст в кавычках.
+ *
+ * Первая версия проверки смотрела только строковые литералы и потому пропускала
+ * самый обычный способ написать текст в React — узел JSX: `<div>Задача</div>`
+ * кавычек не имеет. Так мимо каталога прошли одиннадцать строк, включая всю
+ * шапку ленты и оба заголовка пустых экранов, а этап 3.8 при этом закрывался
+ * зелёной проверкой. Идентификаторов и ключей на кириллице в коде нет и быть не
+ * может, так что более узкое правило только вернуло бы ту же дыру другой формы.
+ */
+function offendingLines(source: string): string[] {
   const found: string[] = []
-  for (const match of withoutComments(source).matchAll(/(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g)) {
-    if (/[А-Яа-яЁё]/.test(match[2]!)) found.push(match[2]!.replace(/\s+/g, ' ').slice(0, 80))
+  for (const line of withoutComments(source).split('\n')) {
+    if (/[А-Яа-яЁё]/.test(line)) found.push(line.trim().slice(0, 80))
   }
   return found
 }
@@ -63,12 +73,12 @@ describe('строки интерфейса', () => {
    * которое на английском останется русским, и заметит его пользователь, а не
    * сборка.
    */
-  it('в продуктовом коде окна, трея и CLI нет русских литералов', () => {
+  it('в продуктовом коде окна, трея и CLI нет русского текста', () => {
     const offenders: string[] = []
     for (const area of AREAS) {
       for (const file of sources(area)) {
         if (NOT_INTERFACE.has(file)) continue
-        for (const value of literals(readFileSync(join(root, file), 'utf8'))) {
+        for (const value of offendingLines(readFileSync(join(root, file), 'utf8'))) {
           offenders.push(`${file}: «${value}»`)
         }
       }

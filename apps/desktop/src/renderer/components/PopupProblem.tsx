@@ -68,7 +68,9 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
           padding: 24,
         }}
       >
-        <div style={{ fontSize: 13, color: 'var(--alarm)' }}>Не читаются логи {broken}</div>
+        <div style={{ fontSize: 13, color: 'var(--alarm)' }}>
+          {t('popup.brokenLogs', { names: broken })}
+        </div>
         {problems.map((problem) => (
           <div
             key={`${problem.provider}-${problem.path}`}
@@ -106,7 +108,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
               cursor: 'pointer',
             }}
           >
-            Указать путь
+            {t('popup.setPath')}
           </button>
           <button
             type="button"
@@ -124,7 +126,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
               cursor: 'pointer',
             }}
           >
-            Повторить
+            {t('popup.retry')}
           </button>
         </div>
       </div>

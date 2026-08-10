@@ -1,6 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import type { TaskRow } from '@agentmeter/ipc'
-import { clock, formatTokens } from '../format.ts'
+import { clock, formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 import { span } from '../time.ts'
 
@@ -53,7 +53,7 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
                 aria-hidden="true"
                 style={{ width: 14, height: 1, background: 'var(--tx3)', flex: 'none' }}
               />
-              Без названия
+              {t('card.untitled')}
             </span>
             <span
               style={{
@@ -66,7 +66,7 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
                 opacity: 0.8,
               }}
             >
-              первый промпт: «{task.firstPrompt ?? ''}»
+              {t('today.firstPrompt', { prompt: task.firstPrompt ?? '' })}
             </span>
           </>
         ) : (

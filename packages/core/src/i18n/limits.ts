@@ -41,6 +41,13 @@ export const LIMITS = {
   'window.tabBreakdown': 14,
   'window.tabHistory': 14,
   'window.tabSettings': 14,
+  // Шапка ленты (строка 614 макета): колонки шириной 118/84/96/92 px, кегль
+  // 10 px с разрядкой 0.1em — 6 px на знак моноширинного плюс пиксель разрядки.
+  // Колонка «Задача» занимает остаток ширины и потолка не имеет.
+  'today.columnProject': 16,
+  'today.columnStarted': 12,
+  'today.columnRequests': 13,
+  'today.columnTokens': 13,
   // Заголовки разделов карточки — одна строка над блоком, кегль 10 px
   // с разрядкой 0.14em, то есть символ шире обычного.
   'card.timeline': 46,

@@ -147,7 +147,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
                 color: 'var(--tx3)',
               }}
             >
-              ≈ оценка
+              {t('popup.estimate')}
             </span>
           }
         />

@@ -80,7 +80,7 @@ export function TaskCardHeader({ card }: { card: TaskCardData }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {Math.round(card.dayShare * 100)}% дневного расхода
+          {t('card.dayShare', { percent: Math.round(card.dayShare * 100) })}
         </span>
       </div>
     </div>

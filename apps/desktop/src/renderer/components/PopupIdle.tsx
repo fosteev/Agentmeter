@@ -35,9 +35,24 @@ function caption(window: LimitReportRow, at: number): string {
   return t('limit.idleWindow', { span: span(Math.max(0, window.resetsAt - at)) })
 }
 
+/**
+ * Метка выделенного куска внутри переведённой фразы.
+ *
+ * Фраза «Никого. Последний — Codex · troy, 18 мин назад» переводится **целиком**
+ * и одним ключом, хотя середина в макете выделена цветом. Разрежь её на «до» и
+ * «после» двумя ключами — и порядок слов задавала бы разметка, а не язык.
+ * Служебный символ в тексте каталога не встречается, поэтому разрез однозначен.
+ */
+const MARK = '\u0000'
+
 export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
   const { at, lastAgent, limits, today } = snapshot
   if (lastAgent === undefined) return null
+
+  const [beforeAgent = '', afterAgent = ''] = t('popup.idleLast', {
+    agent: MARK,
+    ago: ago(at - lastAgent.endedAt),
+  }).split(MARK)
 
   return (
     <div
@@ -67,11 +82,11 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
           }}
         />
         <div style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
-          Никого. Последний —{' '}
+          {beforeAgent}
           <span style={{ color: 'var(--tx)' }}>
             {PROVIDER[lastAgent.provider]} · {lastAgent.project}
           </span>
-          , {ago(at - lastAgent.endedAt)}
+          {afterAgent}
         </div>
       </div>
 

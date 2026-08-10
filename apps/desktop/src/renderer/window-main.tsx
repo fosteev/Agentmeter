@@ -13,7 +13,7 @@ import { TodayTab } from './components/TodayTab.tsx'
 import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
-import { setLocale } from './format.ts'
+import { setLocale, t } from './format.ts'
 
 function useTheme(): void {
   useEffect(() => {
@@ -41,7 +41,7 @@ export function tabPlaceholder(tab: WindowTab): ReactElement {
         fontSize: 13,
       }}
     >
-      этот экран появится в {stage}
+      {t('window.placeholder', { stage })}
     </div>
   )
 }

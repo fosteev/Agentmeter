@@ -58,7 +58,7 @@ export function DaySummary({ report }: DaySummaryProps) {
             color: 'var(--tx3)',
           }}
         >
-          токенов
+          {t('today.tokensWord')}
         </span>
       </div>
     </div>

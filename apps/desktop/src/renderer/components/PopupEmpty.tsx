@@ -53,9 +53,9 @@ export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
             <div key={bar} style={{ width: 6, height: 6, background: 'var(--tx3)' }} />
           ))}
         </div>
-        <div style={{ fontSize: 13 }}>Агенты ещё не запускались</div>
+        <div style={{ fontSize: 13 }}>{t('popup.neverRan')}</div>
         <div style={{ fontSize: 12, color: 'var(--tx2)', lineHeight: 1.5 }}>
-          Запустите Claude Code или Codex — Agentmeter подхватит сессию сам, за пару секунд.
+          {t('popup.neverRanHint')}
         </div>
       </div>
 

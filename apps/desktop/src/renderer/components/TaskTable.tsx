@@ -4,6 +4,7 @@ import type {
   TaskCard as TaskCardData,
   TaskRow,
 } from '@agentmeter/ipc'
+import { t } from '../format.ts'
 import { FoldedTail } from './FoldedTail.tsx'
 import { TaskCard } from './TaskCard.tsx'
 import { TaskLine } from './TaskLine.tsx'
@@ -90,11 +91,11 @@ export function TaskTable({
           color: 'var(--tx3)',
         }}
       >
-        <div>Задача</div>
-        <div>Проект · ветка</div>
-        <div>Начало</div>
-        <div style={{ textAlign: 'right' }}>Запросы</div>
-        <div style={{ textAlign: 'right' }}>Токены</div>
+        <div>{t('today.columnTask')}</div>
+        <div>{t('today.columnProject')}</div>
+        <div>{t('today.columnStarted')}</div>
+        <div style={{ textAlign: 'right' }}>{t('today.columnRequests')}</div>
+        <div style={{ textAlign: 'right' }}>{t('today.columnTokens')}</div>
       </div>
       <div
         style={{

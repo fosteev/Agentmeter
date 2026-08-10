@@ -73,7 +73,7 @@ export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIn
           padding: 24,
         }}
       >
-        <div style={{ fontSize: 13 }}>Первичное индексирование</div>
+        <div style={{ fontSize: 13 }}>{t('popup.indexing')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           <div
             style={{
@@ -96,13 +96,16 @@ export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIn
             }}
           >
             <span>
-              {megabytes(progress.bytesDone)} / {megabytes(progress.bytesTotal)} МБ
+              {t('popup.megabytes', {
+                done: megabytes(progress.bytesDone),
+                total: megabytes(progress.bytesTotal),
+              })}
             </span>
             <span>{eta}</span>
           </div>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--tx3)', lineHeight: 1.5 }}>
-          Читаем только локальные логи. Сегодняшний день уже доступен — история дособерётся в фоне.
+          {t('popup.indexingHint')}
         </div>
       </div>
 
