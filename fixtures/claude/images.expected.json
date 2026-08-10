@@ -97,7 +97,13 @@
           "resultBytes": 8279,
           "marginalTokens": 3743,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/e/lor/lorem /lorem i/lorem ipsum dolor sit ame",
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -205,7 +211,13 @@
           "resultBytes": 29380,
           "marginalTokens": 159,
           "marginalBasis": "measured",
-          "hasImage": true
+          "hasImage": true,
+          "files": [
+            {
+              "path": "/proj/g",
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -268,7 +280,13 @@
           "resultBytes": 404,
           "marginalTokens": 135,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/e/lor/lorem /lorem ips/lorem ipsu",
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -322,7 +340,13 @@
           "resultBytes": 3433,
           "marginalTokens": 1032,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/e/lor/lor/lorem ip",
+              "action": "read"
+            }
+          ]
         }
       ]
     },

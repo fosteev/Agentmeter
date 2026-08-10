@@ -170,7 +170,29 @@
           "resultBytes": 177,
           "marginalTokens": 66,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/h/lorem ipsum dolo/src/handlers.ts",
+              "action": "write"
+            },
+            {
+              "path": "/proj/h/lorem ipsum dolo/src/retry.ts",
+              "action": "write"
+            },
+            {
+              "path": "/proj/h/lorem ipsum dolo/src/legacy.ts",
+              "action": "write"
+            },
+            {
+              "path": "/proj/h/lorem ipsum dolo/src/history.ts",
+              "action": "write"
+            },
+            {
+              "path": "/proj/shared/config.yaml",
+              "action": "write"
+            }
+          ]
         }
       ]
     },

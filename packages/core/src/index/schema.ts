@@ -17,7 +17,7 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
@@ -113,6 +113,32 @@ CREATE TABLE IF NOT EXISTS tool_calls (
 
 CREATE INDEX IF NOT EXISTS tool_calls_name   ON tool_calls (name);
 CREATE INDEX IF NOT EXISTS tool_calls_server ON tool_calls (server) WHERE server IS NOT NULL;
+
+-- Файлы, которых коснулся вызов: путь плюс что с ним сделали (3.4).
+--
+-- Отдельная таблица, а не колонка в tool_calls, по одной причине: один
+-- apply_patch правит несколько файлов сразу, и в колонку влез бы только
+-- первый — молча, потому что «путь у вызова есть» выглядело бы правдой.
+--
+-- Путь лежит как его назвал источник. Приведение к виду «относительно проекта»
+-- живёт в запросе: правило показа поменяется скорее, чем логи, а переиндексация
+-- ради оформления — это перечитывание 570 МБ.
+CREATE TABLE IF NOT EXISTS tool_files (
+  session_id TEXT    NOT NULL,
+  seq        INTEGER NOT NULL,
+  idx        INTEGER NOT NULL,
+  path       TEXT    NOT NULL,
+  -- read | write. Одинаково значит у обоих провайдеров только write: у Codex
+  -- чтение идёт шеллом и в лог структурой не попадает вовсе (sources/files.ts).
+  action     TEXT    NOT NULL,
+  -- Путь в ключе: патч, дважды назвавший один файл (Update File + Move to
+  -- обратно), — это один затронутый файл, а не два.
+  PRIMARY KEY (session_id, seq, idx, path),
+  FOREIGN KEY (session_id, seq, idx) REFERENCES tool_calls (session_id, seq, idx) ON DELETE CASCADE
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS tool_files_session ON tool_files (session_id, action);
+CREATE INDEX IF NOT EXISTS tool_files_path    ON tool_files (path);
 
 -- Наблюдения лимита из логов Codex: по строке на слот записи token_count.
 -- В индексе лежит вход сборки, а не её результат, и вот почему: окно живёт
@@ -218,6 +244,15 @@ ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
     // выглядела бы как «лимитов нет» — ровно то враньё, против которого весь
     // продукт. Поэтому единственный честный путь — перечитать логи (правило 3).
     version: 4,
+    rebuild: true,
+  },
+  {
+    // Появилась `tool_files` (3.4). ALTER-ом её не наполнить: пути лежат только
+    // в логах, а старая база помнит эти файлы разобранными и дочитывать их не
+    // станет — таблица осталась бы пустой навсегда. Пустая при этом читается
+    // как «задача не тронула ни одного файла», то есть та же ложь, что в
+    // миграции 4. Перечитывание стоит 2.8 с холодного прохода.
+    version: 5,
     rebuild: true,
   },
 ]

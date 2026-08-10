@@ -2,13 +2,19 @@
 
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { Provider, TaskRow as TaskRowData } from '@agentmeter/core'
-import type { DayReport, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
+import type {
+  DayReport,
+  TaskCard as TaskCardData,
+  TodayFilter,
+  TraySnapshot,
+} from '@agentmeter/ipc'
 import emptyRaw from '../../../../fixtures/popup/empty.json?raw'
 import errorRaw from '../../../../fixtures/popup/error.json?raw'
 import indexingRaw from '../../../../fixtures/popup/indexing.json?raw'
 import nobodyRaw from '../../../../fixtures/popup/nobody.json?raw'
 import snapshotRaw from '../../../../fixtures/popup/snapshot.json?raw'
 import todayRaw from '../../../../fixtures/window/today.json?raw'
+import taskRaw from '../../../../fixtures/window/task.json?raw'
 import './tokens.css'
 import { AgentRow } from './components/AgentRow.tsx'
 import { Popup } from './components/Popup.tsx'
@@ -18,6 +24,8 @@ import { BreakdownRow } from './components/BreakdownRow.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
 import { TodayTab } from './components/TodayTab.tsx'
+import { TodaySide } from './components/TodaySide.tsx'
+import { TaskCard } from './components/TaskCard.tsx'
 
 // Витрина раздела 0: токены, четыре компонента во всех состояниях и обеих
 // темах. Это приёмочный лист — Electron-окно и бандлер поднимаются в 2.5,
@@ -488,6 +496,7 @@ const POPUPS: Array<{ title: string; snapshot: TraySnapshot }> = [
 
 const WINDOW_SNAPSHOT = JSON.parse(snapshotRaw) as TraySnapshot
 const TODAY_REPORT = JSON.parse(todayRaw) as DayReport
+const TASK_CARD = JSON.parse(taskRaw) as TaskCardData
 
 function PopupCards() {
   return (
@@ -527,7 +536,10 @@ function WindowCard() {
     >
       <Window snapshot={WINDOW_SNAPSHOT} activeTab={tab} onTabChange={setTab}>
         {tab === 'today' ? (
-          <TodayTab report={TODAY_REPORT} filter={filter} onFilterChange={setFilter} />
+          <>
+            <TodayTab report={TODAY_REPORT} filter={filter} onFilterChange={setFilter} />
+            <TodaySide report={TODAY_REPORT} />
+          </>
         ) : (
           <div
             style={{
@@ -619,7 +631,12 @@ export function Gallery() {
         >
           Главное окно · лента «Сегодня»
         </div>
-        <WindowCard />
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+          <WindowCard />
+          <div style={{ width: 900, flex: 'none' }}>
+            <TaskCard card={TASK_CARD} />
+          </div>
+        </div>
       </div>
     </div>
   )

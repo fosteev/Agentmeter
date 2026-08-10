@@ -156,6 +156,22 @@ function insertToolCall(db: Db, request: Request, tool: ToolCall, index: number)
     tool.marginalBasis,
     tool.hasImage ? 1 : 0,
   )
+
+  // `OR IGNORE`, а не `OR REPLACE`: тот же путь в том же вызове — это один
+  // затронутый файл, и второе действие над ним ничего не добавляет. Замена
+  // молча переписала бы `action`, то есть чтение превратилось бы в правку или
+  // наоборот в зависимости от порядка строк патча.
+  for (const file of tool.files ?? []) {
+    db.run(
+      `INSERT OR IGNORE INTO tool_files (session_id, seq, idx, path, action)
+       VALUES (?, ?, ?, ?, ?)`,
+      request.sessionId,
+      request.seq,
+      index,
+      file.path,
+      file.action,
+    )
+  }
 }
 
 function insertDiagnostics(

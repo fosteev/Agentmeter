@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Config } from '@agentmeter/core'
-import type { DayReport, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
+import type { DayReport, TaskCard, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
 // Границы дня — из ядра, тем же кодом, что у трея и CLI. Своя копия правила
 // здесь стояла и была верной; опасна не она, а то, что дважды в год день
 // длится 23 или 25 часов, и разойтись две копии могут ровно в этот день —
@@ -10,6 +10,7 @@ import type { DayReport, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
 import { dayRange } from '@agentmeter/core/day'
 import './tokens.css'
 import { TodayTab } from './components/TodayTab.tsx'
+import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
 import { setLocale } from './format.ts'
@@ -65,15 +66,38 @@ export function requestToday(
   return getToday(filter)
 }
 
+type TaskGetter = (arg: { sessionId: string }) => Promise<TaskCard | null>
+
+export function requestTask(
+  sessionId: string,
+  getTask: TaskGetter = window.agentmeter['task:get'],
+): Promise<TaskCard | null> {
+  return getTask({ sessionId })
+}
+
+export function createTaskRequestGuard(
+  getTask: TaskGetter = window.agentmeter['task:get'],
+): (sessionId: string | null) => Promise<TaskCard | null | undefined> {
+  let latest = 0
+  return async (sessionId) => {
+    const request = ++latest
+    if (sessionId === null) return null
+    const card = await requestTask(sessionId, getTask)
+    return request === latest ? card : undefined
+  }
+}
+
 export function WindowApp() {
   const [snapshot, setSnapshot] = useState<TraySnapshot | null>(null)
   const [config, setConfig] = useState<Config | null>(null)
   const [todayFilter, setTodayFilter] = useState<TodayFilter | null>(null)
   const [today, setToday] = useState<DayReport | null>(null)
+  const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
   const [tab, setTab] = useState<WindowTab>(() =>
     initialTab(typeof location === 'undefined' ? '' : location.search),
   )
   const todayRequest = useRef(0)
+  const taskRequest = useRef(createTaskRequestGuard())
   useTheme()
 
   useEffect(() => {
@@ -112,11 +136,27 @@ export function WindowApp() {
     })
   }, [tab, todayFilter])
 
+  const handleTaskToggle = (sessionId: string): void => {
+    setTaskCard(null)
+    void taskRequest.current(sessionId).then((card) => {
+      if (card !== undefined) setTaskCard(card)
+    })
+  }
+
   if (snapshot === null || config === null) return null
   return (
     <Window snapshot={snapshot} activeTab={tab} onTabChange={setTab}>
       {tab === 'today' && todayFilter !== null ? (
-        <TodayTab report={today} filter={todayFilter} onFilterChange={setTodayFilter} />
+        <>
+          <TodayTab
+            report={today}
+            filter={todayFilter}
+            onFilterChange={setTodayFilter}
+            taskCard={taskCard}
+            onTaskToggle={handleTaskToggle}
+          />
+          <TodaySide report={today} />
+        </>
       ) : (
         tabPlaceholder(tab)
       )}

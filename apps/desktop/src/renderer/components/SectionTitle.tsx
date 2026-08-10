@@ -12,7 +12,7 @@ import type { ReactNode } from 'react'
 export interface SectionTitleProps {
   title: string
   /** Готовые внутренние поля, например «14px 14px 4px». Числа — из макета. */
-  padding: string
+  padding?: string
   /** Правая часть: счётчик, подпись про точность. */
   aside?: ReactNode
 }

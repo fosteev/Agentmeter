@@ -1,6 +1,8 @@
 export { breakdownReport } from './breakdown.ts'
 export { dayRange } from './day.ts'
 export { doctorReport } from './doctor.ts'
+export { changedFiles } from './files.ts'
+export type { ChangedFile } from './files.ts'
 export { limitsReport } from './limits.ts'
 export { daySplits } from './splits.ts'
 export type { HourSplit, ProjectSplit, ProviderSlice } from './splits.ts'

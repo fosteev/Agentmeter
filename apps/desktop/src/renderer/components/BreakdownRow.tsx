@@ -1,5 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import { formatTokens } from '../format.ts'
+import { hatch } from '../paint.ts'
 
 // Элемент развёртки. Два вида из строк 191–202 макета:
 // разовый расход — сплошная заливка цветом провайдера (по умолчанию codex);
@@ -14,6 +15,11 @@ export interface BreakdownRowProps {
   max: number
   persistent: boolean
   accent?: Provider
+  variant?: 'breakdown' | 'task'
+  calls?: number
+  confidence?: 'exact' | 'estimate' | 'reconstructed'
+  caveat?: string
+  note?: string
 }
 
 const ACCENT: Record<Provider, string> = {
@@ -21,30 +27,42 @@ const ACCENT: Record<Provider, string> = {
   codex: 'var(--codex)',
 }
 
-const HATCH = `repeating-linear-gradient(115deg, var(--warn) 0 3px, color-mix(in oklch, var(--warn) 30%, transparent) 3px 7px)`
-
 export function BreakdownRow({
   label,
   tokens,
   max,
   persistent,
   accent = 'codex',
+  variant = 'breakdown',
+  calls,
+  confidence = 'exact',
+  caveat,
+  note,
 }: BreakdownRowProps) {
   const pct = max > 0 ? Math.min(100, (tokens / max) * 100) : 0
+  const task = variant === 'task'
+  const approximate = confidence !== 'exact'
+  const barColor = note === undefined ? ACCENT[accent] : 'var(--alarm)'
+  const title = [note, approximate ? caveat : undefined].filter(Boolean).join('\n') || undefined
 
   return (
     <div
+      data-breakdown-row={label}
+      title={title}
       style={{
         display: 'grid',
-        gridTemplateColumns: '96px 1fr 64px',
+        gridTemplateColumns: task ? '104px 1fr 56px' : '96px 1fr 64px',
         gap: 10,
         alignItems: 'center',
       }}
     >
-      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>{label}</span>
+      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: task ? 11.5 : 12 }}>
+        {label}
+        {task && calls !== undefined ? <span style={{ color: 'var(--tx3)' }}> {calls}</span> : null}
+      </span>
       <div
         style={{
-          height: 10,
+          height: task ? 9 : 10,
           borderRadius: 2,
           background: 'var(--s2)',
           overflow: 'hidden',
@@ -57,7 +75,11 @@ export function BreakdownRow({
           style={{
             width: `${pct}%`,
             height: '100%',
-            background: persistent ? HATCH : ACCENT[accent],
+            background: persistent
+              ? hatch('var(--warn)')
+              : approximate
+                ? hatch(barColor)
+                : barColor,
           }}
         />
       </div>
@@ -66,10 +88,11 @@ export function BreakdownRow({
           fontFamily: "'IBM Plex Mono', monospace",
           fontSize: 11,
           textAlign: 'right',
-          color: persistent ? 'var(--tx2)' : 'var(--tx)',
+          color: note !== undefined ? 'var(--alarm)' : persistent ? 'var(--tx2)' : 'var(--tx)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
+        {approximate ? '≈' : ''}
         {formatTokens(tokens)}
       </span>
     </div>

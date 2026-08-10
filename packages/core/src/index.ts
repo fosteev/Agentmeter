@@ -7,6 +7,7 @@ export type {
   Session,
   Request,
   ToolCall,
+  ToolFile,
   ToolKind,
   LiveSession,
   LimitWindow,

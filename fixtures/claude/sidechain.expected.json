@@ -33,7 +33,13 @@
           "resultBytes": 105,
           "marginalTokens": 36,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/c/lorem /lorem ips",
+              "action": "read"
+            }
+          ]
         },
         {
           "id": "toolu_014TeHgdrkkBRXL6Z8h53ATy",

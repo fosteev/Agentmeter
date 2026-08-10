@@ -73,7 +73,21 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
     [413, 420],
   ],
   'TaskRow.tsx': [[186, 189]],
-  'BreakdownRow.tsx': [[192, 200]],
+  'BreakdownRow.tsx': [
+    [192, 200],
+    [887, 891],
+  ],
+  // Рама, сетка и **обе колонки** нижней половины: поля колонок написаны здесь,
+  // здесь же они и сверяются. Список инструментов — оттуда же (884–892).
+  'TaskCard.tsx': [
+    [836, 836],
+    [866, 867],
+    [884, 892],
+  ],
+  'TaskCardHeader.tsx': [[838, 848]],
+  'TaskTimeline.tsx': [[851, 863]],
+  'TokenSplit.tsx': [[867, 881]],
+  'TaskFiles.tsx': [[893, 901]],
   // Сборка попапа: рама, контейнер списка агентов и контейнер лимитов.
   // Заголовки разделов сюда попадают потому, что их поля приходят отсюда же
   // параметром — у списка 14, у лимитов 16, и оба числа из макета.
@@ -123,6 +137,12 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
     [647, 651],
   ],
   'FoldedTail.tsx': [[731, 731]],
+  'TodaySide.tsx': [
+    [735, 736],
+    [752, 754],
+  ],
+  'HourChart.tsx': [[738, 749]],
+  'ProjectBars.tsx': [[756, 761]],
 }
 
 /**
@@ -210,8 +230,13 @@ describe('структурные токены из строки 107 макета
 // Ловит: в компоненте появился padding:7 или margin:6 — отступ, которого нет
 // нигде в разделе 0 макета.
 describe('отступы компонентов только из значений раздела 0', () => {
+  // `[:=]`, а не `:`: отступ уезжает в компонент и свойством стиля
+  // (`padding: '9px 12px'`), и пропом (`padding="14px 14px 4px"` в `Popup.tsx`).
+  // Пока сверялось только первое, второе проходило мимо проверки вовсе — то
+  // есть у любого компонента, принимающего поля параметром, числа не сверялись
+  // ни с чем.
   const SPACING =
-    /\b(?:rowGap|columnGap|padding|margin|gap)(?:Top|Left|Right|Bottom|Inline|Block|Start|End)?\s*:\s*([^,}\n]+)/g
+    /\b(?:rowGap|columnGap|padding|margin|gap)(?:Top|Left|Right|Bottom|Inline|Block|Start|End)?\s*[:=]\s*([^,}\n]+)/g
 
   for (const { name, src } of COMPONENTS) {
     it(`${name}: padding/margin/gap из своего блока макета`, () => {

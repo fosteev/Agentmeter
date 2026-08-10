@@ -412,7 +412,13 @@
           "resultBytes": 1797,
           "marginalTokens": 839,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/d/lorem ips/lorem ip",
+              "action": "read"
+            }
+          ]
         }
       ]
     },

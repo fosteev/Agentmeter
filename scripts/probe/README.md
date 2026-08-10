@@ -13,6 +13,7 @@
 | `ground-truth-check.py` | сверка с эталоном самого Claude Code | `agentmeter verify` (1.3) |
 | `verify-live.ts` | та же сверка, но нашим парсером из `packages/core` | `agentmeter verify` (1.3) |
 | `states-live.ts` | чей ход по хвосту лога, состояния и темп | 2.2 и 2.3, закрыты |
+| `files-live.ts` | пути инструментов: доехали ли до индекса и совпали ли с логом | 3.4, пути закрыты |
 
 ```bash
 python3 scripts/probe/ground-truth-check.py            # сейчас падает — это ожидаемо

@@ -1,6 +1,7 @@
 import type { Provider } from '@agentmeter/core'
 import type { TaskRow } from '@agentmeter/ipc'
 import { clock, formatTokens } from '../format.ts'
+import { hatch } from '../paint.ts'
 import { span } from '../time.ts'
 
 export interface TaskLineProps {
@@ -15,11 +16,6 @@ const PROVIDER: Record<Provider, string> = {
 
 function estimated(task: TaskRow): boolean {
   return task.tokens.confidence !== 'exact'
-}
-
-function hatch(provider: Provider): string {
-  const color = `var(--${provider})`
-  return `repeating-linear-gradient(115deg, ${color} 0 3px, color-mix(in oklch, ${color} 32%, transparent) 3px 7px)`
 }
 
 export function TaskLine({ task, maxTokens }: TaskLineProps) {
@@ -172,7 +168,9 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
             style={{
               width: `${width}%`,
               height: '100%',
-              background: approximate ? hatch(task.provider) : `var(--${task.provider})`,
+              background: approximate
+                ? hatch(`var(--${task.provider})`)
+                : `var(--${task.provider})`,
             }}
           />
         </div>

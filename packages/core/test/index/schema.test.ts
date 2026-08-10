@@ -81,7 +81,7 @@ describe('схема индекса', () => {
   // Версия 4 — первая миграция с rebuild, и до неё эта ветка openDb не
   // выполнялась ни разу. Проверяется именно она: снос базы под открытым
   // соединением, с включёнными внешними ключами и данными во всех таблицах.
-  it.each([1, 2, 3])('индекс версии %i пересобирается, а не чинится по кусочкам', (version) => {
+  it.each([1, 2, 3, 4])('индекс версии %i пересобирается, а не чинится по кусочкам', (version) => {
     const first = openDb(dbPath())
     seedMigrationData(first.db)
     first.db.run('UPDATE meta SET value = ? WHERE key = ?', String(version), 'schema_version')
@@ -94,7 +94,7 @@ describe('схема индекса', () => {
     expect(
       db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
     ).toEqual({ value: String(SCHEMA_VERSION) })
-    for (const table of ['sources', 'sessions', 'requests', 'tool_calls', 'diagnostics']) {
+    for (const table of ['sources', 'sessions', 'requests', 'tool_calls', 'tool_files', 'diagnostics']) {
       expect(db.all(`SELECT * FROM ${table}`), table).toHaveLength(0)
     }
     // Пересборка гасит внешние ключи, чтобы снести таблицы в любом порядке.
@@ -193,6 +193,10 @@ function seedMigrationData(db: ReturnType<typeof openDb>['db']): void {
     `INSERT INTO tool_calls (
        session_id, seq, idx, name, kind, marginal_tokens, marginal_basis
      ) VALUES ('migration-session', 0, 0, 'Read', 'builtin', 13, 'measured')`,
+  )
+  db.run(
+    `INSERT INTO tool_files (session_id, seq, idx, path, action)
+     VALUES ('migration-session', 0, 0, '/proj/a/migration.ts', 'read')`,
   )
   db.run(
     `INSERT INTO diagnostics (source_path, kind, detail, count, cli_version, seen_at)

@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { attributeMarginal } from '../../attribution/marginal.ts'
 import { attributePrefix } from '../../attribution/prefix.ts'
+import { claudeToolFiles } from '../files.ts'
 import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
 import type {
@@ -275,6 +276,7 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
     const name = stringField(block, 'name')
     if (!id || !name || draft.toolIds.has(id)) continue
     draft.toolIds.add(id)
+    const files = claudeToolFiles(name, block.input)
     draft.tools.push({
       id,
       name,
@@ -283,6 +285,7 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
       marginalTokens: 0,
       marginalBasis: 'unknown',
       hasImage: false,
+      ...(files === undefined ? {} : { files }),
     })
   }
 }

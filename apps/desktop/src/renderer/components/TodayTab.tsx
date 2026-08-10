@@ -1,4 +1,4 @@
-import type { DayReport, TodayFilter } from '@agentmeter/ipc'
+import type { DayReport, TaskCard, TodayFilter } from '@agentmeter/ipc'
 import { DaySummary } from './DaySummary.tsx'
 import { TaskTable } from './TaskTable.tsx'
 import { TodayFilters } from './TodayFilters.tsx'
@@ -7,6 +7,8 @@ export interface TodayTabProps {
   report: DayReport | null
   filter: TodayFilter
   onFilterChange: (filter: TodayFilter) => void
+  taskCard?: TaskCard | null
+  onTaskToggle?: (sessionId: string) => void
 }
 
 function emptyMessage(report: DayReport): string | null {
@@ -16,7 +18,13 @@ function emptyMessage(report: DayReport): string | null {
   return null
 }
 
-export function TodayTab({ report, filter, onFilterChange }: TodayTabProps) {
+export function TodayTab({
+  report,
+  filter,
+  onFilterChange,
+  taskCard = null,
+  onTaskToggle = () => undefined,
+}: TodayTabProps) {
   const message = report === null ? 'Загружаем ленту…' : emptyMessage(report)
 
   return (
@@ -37,7 +45,12 @@ export function TodayTab({ report, filter, onFilterChange }: TodayTabProps) {
       {report === null || report.emptyIndex ? null : <DaySummary report={report} />}
       <TodayFilters filter={filter} onChange={onFilterChange} />
       {message === null ? (
-        <TaskTable tasks={report!.tasks} folded={report!.folded} />
+        <TaskTable
+          tasks={report!.tasks}
+          folded={report!.folded}
+          taskCard={taskCard}
+          onToggle={onTaskToggle}
+        />
       ) : (
         <div
           role="status"

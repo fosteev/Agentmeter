@@ -173,7 +173,13 @@
           "resultBytes": 768,
           "marginalTokens": 3421,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/e/lor/lorem ip/lore/lorem /lorem ips/lorem ipsum dolor sit am",
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -200,7 +206,13 @@
           "resultBytes": 2363,
           "marginalTokens": 1002,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "files": [
+            {
+              "path": "/proj/e/lor/lorem ip/lorem i/lorem ipsum /lorem ipsum dolor sit",
+              "action": "read"
+            }
+          ]
         }
       ]
     },

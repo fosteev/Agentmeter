@@ -2,6 +2,7 @@ import { basename, extname, resolve } from 'node:path'
 import { attributeMarginal } from '../../attribution/marginal.ts'
 import { attributePrefix } from '../../attribution/prefix.ts'
 import { appendLimitObservations } from './limits.ts'
+import { codexToolFiles } from '../files.ts'
 import { readJsonlLines } from '../jsonl.ts'
 import { emptyDiagnostics } from '../types.ts'
 import type {
@@ -12,6 +13,7 @@ import type {
   Request,
   Session,
   ToolCall,
+  ToolFile,
   ToolKind,
   LimitObservation,
 } from '../types.ts'
@@ -28,6 +30,7 @@ interface PendingTool {
   mcpTool?: string
   /** Тул, чью природу видно из самой записи, а не из имени: веб-поиск. */
   kind?: ToolKind
+  files?: ToolFile[]
 }
 
 /** Накопительный итог сессии. Его неподвижность — признак повторной записи. */
@@ -335,6 +338,12 @@ function consumeToolCall(state: ParseState, payload: JsonObject): void {
   if (!id || !name) return
   const tool = getOrCreatePendingTool(state, id)
   tool.name ??= name
+  // `custom_tool_call` кладёт вход в `input` строкой, `function_call` — в
+  // `arguments` строкой JSON. Разбирает их `codexToolFiles`, здесь только
+  // выбор поля: у патча одно, у остальных другое, и перепутать их — потерять
+  // все правки разом.
+  const files = codexToolFiles(name, payload.input ?? payload.arguments)
+  if (files !== undefined) tool.files = files
 }
 
 function consumeToolOutput(state: ParseState, payload: JsonObject): void {
@@ -450,6 +459,7 @@ function pendingTools(state: ParseState): ToolCall[] {
       marginalTokens: 0,
       marginalBasis: 'unknown',
       hasImage: tool.name === 'view_image' && tool.resultBytes > 0,
+      ...(tool.files === undefined ? {} : { files: tool.files }),
     }))
   for (const tool of tools) state.emittedTools.set(tool.id, tool)
   return tools

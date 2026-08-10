@@ -1,15 +1,77 @@
-import type { FoldedTail as FoldedTailData, TaskRow } from '@agentmeter/ipc'
+import { useState } from 'react'
+import type {
+  FoldedTail as FoldedTailData,
+  TaskCard as TaskCardData,
+  TaskRow,
+} from '@agentmeter/ipc'
 import { FoldedTail } from './FoldedTail.tsx'
+import { TaskCard } from './TaskCard.tsx'
 import { TaskLine } from './TaskLine.tsx'
 
 export interface TaskTableProps {
   tasks: TaskRow[]
   folded: FoldedTailData | null
+  taskCard?: TaskCardData | null
+  onToggle?: (sessionId: string) => void
 }
 
-export function TaskTable({ tasks, folded }: TaskTableProps) {
+export function toggleTask(
+  current: string | null,
+  sessionId: string,
+  onToggle: (sessionId: string) => void,
+): string | null {
+  if (current === sessionId) return null
+  onToggle(sessionId)
+  return sessionId
+}
+
+export function TaskRows({
+  tasks,
+  maxTokens,
+  expandedSessionId,
+  taskCard,
+  onToggle,
+}: {
+  tasks: TaskRow[]
+  maxTokens: number
+  expandedSessionId: string | null
+  taskCard: TaskCardData | null
+  onToggle: (sessionId: string) => void
+}) {
+  return tasks.map((task) => (
+    <div key={task.sessionId} data-task-entry={task.sessionId}>
+      <div
+        data-task-trigger={task.sessionId}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expandedSessionId === task.sessionId}
+        onClick={() => onToggle(task.sessionId)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') onToggle(task.sessionId)
+        }}
+      >
+        <TaskLine task={task} maxTokens={maxTokens} />
+      </div>
+      {expandedSessionId === task.sessionId && taskCard?.task.sessionId === task.sessionId ? (
+        <TaskCard card={taskCard} />
+      ) : null}
+    </div>
+  ))
+}
+
+export function TaskTable({
+  tasks,
+  folded,
+  taskCard = null,
+  onToggle = () => undefined,
+}: TaskTableProps) {
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
   const visible = folded === null ? tasks : tasks.slice(0, folded.from)
   const maxTokens = Math.max(0, ...tasks.map((task) => task.tokens.value))
+
+  const handleToggle = (sessionId: string): void => {
+    setExpandedSessionId((current) => toggleTask(current, sessionId, onToggle))
+  }
 
   return (
     <>
@@ -37,16 +99,20 @@ export function TaskTable({ tasks, folded }: TaskTableProps) {
       <div
         style={{
           flex: 1,
-          overflow: 'hidden',
+          overflow: 'auto',
           display: 'flex',
           flexDirection: 'column',
           padding: '4px 12px',
           minHeight: 0,
         }}
       >
-        {visible.map((task) => (
-          <TaskLine key={task.sessionId} task={task} maxTokens={maxTokens} />
-        ))}
+        <TaskRows
+          tasks={visible}
+          maxTokens={maxTokens}
+          expandedSessionId={expandedSessionId}
+          taskCard={taskCard}
+          onToggle={handleToggle}
+        />
         {folded === null ? null : (
           <FoldedTail count={tasks.length - folded.from} belowTokens={folded.belowTokens} />
         )}
