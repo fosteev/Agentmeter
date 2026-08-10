@@ -150,6 +150,24 @@ describe('лента «Сегодня» на контрактных фиксту
   })
 
   /**
+   * Ловит подмену ветки ключом (3.7): `GARM-664.zigbee` и `GARM-664.ui` —
+   * разная работа по одному тикету, и оставь строка один ключ, две задачи
+   * стали бы неразличимыми. Ключ при этом обязан быть виден отдельно.
+   */
+  it('строка показывает ветку целиком, а ключ тикета выделен внутри неё', () => {
+    const [task, ...rest] = today.tasks
+    const tagged = { ...task!, branch: 'GARM-664.zigbee', ticket: 'GARM-664' }
+
+    const html = renderToStaticMarkup(<TaskTable tasks={[tagged, ...rest]} folded={null} />)
+    const line = row(html, tagged.sessionId)
+
+    expect(line).toContain('data-ticket="GARM-664"')
+    expect(line).toContain('.zigbee')
+    // Строка без ключа выделять нечего — и она этого не делает.
+    expect(row(html, rest[0]!.sessionId)).not.toContain('data-ticket')
+  })
+
+  /**
    * Ловит колонку «Запросы», в которую попали вызовы инструментов.
    *
    * Это разные величины — 276 запросов к API при 195 вызовах инструментов, — и

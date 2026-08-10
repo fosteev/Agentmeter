@@ -14,6 +14,7 @@
  */
 import type { Db } from '../index/db.ts'
 import type { Provider } from '../sources/types.ts'
+import { ticketKey } from './ticket.ts'
 import { requestFilter } from './today.ts'
 import type { DayRange, RequestScope } from './types.ts'
 
@@ -39,10 +40,26 @@ export interface ProjectSplit {
   reconstructed: number
 }
 
+/**
+ * Строка разреза «по тикетам» (3.7).
+ *
+ * Ключ приходит из имени ветки правилом `query/ticket.ts`. Сессии без ключа
+ * сюда не попадают вовсе, и это не потеря: «работа вне тикета» — не тикет, а
+ * строка с пустым именем в списке тикетов читалась бы как тикет без названия.
+ * Сколько расхода осталось за пределами разреза, видно из итога дня.
+ */
+export interface TicketSplit {
+  ticket: string
+  total: number
+  slices: ProviderSlice[]
+  reconstructed: number
+}
+
 interface SplitRow {
   ts: number
   provider: Provider
   project: string
+  branch: string | null
   total: number
   reconstructed: number
 }
@@ -51,10 +68,10 @@ export function daySplits(
   db: Db,
   range: DayRange,
   scope: RequestScope = {},
-): { hours: HourSplit[]; projects: ProjectSplit[] } {
+): { hours: HourSplit[]; projects: ProjectSplit[]; tickets: TicketSplit[] } {
   const filter = requestFilter(range, scope)
   const rows = db.all<SplitRow>(
-    `SELECT requests.ts, sessions.provider, sessions.project,
+    `SELECT requests.ts, sessions.provider, sessions.project, sessions.branch,
             requests.input + requests.output + requests.cache_write + requests.cache_read AS total,
             (requests.origin != 'log') AS reconstructed
      FROM requests
@@ -65,6 +82,10 @@ export function daySplits(
 
   const hours = new Map<number, Map<Provider, number>>()
   const projects = new Map<string, { slices: Map<Provider, number>; reconstructed: number }>()
+  // Ключ вычисляется здесь, а не в SQL: правило извлечения — измерение, и
+  // жить ему в одном месте (`query/ticket.ts`), а не двумя регулярками, из
+  // которых одна написана на диалекте SQLite.
+  const tickets = new Map<string, { slices: Map<Provider, number>; reconstructed: number }>()
 
   for (const row of rows) {
     // Час берётся из локального времени, а не из UTC: день на этом экране
@@ -82,6 +103,14 @@ export function daySplits(
     project.slices.set(row.provider, (project.slices.get(row.provider) ?? 0) + row.total)
     project.reconstructed += row.reconstructed
     projects.set(row.project, project)
+
+    const key = ticketKey(row.branch)
+    if (key !== null) {
+      const ticket = tickets.get(key) ?? { slices: new Map<Provider, number>(), reconstructed: 0 }
+      ticket.slices.set(row.provider, (ticket.slices.get(row.provider) ?? 0) + row.total)
+      ticket.reconstructed += row.reconstructed
+      tickets.set(key, ticket)
+    }
   }
 
   return {
@@ -97,6 +126,12 @@ export function daySplits(
         return { project, total: sum(slices), slices, reconstructed: value.reconstructed }
       })
       .sort((left, right) => right.total - left.total || left.project.localeCompare(right.project)),
+    tickets: [...tickets.entries()]
+      .map(([ticket, value]) => {
+        const slices = toSlices(value.slices)
+        return { ticket, total: sum(slices), slices, reconstructed: value.reconstructed }
+      })
+      .sort((left, right) => right.total - left.total || left.ticket.localeCompare(right.ticket)),
   }
 }
 

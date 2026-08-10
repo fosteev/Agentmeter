@@ -222,6 +222,46 @@ describe('buildDayReport', () => {
   })
 
   /**
+   * Ловит разрез по тикетам, появившийся из ниоткуда (3.7): на фикстурах все
+   * ветки называются `feature/one`, ключа в них нет, и блока быть не должно.
+   * Пустой список здесь означал бы обещание разреза, которого нет.
+   */
+  it('без тикетов разреза по тикетам нет вовсе', () => {
+    const report = buildDayReport(db, ALL)
+
+    expect(report.byTicket).toBeUndefined()
+    expect(report.tasks.every((task) => task.ticket === undefined)).toBe(true)
+  })
+
+  /**
+   * Ловит разрез, посчитанный не по тем сессиям, и ключ, не доехавший до
+   * строки. Ветка сеется руками: в фикстурах ключа нет ни у одной, и проверка
+   * на них была бы зелёной при любом правиле.
+   */
+  it('ключ тикета доезжает до строки, а разрез считает только его сессии', () => {
+    // Корневая сессия, а не сабагент: у ребёнка своя ветка в строку ленты не
+    // попадает — он свёрнут в родителя, и проверка мерила бы не то.
+    const [first] = db.all<{ id: string }>(
+      'SELECT id FROM sessions WHERE parent_session_id IS NULL ORDER BY started_at LIMIT 1',
+    )
+    db.run("UPDATE sessions SET branch = 'GARM-664.zigbee' WHERE id = ?", first!.id)
+
+    const report = buildDayReport(db, ALL)
+    const tagged = report.tasks.find((task) => task.sessionId === first!.id)!
+    const tickets = report.byTicket!
+
+    expect(tagged.ticket).toBe('GARM-664')
+    expect(tagged.branch).toBe('GARM-664.zigbee')
+    expect(tickets).toHaveLength(1)
+    expect(tickets[0]!.ticket).toBe('GARM-664')
+    // Разрез — про свои сессии, а не про весь день: остальные ветки ключа не
+    // имеют, и их расход в него попасть не может.
+    expect(tickets[0]!.tokens.value).toBe(tagged.tokens.value)
+    expect(tickets[0]!.tokens.value).toBeLessThan(report.totals.total.value)
+    expect(report.tasks.filter((task) => task.ticket !== undefined)).toHaveLength(1)
+  })
+
+  /**
    * Ловит хвост проектов, покрашенный в чей-то цвет, и именованную строку без
    * провайдера: первое приписывает расход не тому, второе оставляет полосу
    * серой там, где ответ известен.

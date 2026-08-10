@@ -1,16 +1,30 @@
-import type { ProjectRow } from '@agentmeter/ipc'
+import type { ProjectRow, TicketRow } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 
+/**
+ * Полосы «По проектам» и «По тикетам» — один компонент на два списка (3.7).
+ *
+ * Вид у них общий (строки 756–761 макета), и вторая копия разошлась бы с первой
+ * на первой же правке ширины полосы. Различаются они ровно подписью
+ * свёрнутого хвоста: «+ 4 проекта» против «+ 4 тикетов», и это данные, а не
+ * повод для второго компонента.
+ */
 export interface ProjectBarsProps {
-  projects: ProjectRow[]
+  projects: Array<ProjectRow | TicketRow>
+  /** Что за список. От него зависит только подпись хвоста. */
+  kind?: 'project' | 'ticket'
 }
 
-export function ProjectBars({ projects }: ProjectBarsProps) {
+function name(row: ProjectRow | TicketRow): string {
+  return 'project' in row ? row.project : row.ticket
+}
+
+export function ProjectBars({ projects, kind = 'project' }: ProjectBarsProps) {
   const maximum = Math.max(0, ...projects.map((row) => row.tokens.value))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+    <div data-bars={kind} style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
       {projects.map((row, index) => {
         const folded = row.folded !== undefined
         const approximate = row.tokens.confidence !== 'exact'
@@ -19,7 +33,7 @@ export function ProjectBars({ projects }: ProjectBarsProps) {
 
         return (
           <div
-            key={folded ? `folded-${row.folded}` : `${row.project}-${index}`}
+            key={folded ? `folded-${row.folded}` : `${name(row)}-${index}`}
             data-project-row={index}
             style={{
               display: 'grid',
@@ -31,7 +45,11 @@ export function ProjectBars({ projects }: ProjectBarsProps) {
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 12, color: folded ? 'var(--tx2)' : undefined }}>
-                {folded ? t('today.projects', { count: row.folded! }) : row.project}
+                {folded
+                  ? t(kind === 'ticket' ? 'today.tickets' : 'today.projects', {
+                      count: row.folded!,
+                    })
+                  : name(row)}
               </span>
               <div
                 style={{

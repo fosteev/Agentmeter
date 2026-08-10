@@ -233,7 +233,11 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
   if (cwd && state.cwd === undefined) state.cwd = cwd
 
   const branch = stringField(record, 'gitBranch')
-  if (branch && state.branch === undefined) state.branch = branch
+  // `HEAD` — не имя ветки, а отсоединённое состояние: веткой с таким именем git
+  // быть запрещает. Claude Code пишет его у 154 сессий из 461 с веткой, и без
+  // отсева колонка «Проект · ветка» показывает «HEAD» у трети ленты, выдавая
+  // «ветка неизвестна» за ответ (3.7).
+  if (branch && branch !== 'HEAD' && state.branch === undefined) state.branch = branch
 
   const model = stringField(message, 'model') ?? state.model ?? 'unknown'
   if (!state.model && model !== 'unknown') state.model = model

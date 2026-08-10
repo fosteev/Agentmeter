@@ -189,7 +189,11 @@ function consumeSessionMeta(state: ParseState, payload: JsonObject | undefined):
 
   const git = objectField(payload, 'git')
   const branch = git ? stringField(git, 'branch') : undefined
-  if (branch) state.branch = branch
+  // То же правило, что у Claude (3.7): `HEAD` означает отсоединённое состояние,
+  // а не ветку. У Codex на живых логах такого не встретилось ни разу, но
+  // правило одно на обоих — разойдись они, один и тот же репозиторий давал бы
+  // разную колонку в зависимости от того, кто в нём работал.
+  if (branch && branch !== 'HEAD') state.branch = branch
 
   const cliVersion = stringField(payload, 'cli_version')
   if (cliVersion) {

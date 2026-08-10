@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import type { DayReport, HourBucket, ProjectRow } from '@agentmeter/ipc'
+import type { DayReport, HourBucket, ProjectRow, TicketRow } from '@agentmeter/ipc'
 import { HourChart } from '../src/renderer/components/HourChart.tsx'
 import { ProjectBars } from '../src/renderer/components/ProjectBars.tsx'
 import { TodaySide } from '../src/renderer/components/TodaySide.tsx'
@@ -210,5 +210,32 @@ describe('правая колонка вкладки «Сегодня»', () => 
     expect(html).not.toContain('data-today-side-divider=')
     expect(html).not.toContain('Расход по часам')
     expect(html).not.toContain('По проектам')
+  })
+
+  /**
+   * Ловит блок тикетов, нарисованный пустым (3.7): за большинство дней ветки
+   * ключа не несут, и заголовок «По тикетам» над пустотой обещал бы разрез,
+   * которого нет. Ловит и подпись хвоста, взятую у проектов: «+ 2 проекта» в
+   * списке тикетов — это чужое слово над своими числами.
+   */
+  it('блок тикетов появляется только при тикетах и считает свой хвост своими словами', () => {
+    const withoutTickets = renderToStaticMarkup(<TodaySide report={today} />)
+    expect(withoutTickets).not.toContain('data-today-side-block="tickets"')
+    expect(withoutTickets).not.toContain('По тикетам')
+
+    const tickets: TicketRow[] = [
+      { ticket: 'GARM-664', tokens: { value: 4_000_000, confidence: 'exact' }, provider: 'claude' },
+      { ticket: 'SC-248', tokens: { value: 1_000_000, confidence: 'exact' }, provider: 'codex' },
+      { ticket: 'GARM-573', tokens: { value: 900_000, confidence: 'exact' }, provider: 'claude' },
+      { ticket: 'GARM-625', tokens: { value: 800_000, confidence: 'exact' }, provider: 'claude' },
+      { ticket: '', tokens: { value: 300_000, confidence: 'exact' }, provider: null, folded: 2 },
+    ]
+    const html = renderToStaticMarkup(<TodaySide report={{ ...today, byTicket: tickets }} />)
+
+    expect(html).toContain('data-today-side-block="tickets"')
+    expect(html).toContain('По тикетам')
+    expect(html).toContain('GARM-664')
+    expect(html).toContain('+ 2 тикета')
+    expect(html).not.toContain('+ 2 проекта')
   })
 })

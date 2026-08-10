@@ -364,6 +364,7 @@ function taskRow(provider: Provider, title: string, total: number): TaskRowData 
     durationMs: 0,
     project: 'demo',
     branch: null,
+    ticket: null,
     model: 'demo',
     title: title.length === 0 ? null : title,
     firstPrompt: null,

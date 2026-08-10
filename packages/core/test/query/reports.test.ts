@@ -12,6 +12,7 @@ import {
   limitsReport,
   readLimitWindows,
   taskRows,
+  ticketKey,
   todayReport,
   type DayRange,
   type SourceFile,
@@ -72,6 +73,28 @@ describe('query reports', () => {
     expect(parent?.children.map((child) => child.sessionId)).toEqual(['a6bf337b0067775dd'])
     expect(sumRows(rows)).toEqual(expectedTotals)
     expect(sumRows(rows)).toEqual(todayReport(db, allTime).totals)
+  })
+
+  /**
+   * Ловит правило извлечения тикета, взятое из головы (3.7).
+   *
+   * Мера подобрана на живых логах: строгая форма даёт 9 сессий и ноль ложных
+   * срабатываний, а та же без учёта регистра объявляет тикетом ветку
+   * `refactor/phase-3-sensors`. Здесь проверяются обе стороны: что настоящие
+   * ключи находятся и что похожее на ключ ключом не считается.
+   */
+  it('ключ тикета берётся из ветки только в строгой форме', () => {
+    expect(ticketKey('GARM-802')).toBe('GARM-802')
+    expect(ticketKey('GARM-664.zigbee')).toBe('GARM-664')
+    expect(ticketKey('feature/SC-248-widget')).toBe('SC-248')
+    expect(ticketKey('SC-248.max_widget')).toBe('SC-248')
+
+    expect(ticketKey('refactor/phase-3-sensors')).toBeNull()
+    expect(ticketKey('refactor/T16-presentation-di-cleanup')).toBeNull()
+    expect(ticketKey('develop')).toBeNull()
+    expect(ticketKey('1.6.31')).toBeNull()
+    expect(ticketKey(null)).toBeNull()
+    expect(ticketKey('')).toBeNull()
   })
 
   /**

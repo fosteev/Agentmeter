@@ -81,6 +81,7 @@ export const en = {
   today: {
     byHour: 'Spend by hour',
     byProject: 'By project',
+    byTicket: 'By ticket',
     sort: 'Sort',
     sortPrefix: 'sort:',
     sortTokens: 'by spend ↓',
@@ -101,6 +102,8 @@ export const en = {
     untitled: 'untitled',
     projects_one: '+ {{count}} project',
     projects_other: '+ {{count}} projects',
+    tickets_one: '+ {{count}} ticket',
+    tickets_other: '+ {{count}} tickets',
     foldedTail_one: 'and {{count}} more task below {{tokens}} — folded',
     foldedTail_other: 'and {{count}} more tasks below {{tokens}} — folded',
     sessions_one: '{{count}} session',

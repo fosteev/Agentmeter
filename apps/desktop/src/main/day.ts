@@ -18,6 +18,7 @@ import {
   type Config,
   type RequestScope,
   type TaskRow as CoreTaskRow,
+  type TicketSplit,
   type Totals,
 } from '@agentmeter/core'
 import { measured } from './measured.ts'
@@ -29,6 +30,7 @@ import type {
   Measured,
   ProjectRow,
   TaskRow,
+  TicketRow,
   TodayFilter,
 } from '@agentmeter/ipc'
 
@@ -84,6 +86,9 @@ export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): 
     folded: foldTail(tasks, sort),
     byHour: splits.hours.map(toHourBucket),
     byProject: toProjectRows(splits.projects),
+    // Поля нет вовсе, когда тикетов не нашлось: пустой блок обещал бы разрез,
+    // которого за этот день не существует (3.7).
+    ...(splits.tickets.length === 0 ? {} : { byTicket: toTicketRows(splits.tickets) }),
     // `split` (постоянное против разового) не заполняется: модель постоянной
     // стоимости сводится в дневной итог в 4.1. Нули здесь были бы утверждением
     // «на префикс ушло ноль», и оно ложное.
@@ -123,6 +128,7 @@ export function toTaskRow(row: CoreTaskRow, privacy?: Privacy): TaskRow {
   // длины — то есть данными, которых не было.
   if (row.firstPrompt !== null && privacy?.hidePrompts !== true) task.firstPrompt = row.firstPrompt
   if (row.branch !== null) task.branch = row.branch
+  if (row.ticket !== null) task.ticket = row.ticket
   if (row.model.length > 0) task.model = row.model
   if (row.agentType !== null) task.agentType = row.agentType
   // Тем же переводом, что и родитель: строка ребёнка показывается в карточке
@@ -197,10 +203,38 @@ function toProjectRows(projects: readonly ProjectSplit[]): ProjectRow[] {
 }
 
 /**
+ * Тикеты поимённо плюс хвост одной строкой — тем же правилом, что проекты.
+ *
+ * Хвост считается здесь по той же причине: сложи его окно — и тот же расход
+ * окажется посчитан дважды, причём разойтись счёты могут молча.
+ */
+function toTicketRows(tickets: readonly TicketSplit[]): TicketRow[] {
+  const head = tickets.slice(0, KEEP_PROJECTS).map(
+    (ticket): TicketRow => ({
+      ticket: ticket.ticket,
+      tokens: measured(ticket.total, ticket.reconstructed > 0),
+      provider: dominant(ticket),
+    }),
+  )
+  const tail = tickets.slice(KEEP_PROJECTS)
+  if (tail.length === 0) return head
+  const total = tail.reduce((sum, ticket) => sum + ticket.total, 0)
+  return [
+    ...head,
+    {
+      ticket: '',
+      tokens: measured(total, tail.some((ticket) => ticket.reconstructed > 0)),
+      provider: null,
+      folded: tail.length,
+    },
+  ]
+}
+
+/**
  * Чей это проект. `null` — поровну: приписать проект одному провайдеру при
  * равных суммах значит выбрать цвет монеткой.
  */
-function dominant(project: ProjectSplit): Provider | null {
+function dominant(project: ProjectSplit | TicketSplit): Provider | null {
   const [first, second] = project.slices
   if (first === undefined) return null
   if (second !== undefined && second.total === first.total) return null

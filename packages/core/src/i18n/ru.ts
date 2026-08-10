@@ -93,6 +93,7 @@ export const ru = {
   today: {
     byHour: 'Расход по часам',
     byProject: 'По проектам',
+    byTicket: 'По тикетам',
     sort: 'Сортировка',
     sortPrefix: 'сортировка:',
     sortTokens: 'по расходу ↓',
@@ -115,6 +116,9 @@ export const ru = {
     projects_one: '+ {{count}} проект',
     projects_few: '+ {{count}} проекта',
     projects_many: '+ {{count}} проектов',
+    tickets_one: '+ {{count}} тикет',
+    tickets_few: '+ {{count}} тикета',
+    tickets_many: '+ {{count}} тикетов',
     foldedTail_one: 'и ещё {{count}} задача ниже {{tokens}} — свернуто',
     foldedTail_few: 'и ещё {{count}} задачи ниже {{tokens}} — свернуто',
     foldedTail_many: 'и ещё {{count}} задач ниже {{tokens}} — свернуто',

@@ -11,6 +11,10 @@ export interface TodaySideProps {
 export function TodaySide({ report }: TodaySideProps) {
   const showHours = report !== null && !report.emptyIndex && report.byHour.length > 0
   const showProjects = report !== null && !report.emptyIndex && report.byProject.length > 0
+  // Блока нет, когда тикетов нет: пустой список обещал бы разрез, которого за
+  // этот день не существует (3.7).
+  const tickets = report?.byTicket ?? []
+  const showTickets = report !== null && !report.emptyIndex && tickets.length > 0
 
   return (
     <aside
@@ -41,6 +45,18 @@ export function TodaySide({ report }: TodaySideProps) {
         >
           <SectionTitle title={t('today.byProject')} />
           <ProjectBars projects={report.byProject} />
+        </div>
+      ) : null}
+      {showProjects && showTickets ? (
+        <div data-today-side-divider style={{ height: 1, background: 'var(--line)' }} />
+      ) : null}
+      {showTickets ? (
+        <div
+          data-today-side-block="tickets"
+          style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <SectionTitle title={t('today.byTicket')} />
+          <ProjectBars projects={tickets} kind="ticket" />
         </div>
       ) : null}
     </aside>

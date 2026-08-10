@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Provider } from '@agentmeter/core'
 import type { TaskRow } from '@agentmeter/ipc'
 import { clock, formatTokens, t } from '../format.ts'
@@ -16,6 +17,32 @@ const PROVIDER: Record<Provider, string> = {
 
 function estimated(task: TaskRow): boolean {
   return task.tokens.confidence !== 'exact'
+}
+
+/**
+ * Ветка с выделенным ключом тикета (3.7).
+ *
+ * Показывается **вся** ветка, а не один ключ: `GARM-664.zigbee` и
+ * `GARM-664.ui` — разная работа по одному тикету, и подмена имени ключом
+ * сделала бы две строки неразличимыми. Ключ при этом виден: он ярче остатка.
+ *
+ * Место ключа ищется в строке, а не выводится заново: правило извлечения —
+ * измерение, и живёт оно в ядре (`query/ticket.ts`). Вторая регулярка здесь
+ * означала бы две модели одного и того же.
+ */
+function branchParts(task: TaskRow): ReactNode {
+  const branch = task.branch ?? ''
+  const at = task.ticket === undefined ? -1 : branch.indexOf(task.ticket)
+  if (at === -1) return branch
+  return (
+    <>
+      {branch.slice(0, at)}
+      <span data-ticket={task.ticket} style={{ color: 'var(--tx2)' }}>
+        {task.ticket}
+      </span>
+      {branch.slice(at + task.ticket!.length)}
+    </>
+  )
 }
 
 export function TaskLine({ task, maxTokens }: TaskLineProps) {
@@ -128,7 +155,7 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
             textOverflow: 'ellipsis',
           }}
         >
-          {task.branch ?? ''}
+          {branchParts(task)}
         </span>
       </div>
       <div

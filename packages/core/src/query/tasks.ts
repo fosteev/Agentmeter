@@ -10,6 +10,7 @@
  */
 import type { Db } from '../index/db.ts'
 import type { Provider } from '../sources/types.ts'
+import { ticketKey } from './ticket.ts'
 import { addTotals, emptyTotals, requestFilter } from './today.ts'
 import type { DayRange, RequestScope, TaskRow } from './types.ts'
 
@@ -83,6 +84,7 @@ export function taskRows(
         durationMs: Math.max(0, request.ended_at - request.started_at),
         project: request.project,
         branch: request.branch,
+        ticket: ticketKey(request.branch),
         model: request.session_model ?? request.model,
         title: request.title,
         firstPrompt: request.first_prompt,
@@ -162,6 +164,7 @@ function publicRow(row: TaskRow & { parentSessionId: string | null }): TaskRow {
     durationMs: row.durationMs,
     project: row.project,
     branch: row.branch,
+    ticket: row.ticket,
     model: row.model,
     title: row.title,
     firstPrompt: row.firstPrompt,
