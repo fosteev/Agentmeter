@@ -24,6 +24,14 @@ export function renderDoctor(
         sessions: formatNumber(report.reconstructedSessions, locale),
       }),
     )
+    // Строка появляется, только когда провайдер уже что-то удалил: «логов,
+    // которых нет: 0» — это не новость, а шум в отчёте, который читают ради
+    // проблем.
+    if (report.vanishedSources > 0) {
+      lines.push(
+        t('cli.vanishedSources', { sources: formatNumber(report.vanishedSources, locale) }),
+      )
+    }
   }
   lines.push(
     '',

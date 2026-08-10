@@ -19,7 +19,8 @@ export function putSource(db: Db, file: SourceFile, stat: SourceStat): void {
        size = excluded.size,
        mtime = excluded.mtime,
        offset = excluded.offset,
-       parsed_at = excluded.parsed_at`,
+       parsed_at = excluded.parsed_at,
+       vanished_at = NULL`,
     file.path,
     file.provider,
     stat.inode,
@@ -49,7 +50,28 @@ export function putSession(db: Db, result: ParseResult, file: SourceFile, stat?:
     putLimitObservations(db, file.path, result.session.provider, result.limits ?? [])
     if (stat) putSource(db, file, stat)
     db.run('UPDATE sources SET session_id = ? WHERE path = ?', result.session.id, file.path)
+    // Та же сессия, приехавшая с другого пути, забирает свою пропавшую строку с
+    // собой. Иначе переезд каталога с логами оставил бы вечный «файл, который
+    // провайдер удалил», а это счётчик, который doctor показывает человеку.
+    db.run(
+      'DELETE FROM sources WHERE session_id = ? AND path <> ? AND vanished_at IS NOT NULL',
+      result.session.id,
+      file.path,
+    )
   })
+}
+
+/**
+ * Файла больше нет на диске — но разобранное из него остаётся.
+ *
+ * Claude Code чистит свои транскрипты сам (`cleanupPeriodDays`, по умолчанию
+ * 30 дней), и после этого индекс — единственная запись о том расходе. Снеси мы
+ * данные вслед за файлом, день, в который человек работал, стал бы измеренным
+ * нулём: «логи прочитаны, запросов нет». Замер на живых логах — 92 дня внутри
+ * покрытия, 31 из них ушёл бы в такой ноль целиком (см. «Ретеншн индекса»).
+ */
+export function markVanished(db: Db, path: string, at: number): void {
+  db.run('UPDATE sources SET vanished_at = ? WHERE path = ? AND vanished_at IS NULL', at, path)
 }
 
 export function forgetSource(db: Db, path: string): void {

@@ -36,9 +36,15 @@ export interface Config {
   }
 
   index: {
-    /** Сколько дней хранить разобранные данные. 0 — не чистить. */
-    retentionDays: number
-    /** Следить за логами и дочитывать на лету. */
+    /**
+     * Следить за логами и дочитывать на лету.
+     *
+     * Срока хранения здесь нет, и это решение M5, а не пропуск: индекс
+     * переживает свой источник. Claude Code удаляет транскрипты сам, и после
+     * этого разобранное — единственная запись о расходе; настройка «чистить
+     * старше N дней» стирала бы её. Цена измерена: 28.7 МБ индекса на 492 МБ
+     * логов, 0.58 МБ в день — см. «Ретеншн индекса» в `docs/roadmap.md`.
+     */
     watch: boolean
   }
 
@@ -137,7 +143,7 @@ export const DEFAULT_CONFIG: Config = {
     sessionTokenAlert: 0,
     notifyOnIdle: true,
   },
-  index: { retentionDays: 90, watch: true },
+  index: { watch: true },
   live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },
   privacy: { hidePrompts: false, hidePaths: false },
   ui: {

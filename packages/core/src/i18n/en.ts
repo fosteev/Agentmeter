@@ -284,6 +284,7 @@ export const en = {
       'Claude does not log its context window size — inferred from the observed maximum, stage 2.6',
     split: 'cost split between the calls of one request, stage 1.6',
     unmeasured: 'some calls cannot be measured — no next request in the log, stage 1.6',
+    vanishedLog: 'Claude deleted its own logs for this day — spend is no less than shown',
   },
 
   note: {
@@ -433,6 +434,7 @@ export const en = {
     schema: 'Schema: {{version}}',
     sources: 'Sources: {{sources}} · sessions: {{sessions}} · requests: {{requests}}',
     reconstructedSessions: 'Sessions with a measured correction: {{sessions}}',
+    vanishedSources: 'Logs no longer on disk: {{sources}} — their spend lives only here',
     calibration: 'Calibration',
     cacheReadWeight: 'cache_read: {{value}}',
     notCalibrated: '— (not calibrated, stage 1.9)',

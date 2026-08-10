@@ -38,6 +38,10 @@ export function HistoryBars({ days, selected, onSelectDay }: HistoryBarsProps) {
             data-history-day={day.at}
             data-history-day-state={day.tokens === null ? 'absent' : day.tokens.value === 0 ? 'zero' : 'spend'}
             aria-pressed={chosen}
+            // Знак `≈` над столбиком объясняется здесь же: у оценки бывает две
+            // причины (восстановленные запросы и удалённый лог), и молчаливый
+            // знак читается как «мы округлили».
+            title={day.tokens?.caveat}
             onClick={() => onSelectDay(day.at)}
             style={{
               flex: 1,

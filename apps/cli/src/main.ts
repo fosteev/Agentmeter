@@ -301,7 +301,7 @@ function runIndex(common: CommonOptions, config: Config): number {
     output(
       common.json
         ? stats
-        : `scanned=${stats.scanned} parsed=${stats.parsed} skipped=${stats.skipped} removed=${stats.removed} failed=${stats.failed} sessions=${stats.sessions} requests=${stats.requests} ms=${stats.ms}`,
+        : `scanned=${stats.scanned} parsed=${stats.parsed} skipped=${stats.skipped} vanished=${stats.vanished} failed=${stats.failed} sessions=${stats.sessions} requests=${stats.requests} ms=${stats.ms}`,
       common.json,
     )
     return stats.failed === 0 ? 0 : 1

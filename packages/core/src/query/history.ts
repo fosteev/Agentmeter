@@ -47,6 +47,12 @@ export interface HistoryDay {
   byProvider: Array<{ provider: Provider; tokens: number }>
   /** Двадцать четыре клетки. Пусто, если данных за день нет вовсе. */
   hours: HistoryHour[]
+  /**
+   * Число — нижняя граница, а не измерение: этих суток не достаёт лог Claude,
+   * потому что Claude Code удалил его сам (`cleanupPeriodDays`). Показывается
+   * знаком `≈`, как всякая оценка в продукте.
+   */
+  approximate: boolean
 }
 
 export interface HistoryReport {
@@ -61,6 +67,14 @@ export interface HistoryReport {
   lastDay: number | null
   /** Сколько дней с расходом за всё время — «116 дней с расходом». */
   daysWithSpend: number
+  /** Итог периода — нижняя граница: хоть у одних суток не достаёт логов. */
+  approximate: boolean
+  /**
+   * С каких суток логи Claude на месте. `null` — Claude в индексе нет вовсе,
+   * и говорить о его пропаже нечего. Раньше этой границы измеренного нуля не
+   * бывает: сутки без расхода там `tokens === null`.
+   */
+  claudeFrom: number | null
 }
 
 interface HourRow {
@@ -101,7 +115,7 @@ export function historyReport(
   // обоих: пока час не кончился, «кого больше» — не вопрос, а догадка.
   const cellProviders = new Map<string, Map<Provider, number>>()
   for (const at of dayStarts(range, dayStartsAtHour)) {
-    byDay.set(at, { at, tokens: 0, byProvider: [], hours: emptyHours() })
+    byDay.set(at, { at, tokens: 0, byProvider: [], hours: emptyHours(), approximate: false })
   }
   for (const row of rows) {
     const { at, hour } = placeHour(row.stamp, dayStartsAtHour)
@@ -120,9 +134,22 @@ export function historyReport(
   }
 
   const span = observedSpan(db, dayStartsAtHour)
+  const claudeFrom = claudeCoverage(db, dayStartsAtHour)
   for (const day of byDay.values()) {
     day.byProvider.sort((left, right) => right.tokens - left.tokens)
     if (!covered(day.at, span, now, dayStartsAtHour)) {
+      day.tokens = null
+      day.hours = []
+      continue
+    }
+    if (claudeFrom === null || day.at >= claudeFrom) continue
+    // Сутки внутри наблюдаемого окна, но лога Claude за них у нас нет — он был
+    // и его удалили. Расход, который мы видим (Codex), настоящий, но неполный:
+    // это нижняя граница. А сутки, где не видно ничего, — не измеренный ноль,
+    // а незнание: измеренным нулём они объявляли бы «человек не работал» ровно
+    // там, где мы просто не смотрели.
+    if ((day.tokens ?? 0) > 0) day.approximate = true
+    else {
       day.tokens = null
       day.hours = []
     }
@@ -147,7 +174,39 @@ export function historyReport(
     firstDay: span.first,
     lastDay: span.last,
     daysWithSpend: span.count,
+    approximate: days.some((day) => day.approximate),
+    claudeFrom,
   }
+}
+
+/**
+ * С каких суток логи Claude на месте.
+ *
+ * Claude Code чистит свои транскрипты сам (`cleanupPeriodDays`, по умолчанию 30
+ * дней), и раньше этой границы утверждать «за эти сутки запросов не было»
+ * нельзя: мы их логов не видели. Замер на живых логах — 92 дня внутри
+ * покрытия, когда Claude Code точно работал (промпты в `~/.claude/history.jsonl`)
+ * и индекс не знает о них ни одного запроса; 31 день из них показывался
+ * измеренным нулём целиком.
+ *
+ * Правило именно про Claude, а не про всякого провайдера, у кого история
+ * короче. Возьми мы «максимум по провайдерам», и человек, попробовавший Codex
+ * сегодня, получил бы знак `≈` на всей своей клодовой истории — знак, который
+ * стоит везде, не значит ничего (то же правило, что у порогов выделения в 3.4).
+ * Codex своих роллаутов не удаляет: на живых логах они лежат с первого дня
+ * наблюдения, 191 сутки против 54 у Claude на той же машине. Начнёт удалять —
+ * это станет видно как `vanished_at` у его источников, и тогда правило
+ * расширяется по измерению, а не по симметрии.
+ */
+function claudeCoverage(db: Db, dayStartsAtHour: number): number | null {
+  const row = db.get<{ first: number | null }>(
+    `SELECT min(requests.ts) AS first
+     FROM requests
+     JOIN sessions ON sessions.id = requests.session_id
+     WHERE sessions.provider = 'claude'`,
+  )
+  if (row?.first == null) return null
+  return dayRange(row.first, dayStartsAtHour).from
 }
 
 /**

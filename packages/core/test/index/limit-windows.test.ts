@@ -123,7 +123,13 @@ describe('окна лимита в индексе', () => {
     ).toBe(0)
   })
 
-  it('ingestAll снимает окна файла, исчезнувшего между проходами', () => {
+  // Прежде этот тест требовал обратного — «исчез файл, снялись окна», — и
+  // требование было неверным. Провайдер чистит свои логи сам, и вслед за
+  // файлом уходил бы расход, которого больше нигде нет: день, в который
+  // человек работал, становился измеренным нулём. Решение M5 «Ретеншн
+  // индекса»: индекс переживает свой источник, а строка `sources` помечается
+  // `vanished_at`.
+  it('ingestAll держит окна файла, исчезнувшего между проходами', () => {
     const claudeHome = join(dir, '.claude')
     const codexHome = join(dir, '.codex')
     const day = join(codexHome, 'sessions', '2026', '05', '01')
@@ -132,12 +138,22 @@ describe('окна лимита в индексе', () => {
     const path = join(day, 'rollout-limits.jsonl')
     copyFileSync(join(fixturesDir, 'codex-limits.jsonl'), path)
     ingestAll(db, { claudeHome, codexHome })
-    expect(readLimitWindows(db)).not.toHaveLength(0)
+    const before = readLimitWindows(db)
+    expect(before).not.toHaveLength(0)
 
     rmSync(path)
-    ingestAll(db, { claudeHome, codexHome })
+    const stats = ingestAll(db, { claudeHome, codexHome })
 
-    expect(readLimitWindows(db)).toEqual([])
+    expect(stats.vanished).toBe(1)
+    expect(readLimitWindows(db)).toEqual(before)
+    expect(
+      db.get<{ count: number }>(
+        'SELECT count(*) AS count FROM sources WHERE vanished_at IS NOT NULL',
+      )?.count,
+    ).toBe(1)
+    // Второй проход по тем же данным не считает пропажу заново: иначе счётчик
+    // в doctor рос бы на каждое событие вотчера, ничего не измеряя.
+    expect(ingestAll(db, { claudeHome, codexHome }).vanished).toBe(0)
   })
 })
 

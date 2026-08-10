@@ -17,13 +17,19 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
  * (path, inode, offset): путь один и тот же, а inode меняется при ротации
  * файла, и тогда offset надо обнулить, иначе индекс будет читать чужие байты.
  * Уменьшение размера файла — тот же признак: файл обрезали.
+ *
+ * `vanished_at` — когда файла не стало на диске. Строка при этом остаётся, и
+ * разобранные из неё сессии тоже: Claude Code удаляет свои транскрипты сам
+ * (`cleanupPeriodDays`, по умолчанию 30 дней), и с этого момента индекс —
+ * единственная запись о том расходе. Подробности — «Ретеншн индекса» в
+ * `docs/roadmap.md`.
  */
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -39,7 +45,8 @@ CREATE TABLE IF NOT EXISTS sources (
   size       INTEGER NOT NULL,
   mtime      INTEGER NOT NULL,
   offset     INTEGER NOT NULL DEFAULT 0,
-  parsed_at  INTEGER NOT NULL
+  parsed_at  INTEGER NOT NULL,
+  vanished_at INTEGER
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -327,5 +334,15 @@ ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
     // про завтрашние. Индекс производен от логов целиком.
     version: 9,
     rebuild: true,
+  },
+  {
+    // Первая совместимая миграция с версии 3, и это не случайность: столбец
+    // добавляется ради того, чего в логах нет и не будет, — момента, когда лога
+    // не стало. Перечитывать нечего, а старым строкам `NULL` подходит по
+    // смыслу: файлы, лежащие на диске, не пропадали. Пропавшие до этой версии
+    // индекс уже забыл, и вернуть их неоткуда — так и записано в «Ретеншн
+    // индекса».
+    version: 10,
+    sql: 'ALTER TABLE sources ADD COLUMN vanished_at INTEGER;',
   },
 ]

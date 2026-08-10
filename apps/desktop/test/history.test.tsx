@@ -70,6 +70,56 @@ describe('buildHistoryScreen', () => {
   })
 
   /**
+   * Ловит измеренный ноль там, где лог просто удалён (M5, «Ретеншн индекса»).
+   *
+   * Claude Code чистит свои транскрипты сам, и раньше первого уцелевшего лога
+   * утверждать «запросов Claude не было» нельзя. Сутки с расходом Codex — это
+   * нижняя граница, сутки без расхода — незнание, а не ноль. Случая нет ни в
+   * одной фикстуре: там все сутки покрыты обоими провайдерами сразу, и проверка
+   * на них была бы зелена при любом правиле — поэтому сеется руками.
+   */
+  it('сутки раньше первого лога Claude — нижняя граница, а дальше измерение', () => {
+    seed(MONDAY, 'codex', 10, 1000)
+    seed(MONDAY + 2 * DAY, 'claude', 11, 3000)
+
+    const screen = buildHistoryScreen(db, { span: 'week' }, config, NOW)
+    const byDay = new Map(screen.days.map((day) => [dayIndex(day.at), day.tokens]))
+
+    expect(byDay.get(0)?.value).toBe(1000)
+    expect(byDay.get(0)?.confidence).toBe('estimate')
+    expect(byDay.get(0)?.caveat).toContain('удалены')
+    // Вторник раньше границы и пуст: сказать про него нечего.
+    expect(byDay.get(1)).toBeNull()
+    // Среда — первый уцелевший лог Claude, отсюда числа измеренные.
+    expect(byDay.get(2)?.confidence).toBe('exact')
+    // Четверг пуст, но уже внутри покрытия обоих: это измеренный ноль.
+    expect(byDay.get(3)?.value).toBe(0)
+    expect(byDay.get(3)?.confidence).toBe('exact')
+    // Итог периода содержит нижнюю границу, значит и сам нижняя граница.
+    expect(screen.total.confidence).not.toBe('exact')
+  })
+
+  /**
+   * Ловит правило, обобщённое до «максимума по провайдерам». Знак, который
+   * стоит везде, не значит ничего: человек, попробовавший Codex в среду, не
+   * должен получить оценку на всей своей клодовой истории. Границу двигает
+   * только Claude — он единственный, кто удаляет свои логи (замер: 191 сутки
+   * роллаутов Codex против 54 у Claude на одной машине).
+   */
+  it('появление второго провайдера не делает прошлое оценкой', () => {
+    seed(MONDAY, 'claude', 10, 1000)
+    seed(MONDAY + 2 * DAY, 'codex', 11, 3000)
+
+    const screen = buildHistoryScreen(db, { span: 'week' }, config, NOW)
+    const byDay = new Map(screen.days.map((day) => [dayIndex(day.at), day.tokens]))
+
+    expect(byDay.get(0)?.confidence).toBe('exact')
+    expect(byDay.get(1)?.value).toBe(0)
+    expect(byDay.get(2)?.confidence).toBe('exact')
+    expect(screen.total.confidence).toBe('exact')
+  })
+
+  /**
    * Ловит подпись, которая называет пустой столбик пустым, не различая почему.
    * Слова про день без данных обязаны приезжать готовыми: причину знает тот,
    * кто знает границы наблюдаемого окна (правило 3.0).

@@ -3,7 +3,7 @@
  *
  *     node --experimental-strip-types scripts/probe/history-live.ts
  *
- * Пять проверок. Главная — вторая: сумма клеток хитмапа обязана совпадать с
+ * Шесть проверок. Главная — вторая: сумма клеток хитмапа обязана совпадать с
  * итогом столбика над ней и с шапкой «Сегодня» за те же сутки. Разойдись они,
  * и на экране окажутся три числа про один день, каждое настоящее по себе.
  */
@@ -90,6 +90,35 @@ try {
     summary !== undefined &&
       summary.total.value === (day?.totals?.total ?? 0) &&
       summary.tokens.reduce((sum, slice) => sum + slice.tokens.value, 0) === summary.total.value,
+  )
+
+  // Граница уцелевших логов Claude (M5, «Ретеншн индекса»). Claude Code чистит
+  // свои транскрипты сам, и раньше первой уцелевшей записи «за эти сутки
+  // запросов не было» — не измерение, а незнание. Проверяется обеими сторонами
+  // границы: до неё измеренных нулей нет вовсе, после неё нет ни одной оценки
+  // по этой причине.
+  const border = db.get<{ first: number | null }>(
+    `SELECT min(requests.ts) AS first FROM requests
+     JOIN sessions ON sessions.id = requests.session_id
+     WHERE sessions.provider = 'claude'`,
+  )?.first
+  const from = border == null ? null : dayRange(border, 0).from
+  const before = all.days.filter((one) => from !== null && one.at < from)
+  const after = all.days.filter((one) => from !== null && one.at >= from)
+  const zeroBefore = before.filter((one) => one.tokens?.value === 0).length
+  const lowerBefore = before.filter((one) => one.tokens !== null && one.tokens.value > 0).length
+  const guessAfter = after.filter(
+    (one) => one.tokens !== null && one.tokens.confidence === 'estimate',
+  ).length
+  report(
+    6,
+    'до первого уцелевшего лога Claude измеренных нулей нет',
+    from === null
+      ? 'логов Claude в индексе нет'
+      : `граница ${new Date(from).toISOString().slice(0, 10)}, суток до неё ${before.length} ` +
+        `(нижних границ ${lowerBefore}, измеренных нулей ${zeroBefore}), суток после ${after.length} ` +
+        `(оценок ${guessAfter})`,
+    from !== null && before.length > 0 && zeroBefore === 0 && guessAfter === 0,
   )
 } finally {
   db.close()

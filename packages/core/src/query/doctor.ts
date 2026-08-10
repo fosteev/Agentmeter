@@ -34,6 +34,9 @@ export function doctorReport(db: Db, config: Config): DoctorReport {
       db.get<CountRow>(
         "SELECT count(DISTINCT session_id) AS count FROM requests WHERE origin != 'log'",
       )?.count ?? 0,
+    vanishedSources:
+      db.get<CountRow>('SELECT count(*) AS count FROM sources WHERE vanished_at IS NOT NULL')
+        ?.count ?? 0,
     calibration: {
       cacheReadWeight: config.limits.claude.cacheReadWeight,
       fiveHourCap: config.limits.claude.fiveHourCap,

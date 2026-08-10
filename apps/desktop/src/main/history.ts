@@ -34,7 +34,7 @@ import type {
   TokenSlice,
 } from '@agentmeter/ipc'
 import { toSpendSplit } from './day.ts'
-import { measured } from './measured.ts'
+import { lowerBound, measured } from './measured.ts'
 
 /** Сколько суток показывает каждый режим. `all` — всё, что есть в индексе. */
 const SPAN_DAYS = { week: 7, month: 30 } as const
@@ -68,7 +68,7 @@ export function buildHistoryScreen(
     firstDay: report.firstDay,
     daysWithSpend: report.daysWithSpend,
     days,
-    total: measured(report.total, approximate),
+    total: measured(report.total, approximate || report.approximate),
     coverage: coverage(report),
   }
   const selected = selectDay(report, arg.at)
@@ -120,10 +120,19 @@ function spanRange(
 function toDay(day: HistoryReport['days'][number], approximate: boolean): HistoryDay {
   return {
     at: day.at,
-    tokens: day.tokens === null ? null : measured(day.tokens, approximate),
+    // Две неточности спорят за один знак, и сильнее та, у которой не измерена
+    // даже погрешность: восстановленное (1.3) промахивается на ≤ 3.3%, а за
+    // удалённым логом может стоять что угодно.
+    tokens: dayTokens(day, approximate),
     byProvider: day.byProvider,
     hours: day.hours,
   }
+}
+
+function dayTokens(day: HistoryReport['days'][number], approximate: boolean): Measured | null {
+  if (day.tokens === null) return null
+  if (day.approximate) return lowerBound(day.tokens)
+  return measured(day.tokens, approximate)
 }
 
 /**
@@ -188,9 +197,15 @@ function summary(
     { kind: 'output', tokens: exact(totals?.output ?? 0), share: share(totals?.output ?? 0) },
   ]
 
+  // Итог суток, у которых не достаёт лога, — нижняя граница. Куски по видам
+  // токенов и по провайдерам при этом остаются измеренными: пропал лог Claude,
+  // а не байты Codex, и объявлять оценкой то, что прочитано, — враньё в другую
+  // сторону.
+  const vanished = report.days.find((row) => row.at === at)?.approximate === true
+
   const result: HistoryDaySummary = {
     at,
-    total: measured(total, day.approximate),
+    total: vanished ? lowerBound(total) : measured(total, day.approximate),
     sessions: day.sessions ?? 0,
     tasks: day.tasks ?? 0,
     requests: totals?.requests ?? 0,

@@ -163,6 +163,12 @@ export interface DoctorReport {
   diagnostics: DiagnosticRow[]
   parserErrors: number
   reconstructedSessions: number
+  /**
+   * Источники, которых не стало на диске. Их сессии остались в индексе, и с
+   * этого момента он единственная запись о том расходе — Claude Code чистит
+   * свои транскрипты сам. Ноль здесь — не «всё хорошо», а «пока не чистил».
+   */
+  vanishedSources: number
   calibration: {
     cacheReadWeight: number | null
     fiveHourCap: number | null

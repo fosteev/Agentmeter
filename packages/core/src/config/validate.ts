@@ -57,7 +57,6 @@ export const RULES: Record<string, Rule> = {
   'alerts.dangerAtPercent': integer(0, 100),
   // Ноль — «не уведомлять», это часть договора поля, а не край диапазона.
   'alerts.sessionTokenAlert': integer(0, Number.MAX_SAFE_INTEGER),
-  'index.retentionDays': integer(0, 3650),
   // Опрос чаще, чем раз в 250 мс, съедает батарею и ничего не добавляет:
   // снимок стоит около 6 мс, но чтение хвостов логов — уже нет.
   'live.pollMs': integer(250, 60_000),

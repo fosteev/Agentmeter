@@ -19,3 +19,15 @@ export function measured(value: number, approximate: boolean): Measured {
     ? { value, confidence: 'reconstructed', caveat: t('caveat.reconstructed') }
     : { value, confidence: 'exact' }
 }
+
+/**
+ * Число, у которого известна только нижняя граница: лога за эти сутки больше
+ * нет, и сколько там было — неизвестно (M5, «Ретеншн индекса»).
+ *
+ * Не `reconstructed`: у восстановленного погрешность измерена (≤ 3.3%), а здесь
+ * неизвестен сам порядок. Поэтому `estimate` — та же точность, что у выведенного
+ * размера окна контекста.
+ */
+export function lowerBound(value: number): Measured {
+  return { value, confidence: 'estimate', caveat: t('caveat.vanishedLog') }
+}

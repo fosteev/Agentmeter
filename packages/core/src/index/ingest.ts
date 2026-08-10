@@ -6,7 +6,7 @@ import {
   type SourceFile,
   type SourceIssue,
 } from './discover.ts'
-import { putFailure, putSession, forgetSource } from './store.ts'
+import { putFailure, putSession, forgetSource, markVanished } from './store.ts'
 import { defaultClaudeHome } from './paths.ts'
 import type { Db } from './db.ts'
 import { claudeMemoryPaths } from '../sources/claude/memory.ts'
@@ -23,7 +23,8 @@ export interface IngestStats {
   scanned: number
   parsed: number
   skipped: number
-  removed: number
+  /** Источники, которых не стало на диске за этот проход. Данные их остаются. */
+  vanished: number
   failed: number
   sessions: number
   requests: number
@@ -117,27 +118,35 @@ export function* ingestSteps(
     yield { filesDone: index + 1, filesTotal: files.length, bytesDone, bytesTotal }
   }
 
-  let removed = 0
-  for (const row of db.all<{ path: string }>('SELECT path FROM sources')) {
+  // Файла нет на диске — данные остаются, строка источника помечается. Правило
+  // и его цена расписаны у `markVanished`: индекс переживает свой источник,
+  // потому что после чистки Claude Code он единственный.
+  const now = Date.now()
+  let vanished = 0
+  for (const row of db.all<{ path: string }>(
+    'SELECT path FROM sources WHERE vanished_at IS NULL',
+  )) {
     if (seen.has(row.path)) continue
-    forgetSource(db, row.path)
-    removed += 1
+    markVanished(db, row.path, now)
+    vanished += 1
   }
 
   // Пересборка — только когда индекс действительно изменился. Вотчер зовёт
   // `ingestAll` на каждое событие файловой системы, включая чужие файлы, и
   // безусловный проход по всем запросам Claude на каждое такое событие — это
   // тот же долг 1.10, только с другой стороны. Смену конфига ловит отпечаток
-  // входа внутри `ensureLimitWindows`.
+  // входа внутри `ensureLimitWindows`. Пропажа файла в этот список не входит:
+  // наблюдения остаются на месте вместе с остальными данными, и пересобирать
+  // из них нечего.
   const limits = opts.claudeLimits ?? DEFAULT_CONFIG.limits.claude
-  if (parsed > 0 || removed > 0 || failed > 0) rebuildLimitWindows(db, limits)
+  if (parsed > 0 || failed > 0) rebuildLimitWindows(db, limits)
   else ensureLimitWindows(db, limits)
 
   return {
     scanned: files.length,
     parsed,
     skipped,
-    removed,
+    vanished,
     failed,
     sessions: db.get<{ count: number }>('SELECT count(*) AS count FROM sessions')?.count ?? 0,
     requests: db.get<{ count: number }>('SELECT count(*) AS count FROM requests')?.count ?? 0,
@@ -173,7 +182,7 @@ function ingestOne(db: Db, file: SourceFile, memory: MemoryOptions): FileIngestR
   // файла нельзя.
   const stat = statFile(file.path)
   if (!stat) {
-    forgetSource(db, file.path)
+    markVanished(db, file.path, Date.now())
     return { parsed: false, requests: 0, failed: false }
   }
 
