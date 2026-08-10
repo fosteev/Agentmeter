@@ -20,7 +20,7 @@ const ACCENT: Record<Provider, string> = {
 }
 
 export function TaskRow({ task, hover, expanded }: TaskRowProps) {
-  const untitled = task.title.length === 0
+  const untitled = task.title === null || task.title.length === 0
   const raised = hover === true || expanded === true
 
   return (

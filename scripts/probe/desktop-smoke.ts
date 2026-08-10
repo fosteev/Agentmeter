@@ -8,7 +8,7 @@
  * в нём работает. Зелёный `npm run check` про приложение не говорит ничего: там
  * ни одного запуска Electron нет.
  *
- * Пять проверок, каждая названа по поломке, которую обязана поймать.
+ * Восемь проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -94,6 +94,7 @@ let payload: {
   node?: string
   chrome?: string
   problems?: string[]
+  window?: unknown
   snapshot?: { at?: number; today?: { total?: { value?: number } }; limits?: unknown[] }
 } = {}
 try {
@@ -186,6 +187,23 @@ report(
     ? 'приложение не отчиталось об иконке'
     : `${tray.size}, плотности ${tray.scales?.join('/')}, template=${tray.template}, пустая=${tray.empty}`,
   trayOk,
+)
+
+// 8. Ловит: главное окно, которого нет в сборке или которое открывается не там,
+//    где просили. Юнит-тесты рендерят его компоненты в строку и о существовании
+//    страницы не знают ничего: третий вход бандлера могли забыть, `window.html`
+//    могло не доехать в `dist/web`, параметр адреса могли не прочитать. Всё это
+//    оставляет `npm run check` зелёным, а кнопку «Открыть окно» — мёртвой, и
+//    экран ошибки в попапе — ведущим не в настройки.
+const mainWindow = payload.window as { page?: string; tab?: string } | undefined
+const windowOk = mainWindow?.page === 'window.html' && mainWindow.tab === 'settings'
+report(
+  8,
+  'главное окно поднимается и открывается на запрошенной вкладке',
+  mainWindow === undefined
+    ? 'приложение не отчиталось о главном окне'
+    : `страница ${mainWindow.page}, вкладка ${mainWindow.tab}`,
+  windowOk,
 )
 
 process.exit(failed ? 1 : 0)

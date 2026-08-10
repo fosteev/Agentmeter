@@ -15,6 +15,7 @@ const renderer = fileURLToPath(new URL('./src/renderer', import.meta.url))
 const formatter = fileURLToPath(
   new URL('../../packages/core/src/format/tokens.ts', import.meta.url),
 )
+const day = fileURLToPath(new URL('../../packages/core/src/query/day.ts', import.meta.url))
 
 export default defineConfig({
   root: renderer,
@@ -26,17 +27,20 @@ export default defineConfig({
       // `node:sqlite`, и в браузерном бандле он либо роняет сборку, либо
       // приезжает мёртвым грузом.
       { find: '@agentmeter/core/format', replacement: formatter },
+      // Границы дня — то же самое: правило одно на CLI, трей и окно, а
+      // `query/day.ts` ни к базе, ни к файловой системе не ходит.
+      { find: '@agentmeter/core/day', replacement: day },
     ],
   },
   build: {
     outDir: fileURLToPath(new URL('./dist/web', import.meta.url)),
     emptyOutDir: true,
-    // Витрина 2.4 — вторая точка входа и не выбрасывается: это спецификация
-    // компонентов, на которую после этого этапа наконец можно смотреть.
+    // Витрина и главное окно — отдельные страницы того же рендерера.
     rollupOptions: {
       input: {
         index: `${renderer}/index.html`,
         gallery: `${renderer}/gallery.html`,
+        window: `${renderer}/window.html`,
       },
     },
   },

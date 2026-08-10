@@ -1,7 +1,6 @@
 import type { Db, SqlValue } from '../index/db.ts'
-import type { Provider } from '../sources/types.ts'
 import { taskRows } from './tasks.ts'
-import type { DayRange, TodayReport, Totals, TotalsRow } from './types.ts'
+import type { DayRange, RequestScope, TodayReport, Totals, TotalsRow } from './types.ts'
 
 interface AggregateRow {
   key: string
@@ -17,8 +16,8 @@ interface SummaryRow extends Omit<AggregateRow, 'key'> {
   reconstructed: number
 }
 
-export function todayReport(db: Db, range: DayRange, provider?: Provider): TodayReport {
-  const filter = requestFilter(range, provider)
+export function todayReport(db: Db, range: DayRange, scope: RequestScope = {}): TodayReport {
+  const filter = requestFilter(range, scope)
   const summary = db.get<SummaryRow>(
     `SELECT coalesce(sum(requests.input), 0) AS input,
             coalesce(sum(requests.output), 0) AS output,
@@ -33,7 +32,7 @@ export function todayReport(db: Db, range: DayRange, provider?: Provider): Today
     ...filter.params,
   )!
   const totals = totalsFromRow(summary)
-  const taskCount = taskRows(db, range, provider).length
+  const taskCount = taskRows(db, range, scope).length
   const emptyIndex = sourceCount(db) === 0
   const emptyDay = totals.requests === 0
 
@@ -98,17 +97,37 @@ function aggregateHours(
     .map(([hour, totals]) => ({ key: String(hour), hour, totals }))
 }
 
-function requestFilter(
+export function requestFilter(
   range: DayRange,
-  provider: Provider | undefined,
+  scope: RequestScope,
 ): { sql: string; params: SqlValue[] } {
   const params: SqlValue[] = [range.from, range.to]
   let sql = 'requests.ts >= ? AND requests.ts < ?'
-  if (provider !== undefined) {
+  if (scope.provider !== undefined) {
     sql += ' AND sessions.provider = ?'
-    params.push(provider)
+    params.push(scope.provider)
+  }
+  if (scope.project !== undefined) {
+    sql += ' AND sessions.project = ?'
+    params.push(scope.project)
   }
   return { sql, params }
+}
+
+/**
+ * Есть ли за период запросы вообще — **без учёта сужения**.
+ *
+ * Отдельным вопросом, потому что «за сегодня ничего не делали» и «фильтр отсёк
+ * всё» — это два разных экрана с разными словами, а отличаются они ровно тем,
+ * считать ли фильтр. Вывести одно из другого по пустому списку нельзя.
+ */
+export function hasRequests(db: Db, range: DayRange): boolean {
+  const row = db.get<{ one: number }>(
+    'SELECT 1 AS one FROM requests WHERE ts >= ? AND ts < ? LIMIT 1',
+    range.from,
+    range.to,
+  )
+  return row !== undefined
 }
 
 export function totalsFromRow(row: Omit<AggregateRow, 'key'>): Totals {

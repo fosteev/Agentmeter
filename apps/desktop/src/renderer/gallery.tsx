@@ -1,19 +1,23 @@
 /// <reference types="vite/client" />
 
-import type { CSSProperties, ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { Provider, TaskRow as TaskRowData } from '@agentmeter/core'
-import type { TraySnapshot } from '@agentmeter/ipc'
+import type { DayReport, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
 import emptyRaw from '../../../../fixtures/popup/empty.json?raw'
 import errorRaw from '../../../../fixtures/popup/error.json?raw'
 import indexingRaw from '../../../../fixtures/popup/indexing.json?raw'
 import nobodyRaw from '../../../../fixtures/popup/nobody.json?raw'
 import snapshotRaw from '../../../../fixtures/popup/snapshot.json?raw'
+import todayRaw from '../../../../fixtures/window/today.json?raw'
 import './tokens.css'
 import { AgentRow } from './components/AgentRow.tsx'
 import { Popup } from './components/Popup.tsx'
 import { LimitBar } from './components/LimitBar.tsx'
 import { TaskRow } from './components/TaskRow.tsx'
 import { BreakdownRow } from './components/BreakdownRow.tsx'
+import { Window } from './components/Window.tsx'
+import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
+import { TodayTab } from './components/TodayTab.tsx'
 
 // Витрина раздела 0: токены, четыре компонента во всех состояниях и обеих
 // темах. Это приёмочный лист — Electron-окно и бандлер поднимаются в 2.5,
@@ -353,7 +357,8 @@ function taskRow(provider: Provider, title: string, total: number): TaskRowData 
     project: 'demo',
     branch: null,
     model: 'demo',
-    title,
+    title: title.length === 0 ? null : title,
+    firstPrompt: null,
     totals: {
       input: 0,
       output: 0,
@@ -481,6 +486,9 @@ const POPUPS: Array<{ title: string; snapshot: TraySnapshot }> = [
   { title: 'Нет активных агентов', snapshot: JSON.parse(nobodyRaw) as TraySnapshot },
 ]
 
+const WINDOW_SNAPSHOT = JSON.parse(snapshotRaw) as TraySnapshot
+const TODAY_REPORT = JSON.parse(todayRaw) as DayReport
+
 function PopupCards() {
   return (
     <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -493,6 +501,47 @@ function PopupCards() {
           <Popup snapshot={snapshot} now={snapshot.at + 2000} />
         </div>
       ))}
+    </div>
+  )
+}
+
+function WindowCard() {
+  const [tab, setTab] = useState<WindowTab>('today')
+  const [filter, setFilter] = useState<TodayFilter>({
+    ...TODAY_REPORT.range,
+    sort: 'tokens',
+  })
+  const stage = WINDOW_TABS.find((item) => item.id === tab)!.stage
+
+  return (
+    // Рамка и скругление — здесь, а не в компоненте: в макете это рамка окна
+    // операционной системы (строка 564), и в настоящем окне её рисует она сама.
+    <div
+      style={{
+        width: 1180,
+        height: 740,
+        border: '1px solid var(--line)',
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}
+    >
+      <Window snapshot={WINDOW_SNAPSHOT} activeTab={tab} onTabChange={setTab}>
+        {tab === 'today' ? (
+          <TodayTab report={TODAY_REPORT} filter={filter} onFilterChange={setFilter} />
+        ) : (
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              display: 'grid',
+              placeItems: 'center',
+              color: 'var(--tx3)',
+              fontSize: 13,
+            }}
+          >
+            этот экран появится в {stage}
+          </div>
+        )}
+      </Window>
     </div>
   )
 }
@@ -544,6 +593,33 @@ export function Gallery() {
           Попап · обычный и четыре состояния
         </div>
         <PopupCards />
+      </div>
+
+      <div
+        data-theme="dark"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          padding: 20,
+          border: '1px solid var(--line)',
+          borderRadius: 12,
+          background: 'var(--bg)',
+          overflow: 'auto',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 11,
+            letterSpacing: '.14em',
+            textTransform: 'uppercase',
+            color: 'var(--tx3)',
+          }}
+        >
+          Главное окно · лента «Сегодня»
+        </div>
+        <WindowCard />
       </div>
     </div>
   )

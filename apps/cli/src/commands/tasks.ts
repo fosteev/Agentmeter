@@ -29,7 +29,9 @@ export function renderTasks(
       formatDuration(row.durationMs, state.locale),
       row.branch ? `${row.project}:${row.branch}` : row.project,
       row.model,
-      `${row.approximate ? '≈' : ''}${row.title}`,
+      // Запасное имя подставляет тот, кто печатает: колонке нужна строка, а в
+      // модели «названия нет» — отдельный случай, который рисуют иначе (3.1).
+      `${row.approximate ? '≈' : ''}${row.title ?? row.firstPrompt ?? 'без названия'}`,
       formatTokens(row.totals.total, state.locale),
       String(row.toolCalls),
       String(row.subagents),

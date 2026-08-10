@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 const coreSrc = fileURLToPath(new URL('./packages/core/src/index.ts', import.meta.url))
 const coreFormat = fileURLToPath(new URL('./packages/core/src/format/tokens.ts', import.meta.url))
+const coreDay = fileURLToPath(new URL('./packages/core/src/query/day.ts', import.meta.url))
 const ipcSrc = fileURLToPath(new URL('./packages/ipc/src/index.ts', import.meta.url))
 
 export default defineConfig({
@@ -39,6 +40,7 @@ export default defineConfig({
         resolve: {
           alias: [
             { find: '@agentmeter/core/format', replacement: coreFormat },
+            { find: '@agentmeter/core/day', replacement: coreDay },
             { find: '@agentmeter/core', replacement: coreSrc },
             { find: '@agentmeter/ipc', replacement: ipcSrc },
           ],

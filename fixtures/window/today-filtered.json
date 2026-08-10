@@ -1,0 +1,37 @@
+{
+  "range": {
+    "from": 1786060800000,
+    "to": 1786147200000
+  },
+  "emptyIndex": false,
+  "emptyDay": false,
+  "totals": {
+    "input": {
+      "value": 0,
+      "confidence": "exact"
+    },
+    "output": {
+      "value": 0,
+      "confidence": "exact"
+    },
+    "cacheWrite": {
+      "value": 0,
+      "confidence": "exact"
+    },
+    "cacheRead": {
+      "value": 0,
+      "confidence": "exact"
+    },
+    "total": {
+      "value": 0,
+      "confidence": "exact"
+    },
+    "requests": 0,
+    "sessions": 0,
+    "projects": 0
+  },
+  "tasks": [],
+  "folded": null,
+  "byHour": [],
+  "byProject": []
+}

@@ -97,6 +97,32 @@ const SPEC_LINES: Record<string, Array<[number, number]>> = {
   'PopupIndexing.tsx': [[1213, 1224]],
   'PopupProblem.tsx': [[1226, 1235]],
   'PopupIdle.tsx': [[1237, 1252]],
+  'Window.tsx': [
+    [564, 564],
+    [588, 591],
+  ],
+  'WindowHeader.tsx': [
+    [566, 566],
+    [574, 577],
+    [585, 585],
+  ],
+  'WindowTabs.tsx': [[568, 573]],
+  'WindowLimit.tsx': [[577, 584]],
+  'TodayTab.tsx': [
+    [590, 590],
+    [617, 617],
+  ],
+  'DaySummary.tsx': [[592, 600]],
+  'TodayFilters.tsx': [[603, 611]],
+  'TaskTable.tsx': [
+    [613, 615],
+    [617, 617],
+  ],
+  'TaskLine.tsx': [
+    [619, 631],
+    [647, 651],
+  ],
+  'FoldedTail.tsx': [[731, 731]],
 }
 
 /**
@@ -189,9 +215,13 @@ describe('отступы компонентов только из значени
 
   for (const { name, src } of COMPONENTS) {
     it(`${name}: padding/margin/gap из своего блока макета`, () => {
+      // Сторож границ блока: пустой **текст** блока значит, что диапазон в
+      // `SPEC_LINES` съехал и сверять не с чем. Сторожить пустой набор чисел
+      // нельзя — у контейнера без собственных отступов (`Window.tsx`) он пуст
+      // законно, и требование «хоть одно число» заставило бы приписать
+      // компоненту чужой блок макета.
+      expect(block(name).length, `${name}: блок макета не найден`).toBeGreaterThan(0)
       const allowed = specValues(name)
-      // Пустой набор значил бы, что границы блока съехали и проверять нечего.
-      expect(allowed.size, `${name}: блок макета не найден`).toBeGreaterThan(0)
       const off: number[] = []
       for (const [, raw] of src.matchAll(SPACING)) {
         for (const n of raw.matchAll(/\d+/g)) off.push(Number(n[0]))
@@ -225,9 +255,10 @@ describe('типографика компонентов только из их �
 
   for (const { name, src } of COMPONENTS) {
     it(`${name}: размер и насыщенность из своего блока макета`, () => {
+      // Тот же сторож, что у отступов, и по той же причине: сверяется наличие
+      // блока, а не наличие в нём чисел. У контейнера кеглей нет законно.
+      expect(block(name).length, `${name}: блок макета не найден`).toBeGreaterThan(0)
       const sizes = specFontSizes(name)
-      // Пустой набор значил бы, что границы блока съехали и проверять нечего.
-      expect(sizes.size, `${name}: кегли в блоке макета не найдены`).toBeGreaterThan(0)
       const code = stripComments(src)
       const badSizes: number[] = []
       for (const [, raw] of code.matchAll(SIZE)) {

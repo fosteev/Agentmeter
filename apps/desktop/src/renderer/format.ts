@@ -41,3 +41,34 @@ export function plural(value: number, forms: readonly [string, string, string]):
   const index = category === 'one' ? 0 : category === 'few' ? 1 : 2
   return `${new Intl.NumberFormat(current).format(value)} ${forms[index] ?? forms[2]}`
 }
+
+/**
+ * Даты и время живут здесь по той же причине, что числа: локаль одна на окно.
+ *
+ * Своё `new Intl.DateTimeFormat(...)` в компоненте выглядит безобидно ровно до
+ * второго такого места — а дальше «09:12» в ленте и «09:12» в карточке начинают
+ * расходиться на формат часа или на порядок дня с месяцем, и заметить это можно
+ * только положив два экрана рядом. Форматтеры кэшируются: конструктор `Intl`
+ * дорогой, а строк задач на экране два десятка.
+ */
+const cache = new Map<string, Intl.DateTimeFormat>()
+
+function formatter(key: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const id = `${current}:${key}`
+  const known = cache.get(id)
+  if (known !== undefined) return known
+  const made = new Intl.DateTimeFormat(current, options)
+  cache.set(id, made)
+  return made
+}
+
+/** «09:12» — время начала задачи в колонке «Начало». */
+export function clock(at: number): string {
+  return formatter('clock', { hour: '2-digit', minute: '2-digit' }).format(at)
+}
+
+/** «Пятница, 7 августа» — заголовок дня. С заглавной, как в макете. */
+export function dayTitle(at: number): string {
+  const value = formatter('day', { weekday: 'long', day: 'numeric', month: 'long' }).format(at)
+  return value.charAt(0).toLocaleUpperCase(current) + value.slice(1)
+}

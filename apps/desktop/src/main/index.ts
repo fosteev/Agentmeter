@@ -1,5 +1,5 @@
 /**
- * Main-процесс: окно попапа, заглушка трея, живые данные, проводка IPC.
+ * Main-процесс: попап из трея, главное окно, живые данные, проводка IPC.
  *
  * Сборка обычным `tsc`, без бандлера. Это не экономия: main работает с
  * `node:sqlite` и домашними каталогами пользователя, и стоит прогнать его через
@@ -7,8 +7,8 @@
  * запускается той нодой, что несёт Electron, без флагов вроде
  * `--experimental-strip-types`: в Electron их не передашь.
  *
- * Чего здесь намеренно нет: автообновления, меню, вторых окон и настроек.
- * Это M3 и M5.
+ * Чего здесь намеренно нет: автообновления, меню и запоминания геометрии окна.
+ * Это 3.6 и M5.
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -43,7 +43,14 @@ import {
   type LiveLayer,
   type Watcher,
 } from '@agentmeter/core'
-import type { IndexProgress, IpcEventName, IpcEvents, TraySnapshot } from '@agentmeter/ipc'
+import type {
+  IndexProgress,
+  IpcEventName,
+  IpcEvents,
+  TraySnapshot,
+  WindowTab,
+} from '@agentmeter/ipc'
+import { buildDayReport } from './day.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
@@ -62,6 +69,19 @@ const PRELOAD = join(here, '../preload/index.cjs')
 
 const POPUP_WIDTH = 400
 const POPUP_HEIGHT = 600
+/**
+ * Главное окно (3.1). Размер — из макета (строка 564); минимум подобран по
+ * раскладке: правая колонка занимает 300 фиксированных точек, и ниже 900 лента
+ * из пяти колонок начинает лезть друг на друга.
+ *
+ * Размер и положение не запоминаются, и это осознанно: хранить их негде, кроме
+ * конфига, а конфиг — контракт 0.5, который правится ради нужды, а не ради
+ * догадки о ней. Переезжает в 3.6 вместе с остальными настройками.
+ */
+const WINDOW_WIDTH = 1180
+const WINDOW_HEIGHT = 740
+const WINDOW_MIN_WIDTH = 900
+const WINDOW_MIN_HEIGHT = 560
 /**
  * Логический размер иконки трея. Растр рисуется ещё в двойном и тройном
  * размере: menu bar на retina берёт представление @2x, и без него иконка
@@ -185,11 +205,17 @@ async function runSmoke(): Promise<void> {
   const problems: string[] = []
   let snapshot: TraySnapshot | undefined
   let trayReport: unknown
+  let windowReport: unknown
   try {
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     registerIpc(
       ipcMain,
-      createHandlers(() => runtime),
+      // Главное окно смоук поднимает сам, ниже и явно: канал здесь заглушен,
+      // чтобы проверка не зависела от того, нажал ли кто-то кнопку в попапе.
+      createHandlers(
+        () => runtime,
+        () => undefined,
+      ),
     )
 
     const window = createPopup('index', true)
@@ -236,6 +262,34 @@ async function runSmoke(): Promise<void> {
       problems.push('иконка трея на macOS не template image')
     }
 
+    // Главное окно (3.1). Юнит-тесты рендерят его компоненты в строку и о
+    // существовании страницы не знают ничего: третий вход бандлера могли
+    // забыть, `window.html` могло не доехать в сборку, вкладка из адреса могла
+    // не читаться. Всё это оставляет `npm run check` зелёным, а кнопку
+    // «Открыть окно» — мёртвой.
+    const main = createMainWindow('settings')
+    main.webContents.on('preload-error', (_event, path, error) => {
+      problems.push(`preload главного окна не загрузился (${path}): ${error.message}`)
+    })
+    main.webContents.on('did-fail-load', (_event, code, description) => {
+      problems.push(`главное окно не загрузилось: ${description} (${code})`)
+    })
+    await new Promise<void>((resolve) => {
+      main.webContents.once('did-finish-load', () => resolve())
+      setTimeout(resolve, 15_000)
+    })
+    const openedTab = await main.webContents.executeJavaScript(
+      'new URLSearchParams(location.search).get("tab")',
+    )
+    if (openedTab !== 'settings') {
+      problems.push(`главное окно открылось с вкладкой ${String(openedTab)} вместо settings`)
+    }
+    windowReport = {
+      page: new URL(main.webContents.getURL()).pathname.split('/').at(-1),
+      tab: openedTab,
+    }
+    main.destroy()
+
     window.destroy()
   } catch (error) {
     problems.push(error instanceof Error ? error.message : String(error))
@@ -250,6 +304,7 @@ async function runSmoke(): Promise<void> {
       chrome: process.versions.chrome,
       problems,
       tray: trayReport,
+      window: windowReport,
       snapshot,
     }),
   )
@@ -264,13 +319,15 @@ async function runSmoke(): Promise<void> {
  * результат нужного типа. Данные для них появятся в M3, а незарегистрированный
  * канал давал бы в окне повисший `invoke` без ответа и без ошибки.
  */
-function createHandlers(runtime: () => Runtime): IpcHandlers {
+function createHandlers(runtime: () => Runtime, openWindow: (tab: WindowTab) => void): IpcHandlers {
   return {
     'snapshot:get': () => withIndexing(runtime(), buildSnapshot(runtime().db, runtime().live, runtime().config, { issues: runtime().issues })),
     'limits:get': () =>
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
     'config:get': () => ({ config: runtime().config, problems: [] }),
-    'today:list': () => [],
+    'today:get': (filter) => buildDayReport(runtime().db, filter),
+    // Карточка задачи — 3.4. Пока `null`: это «такой задачи нет», и экран
+    // обязан уметь его показать; выдуманная пустая карточка была бы враньём.
     'task:get': () => null,
     'breakdown:get': () => [],
     'config:set': () => ({ problems: [] }),
@@ -281,7 +338,9 @@ function createHandlers(runtime: () => Runtime): IpcHandlers {
       malformedLines: 0,
       problems: [],
     }),
-    'window:open': () => undefined,
+    'window:open': ({ tab }) => {
+      openWindow(tab)
+    },
     'app:quit': () => {
       app.quit()
     },
@@ -464,6 +523,38 @@ function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWind
 }
 
 /**
+ * Главное окно (3.1). Рамка обычная, от операционной системы.
+ *
+ * Три цветных кружка в строке 567 макета — это её кнопки, нарисованные
+ * дизайнером для контекста, а не наш элемент: своя копия «закрыть» — самый
+ * заметный способ сделать приложение похожим на веб-страницу, и вдобавок она
+ * ломается на каждой платформе по-своему. Наша шапка в 44 точки живёт под
+ * системной.
+ *
+ * Вкладка едет параметром адреса, а не событием: окно только что создано, и
+ * канала, по которому спросить «на какой вкладке открылось», у него ещё нет.
+ */
+function createMainWindow(tab: WindowTab): BrowserWindow {
+  const window = new BrowserWindow({
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    minWidth: WINDOW_MIN_WIDTH,
+    minHeight: WINDOW_MIN_HEIGHT,
+    show: false,
+    title: 'Agentmeter',
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: PRELOAD,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+  void window.loadFile(`${WEB}/window.html`, { query: { tab } })
+  return window
+}
+
+/**
  * Попап под иконкой трея. Различие между платформами ровно одно: на macOS окно
  * висит под menu bar, на Windows и Linux прижимается к трею в углу рабочей
  * области. Раскладка при этом одна — дублировать её под платформу нельзя.
@@ -519,6 +610,7 @@ function main(): void {
 
   let runtime: Runtime | undefined
   let window: BrowserWindow | undefined
+  let main: BrowserWindow | undefined
   let tray: Tray | undefined
   let timer: NodeJS.Timeout | undefined
   let tick = 0
@@ -529,9 +621,54 @@ function main(): void {
 
   const visible = (): boolean => window !== undefined && !window.isDestroyed() && window.isVisible()
 
+  /**
+   * Кому сейчас есть смысл слать снимок.
+   *
+   * Попап — только пока он виден: он висит в трее и большую часть суток скрыт.
+   * Главное окно — пока оно существует: свёрнутое окно человек разворачивает
+   * мгновенно, и застать в нём цифры минутной давности хуже, чем лишний
+   * `send` раз в секунду.
+   */
+  const listeners = (): BrowserWindow[] => {
+    const targets: BrowserWindow[] = []
+    if (visible()) targets.push(window!)
+    if (main !== undefined && !main.isDestroyed()) targets.push(main)
+    return targets
+  }
+
   const emit = <K extends IpcEventName>(channel: K, payload: IpcEvents[K]): void => {
-    if (!visible()) return
-    window?.webContents.send(channel, payload)
+    for (const target of listeners()) target.webContents.send(channel, payload)
+  }
+
+  /**
+   * Открыть главное окно или показать уже открытое.
+   *
+   * Второго такого окна не бывает: два окна на одну базу — это два вотчера и
+   * два счёта одного расхода на глазах у человека, ровно то, от чего стоит
+   * `requestSingleInstanceLock`. Вкладку у открытого окна не переключаем —
+   * перезагрузка ради неё стёрла бы прокрутку, фильтр и раскрытую задачу.
+   */
+  const openMainWindow = (tab: WindowTab): void => {
+    if (main !== undefined && !main.isDestroyed()) {
+      if (main.isMinimized()) main.restore()
+      main.show()
+      main.focus()
+      return
+    }
+    main = createMainWindow(tab)
+    main.once('ready-to-show', () => {
+      main?.show()
+      main?.focus()
+      // Снимок сразу, не дожидаясь следующего опроса: иначе шапка окна секунду
+      // стоит пустой, и это выглядит как «лимит неизвестен».
+      if (runtime !== undefined) main?.webContents.send('live:update', snapshot())
+    })
+    main.on('closed', () => {
+      main = undefined
+      // Иконка в доке нужна ровно пока есть окно: приложение живёт в трее.
+      if (process.platform === 'darwin' && !windowed) app.dock?.hide()
+    })
+    if (process.platform === 'darwin') void app.dock?.show()
   }
 
   const snapshot = (): TraySnapshot =>
@@ -542,7 +679,7 @@ function main(): void {
 
   const poll = (): void => {
     tick += 1
-    const shown = visible()
+    const shown = listeners().length > 0
     if (!shown && tick % HIDDEN_POLL_FACTOR !== 0) return
     // При закрытом попапе снимок всё равно снимается, только вшестеро реже.
     // Не ради рисования: журнал времени жизни (долг 1.3) видит смерть процесса
@@ -589,10 +726,7 @@ function main(): void {
     // и переключение работает без перезапуска.
     nativeTheme.themeSource = runtime.config.ui.theme
 
-    registerIpc(
-      ipcMain,
-      createHandlers(() => runtime!),
-    )
+    registerIpc(ipcMain, createHandlers(() => runtime!, openMainWindow))
 
     window = createPopup(gallery ? 'gallery' : 'index', !windowed)
     window.once('ready-to-show', () => {
@@ -615,7 +749,7 @@ function main(): void {
 
     driveIngest(runtime, (progress) => {
       emit('index:progress', progress)
-      if (visible()) emit('live:update', snapshot())
+      if (listeners().length > 0) emit('live:update', snapshot())
     })
 
     timer = setInterval(poll, runtime.config.live.pollMs)
@@ -623,6 +757,7 @@ function main(): void {
 
   app.on('window-all-closed', () => {
     // Попап живёт в трее: закрытое окно — это норма, а не выход из приложения.
+    // Закрытое главное окно — тем более: приложение продолжает считать.
     if (windowed) app.quit()
   })
 

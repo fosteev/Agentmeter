@@ -1,0 +1,547 @@
+{
+  "range": {
+    "from": 1786060800000,
+    "to": 1786147200000
+  },
+  "emptyIndex": false,
+  "emptyDay": false,
+  "totals": {
+    "input": {
+      "value": 20694000,
+      "confidence": "exact"
+    },
+    "output": {
+      "value": 20694000,
+      "confidence": "exact"
+    },
+    "cacheWrite": {
+      "value": 37939000,
+      "confidence": "exact"
+    },
+    "cacheRead": {
+      "value": 265573000,
+      "confidence": "reconstructed",
+      "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+    },
+    "total": {
+      "value": 344900000,
+      "confidence": "reconstructed",
+      "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+    },
+    "requests": 1642,
+    "sessions": 22,
+    "projects": 8
+  },
+  "tasks": [
+    {
+      "sessionId": "t0100000-0000-4000-8000-000000000000",
+      "title": "Тестирование локальных ИИ моделей с Ollama",
+      "project": "Projects",
+      "provider": "claude",
+      "startedAt": 1786093920000,
+      "endedAt": 1786096380000,
+      "requests": 276,
+      "toolCalls": 195,
+      "tokens": {
+        "value": 87300000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t0200000-0000-4000-8000-000000000000",
+      "title": "Проверить остановки в документации",
+      "project": "ollama-bar",
+      "provider": "claude",
+      "startedAt": 1786097040000,
+      "endedAt": 1786099320000,
+      "requests": 272,
+      "toolCalls": 188,
+      "tokens": {
+        "value": 63500000,
+        "confidence": "reconstructed",
+        "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+      },
+      "branch": "docs/fix",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t0300000-0000-4000-8000-000000000000",
+      "title": null,
+      "project": "ollama-bar",
+      "provider": "claude",
+      "startedAt": 1786102260000,
+      "endedAt": 1786104360000,
+      "requests": 238,
+      "toolCalls": 166,
+      "tokens": {
+        "value": 62100000,
+        "confidence": "exact"
+      },
+      "firstPrompt": "прогони тесты и покажи, что падает, только не чини сразу",
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t0400000-0000-4000-8000-000000000000",
+      "title": "Обновить README с примерами скриншотов",
+      "project": "ollama-bar",
+      "provider": "claude",
+      "startedAt": 1786106820000,
+      "endedAt": 1786108140000,
+      "requests": 200,
+      "toolCalls": 140,
+      "tokens": {
+        "value": 30300000,
+        "confidence": "exact"
+      },
+      "branch": "docs/readme",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t0500000-0000-4000-8000-000000000000",
+      "title": "Отредактировать задачи для GARM проектов",
+      "project": "pilot",
+      "provider": "codex",
+      "startedAt": 1786108800000,
+      "endedAt": 1786109820000,
+      "requests": 126,
+      "toolCalls": 88,
+      "tokens": {
+        "value": 20800000,
+        "confidence": "exact"
+      },
+      "branch": "GARM-802",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t0600000-0000-4000-8000-000000000000",
+      "title": "Изучить репозиторий Meta Llama",
+      "project": "ollama-bench",
+      "provider": "claude",
+      "startedAt": 1786111680000,
+      "endedAt": 1786112520000,
+      "requests": 113,
+      "toolCalls": 79,
+      "tokens": {
+        "value": 13600000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t0700000-0000-4000-8000-000000000000",
+      "title": "Запустить задачу GARM-808 в работу",
+      "project": "pilot",
+      "provider": "codex",
+      "startedAt": 1786114920000,
+      "endedAt": 1786115460000,
+      "requests": 86,
+      "toolCalls": 60,
+      "tokens": {
+        "value": 10400000,
+        "confidence": "exact"
+      },
+      "branch": "GARM-808",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t0900000-0000-4000-8000-000000000000",
+      "title": "Разобрать снимок трея по состояниям",
+      "project": "agentmeter",
+      "provider": "claude",
+      "startedAt": 1786099200000,
+      "endedAt": 1786100640000,
+      "requests": 44,
+      "toolCalls": 31,
+      "tokens": {
+        "value": 8600000,
+        "confidence": "reconstructed",
+        "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t1000000-0000-4000-8000-000000000000",
+      "title": "Перебрать алиасы zsh",
+      "project": "dotfiles",
+      "provider": "claude",
+      "startedAt": 1786101300000,
+      "endedAt": 1786102500000,
+      "requests": 38,
+      "toolCalls": 26,
+      "tokens": {
+        "value": 7400000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t1100000-0000-4000-8000-000000000000",
+      "title": "Починить сборку витрины",
+      "project": "pilot-web",
+      "provider": "codex",
+      "startedAt": 1786113000000,
+      "endedAt": 1786114080000,
+      "requests": 35,
+      "toolCalls": 24,
+      "tokens": {
+        "value": 6900000,
+        "confidence": "exact"
+      },
+      "branch": "build/vite",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t1200000-0000-4000-8000-000000000000",
+      "title": null,
+      "project": "agentmeter",
+      "provider": "claude",
+      "startedAt": 1786095600000,
+      "endedAt": 1786096560000,
+      "requests": 31,
+      "toolCalls": 22,
+      "tokens": {
+        "value": 6200000,
+        "confidence": "exact"
+      },
+      "firstPrompt": "посмотри, почему вотчер мигает на macOS",
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t1300000-0000-4000-8000-000000000000",
+      "title": "Прогнать бенчмарк на трёх моделях",
+      "project": "sandbox",
+      "provider": "claude",
+      "startedAt": 1786116000000,
+      "endedAt": 1786116900000,
+      "requests": 28,
+      "toolCalls": 20,
+      "tokens": {
+        "value": 5400000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t0800000-0000-4000-8000-000000000000",
+      "title": "Изменить статус задачи GARM-810",
+      "project": "pilot",
+      "provider": "codex",
+      "startedAt": 1786120860000,
+      "endedAt": 1786121220000,
+      "requests": 58,
+      "toolCalls": 40,
+      "tokens": {
+        "value": 4800000,
+        "confidence": "exact"
+      },
+      "branch": "GARM-810",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t1400000-0000-4000-8000-000000000000",
+      "title": "Переписать раздел про лимиты",
+      "project": "dotfiles",
+      "provider": "claude",
+      "startedAt": 1786104600000,
+      "endedAt": 1786105320000,
+      "requests": 24,
+      "toolCalls": 17,
+      "tokens": {
+        "value": 4600000,
+        "confidence": "exact"
+      },
+      "branch": "docs",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t1500000-0000-4000-8000-000000000000",
+      "title": "Обновить зависимости",
+      "project": "pilot-web",
+      "provider": "codex",
+      "startedAt": 1786119600000,
+      "endedAt": 1786120260000,
+      "requests": 21,
+      "toolCalls": 15,
+      "tokens": {
+        "value": 3900000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t1600000-0000-4000-8000-000000000000",
+      "title": "Найти утечку в тестах",
+      "project": "agentmeter",
+      "provider": "claude",
+      "startedAt": 1786103400000,
+      "endedAt": 1786103940000,
+      "requests": 17,
+      "toolCalls": 12,
+      "tokens": {
+        "value": 3200000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t1700000-0000-4000-8000-000000000000",
+      "title": "Причесать README",
+      "project": "sandbox",
+      "provider": "claude",
+      "startedAt": 1786110300000,
+      "endedAt": 1786110720000,
+      "requests": 13,
+      "toolCalls": 9,
+      "tokens": {
+        "value": 2400000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t1800000-0000-4000-8000-000000000000",
+      "title": "Поправить опечатки в конфиге",
+      "project": "dotfiles",
+      "provider": "claude",
+      "startedAt": 1786098000000,
+      "endedAt": 1786098300000,
+      "requests": 10,
+      "toolCalls": 7,
+      "tokens": {
+        "value": 1800000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t1900000-0000-4000-8000-000000000000",
+      "title": "Спросить про схему индекса",
+      "project": "agentmeter",
+      "provider": "claude",
+      "startedAt": 1786117200000,
+      "endedAt": 1786117440000,
+      "requests": 6,
+      "toolCalls": 4,
+      "tokens": {
+        "value": 900000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Opus 5"
+    },
+    {
+      "sessionId": "t2000000-0000-4000-8000-000000000000",
+      "title": "Проверить версию CLI",
+      "project": "pilot-web",
+      "provider": "codex",
+      "startedAt": 1786122300000,
+      "endedAt": 1786122420000,
+      "requests": 3,
+      "toolCalls": 2,
+      "tokens": {
+        "value": 400000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "gpt-5-codex"
+    },
+    {
+      "sessionId": "t2100000-0000-4000-8000-000000000000",
+      "title": "Переименовать ветку",
+      "project": "ollama-bar",
+      "provider": "claude",
+      "startedAt": 1786105800000,
+      "endedAt": 1786105860000,
+      "requests": 2,
+      "toolCalls": 1,
+      "tokens": {
+        "value": 300000,
+        "confidence": "exact"
+      },
+      "branch": "main",
+      "model": "Sonnet 4.6"
+    },
+    {
+      "sessionId": "t2200000-0000-4000-8000-000000000000",
+      "title": null,
+      "project": "sandbox",
+      "provider": "claude",
+      "startedAt": 1786096500000,
+      "endedAt": 1786096560000,
+      "requests": 1,
+      "toolCalls": 1,
+      "tokens": {
+        "value": 100000,
+        "confidence": "exact"
+      },
+      "firstPrompt": "что за файл lifetimes.jsonl",
+      "branch": "main",
+      "model": "Opus 5"
+    }
+  ],
+  "folded": {
+    "from": 15,
+    "belowTokens": 3449000
+  },
+  "byHour": [
+    {
+      "hour": 9,
+      "slices": [
+        {
+          "provider": "claude",
+          "tokens": 93600000
+        }
+      ],
+      "total": 93600000
+    },
+    {
+      "hour": 10,
+      "slices": [
+        {
+          "provider": "claude",
+          "tokens": 73900000
+        }
+      ],
+      "total": 73900000
+    },
+    {
+      "hour": 11,
+      "slices": [
+        {
+          "provider": "claude",
+          "tokens": 72700000
+        }
+      ],
+      "total": 72700000
+    },
+    {
+      "hour": 12,
+      "slices": [
+        {
+          "provider": "claude",
+          "tokens": 35200000
+        }
+      ],
+      "total": 35200000
+    },
+    {
+      "hour": 13,
+      "slices": [
+        {
+          "provider": "codex",
+          "tokens": 20800000
+        },
+        {
+          "provider": "claude",
+          "tokens": 2400000
+        }
+      ],
+      "total": 23200000
+    },
+    {
+      "hour": 14,
+      "slices": [
+        {
+          "provider": "claude",
+          "tokens": 13600000
+        },
+        {
+          "provider": "codex",
+          "tokens": 6900000
+        }
+      ],
+      "total": 20500000
+    },
+    {
+      "hour": 15,
+      "slices": [
+        {
+          "provider": "codex",
+          "tokens": 10400000
+        },
+        {
+          "provider": "claude",
+          "tokens": 6300000
+        }
+      ],
+      "total": 16700000
+    },
+    {
+      "hour": 16,
+      "slices": [
+        {
+          "provider": "codex",
+          "tokens": 8700000
+        }
+      ],
+      "total": 8700000
+    },
+    {
+      "hour": 17,
+      "slices": [
+        {
+          "provider": "codex",
+          "tokens": 400000
+        }
+      ],
+      "total": 400000
+    }
+  ],
+  "byProject": [
+    {
+      "project": "ollama-bar",
+      "tokens": {
+        "value": 156200000,
+        "confidence": "reconstructed",
+        "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+      },
+      "provider": "claude"
+    },
+    {
+      "project": "Projects",
+      "tokens": {
+        "value": 87300000,
+        "confidence": "exact"
+      },
+      "provider": "claude"
+    },
+    {
+      "project": "pilot",
+      "tokens": {
+        "value": 36000000,
+        "confidence": "exact"
+      },
+      "provider": "codex"
+    },
+    {
+      "project": "agentmeter",
+      "tokens": {
+        "value": 18900000,
+        "confidence": "reconstructed",
+        "caveat": "часть запросов восстановлена по разрыву цепочки кэша, этап 1.3"
+      },
+      "provider": "claude"
+    },
+    {
+      "project": "",
+      "tokens": {
+        "value": 46500000,
+        "confidence": "exact"
+      },
+      "provider": null,
+      "folded": 4
+    }
+  ]
+}

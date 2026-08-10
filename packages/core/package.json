@@ -12,6 +12,10 @@
     "./format": {
       "types": "./dist/format/tokens.d.ts",
       "default": "./dist/format/tokens.js"
+    },
+    "./day": {
+      "types": "./dist/query/day.d.ts",
+      "default": "./dist/query/day.js"
     }
   },
   "main": "./dist/index.js",

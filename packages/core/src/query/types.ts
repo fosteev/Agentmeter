@@ -5,6 +5,17 @@ export interface DayRange {
   to: number
 }
 
+/**
+ * Чем сужен запрос к агрегатам. Провайдер и проект живут вместе, потому что
+ * сузить надо все три ответа сразу — итог, ленту и разрезы. Отфильтруй список
+ * задач, забыв про итог, — и шапка покажет весь день над лентой из одного
+ * проекта, а сумма строк не сойдётся с числом над ними.
+ */
+export interface RequestScope {
+  provider?: Provider
+  project?: string
+}
+
 export interface Totals {
   input: number
   output: number
@@ -42,7 +53,17 @@ export interface TaskRow {
   project: string
   branch: string | null
   model: string
-  title: string
+  /**
+   * Название, которое дал агент. `null` — его нет.
+   *
+   * Подстановка «без названия» жила здесь до 3.1 и была удобной ровно до
+   * первого экрана: макет рисует безымянную задачу иначе — тире, серый текст и
+   * первый промпт подписью (строки 649–651). Схлопнутая строка делает два вида
+   * строки неразличимыми по данным, а различать их больше негде.
+   */
+  title: string | null
+  /** Первый промпт сессии. Подпись у безымянной задачи, запасное имя в CLI. */
+  firstPrompt: string | null
   totals: Totals
   toolCalls: number
   subagents: number

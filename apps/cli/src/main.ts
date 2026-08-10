@@ -134,7 +134,7 @@ function runToday(
           from: dayRange(endRange.from, config.ui.dayStartsAtHour, -(days - 1)).from,
           to: endRange.to,
         }
-  const report = todayReport(db, range, provider)
+  const report = todayReport(db, range, provider === undefined ? {} : { provider })
   output(common.json ? report : renderToday(report, config.ui.locale), common.json)
   return 0
 }

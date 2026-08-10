@@ -1,7 +1,7 @@
 import type { Db } from '../index/db.ts'
 import type { Provider } from '../sources/types.ts'
-import { addTotals, emptyTotals } from './today.ts'
-import type { DayRange, TaskRow } from './types.ts'
+import { addTotals, emptyTotals, requestFilter } from './today.ts'
+import type { DayRange, RequestScope, TaskRow } from './types.ts'
 
 interface RequestRow {
   session_id: string
@@ -24,10 +24,8 @@ interface RequestRow {
   tool_calls: number
 }
 
-export function taskRows(db: Db, range: DayRange, provider?: Provider): TaskRow[] {
-  const params: Array<number | string> = [range.from, range.to]
-  const providerSql = provider === undefined ? '' : 'AND sessions.provider = ?'
-  if (provider !== undefined) params.push(provider)
+export function taskRows(db: Db, range: DayRange, scope: RequestScope = {}): TaskRow[] {
+  const filter = requestFilter(range, scope)
   const requests = db.all<RequestRow>(
     `SELECT requests.session_id, sessions.provider, sessions.started_at, sessions.ended_at,
             sessions.project, sessions.branch, sessions.model AS session_model,
@@ -39,9 +37,9 @@ export function taskRows(db: Db, range: DayRange, provider?: Provider): TaskRow[
                AND tool_calls.seq = requests.seq) AS tool_calls
      FROM requests
      JOIN sessions ON sessions.id = requests.session_id
-     WHERE requests.ts >= ? AND requests.ts < ? ${providerSql}
+     WHERE ${filter.sql}
      ORDER BY sessions.started_at, requests.seq`,
-    ...params,
+    ...filter.params,
   )
   const bySession = new Map<string, TaskRow & { parentSessionId: string | null }>()
 
@@ -57,7 +55,8 @@ export function taskRows(db: Db, range: DayRange, provider?: Provider): TaskRow[
         project: request.project,
         branch: request.branch,
         model: request.session_model ?? request.model,
-        title: request.title ?? request.first_prompt ?? 'без названия',
+        title: request.title,
+        firstPrompt: request.first_prompt,
         totals: emptyTotals(),
         toolCalls: 0,
         subagents: 0,
@@ -119,6 +118,7 @@ function publicRow(row: TaskRow & { parentSessionId: string | null }): TaskRow {
     branch: row.branch,
     model: row.model,
     title: row.title,
+    firstPrompt: row.firstPrompt,
     totals: row.totals,
     toolCalls: row.toolCalls,
     subagents: row.subagents,
