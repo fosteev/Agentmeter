@@ -73,6 +73,15 @@ import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 import { readStartup, type StartupHost } from './startup.ts'
+import type { AppUpdater } from 'electron-updater'
+import {
+  applyAuto,
+  initialUpdateState,
+  mayCheck,
+  nextUpdateState,
+  type UpdateEvent,
+  type UpdateState,
+} from './update.ts'
 
 const here = fileURLToPath(new URL('./', import.meta.url))
 /**
@@ -115,6 +124,15 @@ const TRAY_SCALES = [1, 2, 3] as const
  * «новая сессия видна меньше чем за 2 с».
  */
 const HIDDEN_POLL_FACTOR = 5
+/**
+ * Когда проверять обновления (5.4).
+ *
+ * Задержка первой проверки — чтобы не лезть в сеть посреди первого прохода
+ * индекса. Шесть часов между следующими: приложение живёт в трее неделями, и
+ * проверка только при запуске у такого означала бы «никогда».
+ */
+const UPDATE_FIRST_DELAY_MS = 30_000
+const UPDATE_EVERY_MS = 6 * 3_600_000
 
 interface Runtime {
   db: Db
@@ -130,6 +148,8 @@ interface Runtime {
   configProblems: string[]
   /** Чем спрашивать систему про автозапуск (5.3) — три метода `app`, не больше. */
   startup: StartupHost
+  /** Ход обновления (5.4). Живёт в памяти: перезапуск начинает проверку заново. */
+  update: UpdateState
   watcher?: Watcher
   /**
    * До чего не добрались на последнем обходе. Держится здесь, а не пересчитыва-
@@ -143,6 +163,29 @@ interface Runtime {
   pending?: Generator<CoreIngestProgress, unknown> | undefined
   /** Когда начался отложенный проход — из него считается оставшееся время. */
   startedIngestAt?: number
+}
+
+/**
+ * Загрузчик обновлений (5.4).
+ *
+ * `electron-updater` — модуль CommonJS, и из ESM его именованные экспорты
+ * приезжают не всегда: `import('electron-updater')` отдаёт пространство имён, у
+ * которого настоящий объект лежит в `default`. Деструктуризация `{ autoUpdater }`
+ * при этом не падает — она даёт `undefined`, и первое же обращение к полю
+ * роняет проверку обновлений целиком, а приложение работает как ни в чём не
+ * бывало. Нашла это проверка 9 в `package-smoke.ts`.
+ *
+ * Импорт ленивый: в неустановленном приложении обновлений нет вовсе, и тянуть
+ * ради них модуль в память при каждом `npm run dev` незачем.
+ */
+async function loadUpdater(): Promise<AppUpdater> {
+  const module = (await import('electron-updater')) as unknown as {
+    autoUpdater?: AppUpdater
+    default?: { autoUpdater?: AppUpdater }
+  }
+  const updater = module.autoUpdater ?? module.default?.autoUpdater
+  if (updater === undefined) throw new Error('electron-updater не отдал autoUpdater')
+  return updater
 }
 
 /**
@@ -211,6 +254,7 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     // тремя методами, а не целиком: `main/config.ts` про Electron не знает и
     // знать не должен — его проверяют без запуска приложения.
     startup: app,
+    update: initialUpdateState(app.getVersion(), app.isPackaged, config.updates.auto),
     issues: ingested?.issues ?? [],
   }
   if (defer) {
@@ -277,6 +321,7 @@ async function runSmoke(): Promise<void> {
   let trayReport: unknown
   let windowReport: unknown
   let settingsReport: unknown
+  let updaterReport: unknown
   try {
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     registerIpc(
@@ -290,6 +335,10 @@ async function runSmoke(): Promise<void> {
         // Смоук автозапуск не трогает: включить его значило бы записать
         // приложение в «Объекты входа» того, кто прогнал проверку.
         () => configReport(runtime),
+        // И в сеть не ходит: проверка обновлений — единственный сетевой вызов
+        // продукта, и смоук обязан оставаться проверкой того, что на диске.
+        () => configReport(runtime),
+        () => undefined,
       ),
     )
 
@@ -389,6 +438,20 @@ async function runSmoke(): Promise<void> {
       }
     }
 
+    // Загрузчик обновлений (5.4) только **загружается**, без единого сетевого
+    // вызова: проверить надо ровно то, что он доехал внутрь сборки. Не доехал
+    // бы — приложение работало бы как ни в чём не бывало, а обновления молча
+    // перестали бы существовать.
+    try {
+      const autoUpdater = await loadUpdater()
+      updaterReport = { module: typeof autoUpdater.checkForUpdates === 'function' }
+    } catch (error) {
+      updaterReport = {
+        module: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+
     window.destroy()
   } catch (error) {
     problems.push(error instanceof Error ? error.message : String(error))
@@ -410,6 +473,7 @@ async function runSmoke(): Promise<void> {
       // упакованном приложении здесь `available: true` — это и проверяет
       // `package-smoke.ts`, потому что в разработке он всегда `false`.
       startup: readStartup(app),
+      updater: updaterReport,
       snapshot,
     }),
   )
@@ -429,6 +493,8 @@ function createHandlers(
   openWindow: (tab: WindowTab) => void,
   changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
   changeStartup: (enabled: boolean) => ConfigReport,
+  checkUpdate: () => ConfigReport,
+  installUpdate: () => void,
 ): IpcHandlers {
   return {
     'snapshot:get': () =>
@@ -447,6 +513,8 @@ function createHandlers(
     // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
     // знать незачем: ответ тот же отчёт, и рассылается он так же.
     'startup:set': ({ enabled }) => changeStartup(enabled),
+    'update:check': () => checkUpdate(),
+    'update:install': () => installUpdate(),
     'index:rebuild': () => undefined,
     'doctor:get': () => ({
       cliVersions: [],
@@ -949,6 +1017,10 @@ function main(): void {
         delete runtime!.watcher
       }
     }
+    // Выключенная проверка обновлений замолкает сразу, а не со следующего
+    // запуска: это единственный сетевой вызов продукта, и «выключил, но он ещё
+    // разок сходит» — не то, что обещает тумблер.
+    runtime!.update = applyAuto(runtime!.update, next.updates.auto)
     emit('config:changed', report)
     return report
   }
@@ -966,6 +1038,57 @@ function main(): void {
     const report = setStartup(runtime!, enabled)
     emit('config:changed', report)
     return report
+  }
+
+  /**
+   * Автообновление (5.4) — вся механика в одном месте.
+   *
+   * `electron-updater` подключается лениво, первым обращением: в неустановленном
+   * приложении он не работает вовсе, и тянуть его в память при каждом `npm run
+   * dev` незачем.
+   */
+  const onUpdateEvent = (event: UpdateEvent): void => {
+    if (runtime === undefined) return
+    const before = runtime.update
+    runtime.update = nextUpdateState(before, event)
+    if (runtime.update !== before) emit('update:state', runtime.update)
+  }
+
+  let updater: AppUpdater | undefined
+  const openUpdater = async (): Promise<AppUpdater> => {
+    if (updater !== undefined) return updater
+    const autoUpdater = await loadUpdater()
+    // Скачивание — сразу за находкой: спрашивать «качать ли» отдельной кнопкой
+    // значит выдумать шаг, которого человек не просил. Установка при этом
+    // остаётся его решением — приложение не перезапускает себя само.
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = false
+    autoUpdater.on('update-available', (info) => onUpdateEvent({ type: 'found', version: info.version }))
+    autoUpdater.on('update-not-available', () => onUpdateEvent({ type: 'none' }))
+    autoUpdater.on('download-progress', (progress) =>
+      onUpdateEvent({ type: 'progress', percent: progress.percent }),
+    )
+    autoUpdater.on('update-downloaded', (info) => onUpdateEvent({ type: 'ready', version: info.version }))
+    autoUpdater.on('error', (error) => onUpdateEvent({ type: 'error', message: error.message }))
+    updater = autoUpdater
+    return autoUpdater
+  }
+
+  const checkUpdate = (manual = true): ConfigReport => {
+    const report = configReport(runtime!)
+    if (!mayCheck(runtime!.update, runtime!.config.updates.auto, manual)) return report
+    onUpdateEvent({ type: 'check' })
+    void openUpdater()
+      .then((one) => one.checkForUpdates())
+      .catch((error: unknown) =>
+        onUpdateEvent({ type: 'error', message: error instanceof Error ? error.message : String(error) }),
+      )
+    return configReport(runtime!)
+  }
+
+  const installUpdate = (): void => {
+    if (runtime?.update.phase !== 'ready' || updater === undefined) return
+    updater.quitAndInstall()
   }
 
   void app.whenReady().then(() => {
@@ -990,7 +1113,14 @@ function main(): void {
 
     registerIpc(
       ipcMain,
-      createHandlers(() => runtime!, openMainWindow, changeConfig, changeStartup),
+      createHandlers(
+        () => runtime!,
+        openMainWindow,
+        changeConfig,
+        changeStartup,
+        () => checkUpdate(),
+        installUpdate,
+      ),
     )
 
     window = createPopup(gallery ? 'gallery' : 'index', !windowed)
@@ -1022,6 +1152,14 @@ function main(): void {
     })
 
     timer = setInterval(poll, runtime.config.live.pollMs)
+
+    // Проверка обновлений (5.4). Первая — не сразу: при старте идёт первый
+    // проход индекса, и сетевой вызов посреди него отнимает время у того
+    // единственного экрана, который человек в этот момент видит. Дальше раз в
+    // шесть часов — приложение живёт в трее неделями, и «проверять при
+    // запуске» у него означало бы «не проверять».
+    setTimeout(() => checkUpdate(false), UPDATE_FIRST_DELAY_MS)
+    setInterval(() => checkUpdate(false), UPDATE_EVERY_MS)
   })
 
   app.on('window-all-closed', () => {

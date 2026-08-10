@@ -272,6 +272,29 @@ export interface ConfigReport {
    * разошлась бы с правдой молча.
    */
   startup: StartupStatus
+  /**
+   * Автообновление (5.4) — тоже не из файла настроек: это состояние загрузчика
+   * прямо сейчас. Сама настройка «проверять автоматически» лежит в конфиге
+   * (`updates.auto`), а фаза, найденная версия и процент — здесь.
+   */
+  update: UpdateStatus
+}
+
+export interface UpdateStatus {
+  /**
+   * `unsupported` — приложение не установлено, обновлять нечего;
+   * `off` — проверка выключена настройкой; `idle` — обновлений нет;
+   * `checking`, `downloading`, `ready` — ход дела; `error` — не получилось.
+   */
+  phase: 'unsupported' | 'off' | 'idle' | 'checking' | 'downloading' | 'ready' | 'error'
+  /** Версия, которая работает сейчас. */
+  current: string
+  /** Найденная версия — с момента находки до установки. */
+  version?: string
+  /** Процент скачанного, 0…100. Только в `downloading`. */
+  percent?: number
+  /** Текст ошибки от загрузчика — не наш пересказ. Только в `error`. */
+  error?: string
 }
 
 export interface StartupStatus {
@@ -963,6 +986,19 @@ export interface IpcCalls {
    * желаемое вместо действительного значит врать самым проверяемым способом.
    */
   'startup:set': { arg: { enabled: boolean }; result: ConfigReport }
+  /**
+   * Проверить обновления руками (5.4).
+   *
+   * Есть отдельно от автоматической проверки затем, что автоматическую можно
+   * выключить: кнопка «Проверить» обязана работать и тогда — иначе выключенная
+   * настройка означала бы «обновлений больше не будет никогда».
+   */
+  'update:check': { arg: void; result: ConfigReport }
+  /**
+   * Установить скачанное и перезапуститься. Зовётся только в фазе `ready`:
+   * кнопки в других фазах нет, а вызов в них ничего не сделает — ставить нечего.
+   */
+  'update:install': { arg: void; result: void }
   'index:rebuild': { arg: void; result: void }
   'doctor:get': { arg: void; result: DoctorReport }
   /**
@@ -990,6 +1026,12 @@ export interface IpcEvents {
    * потребовало бы знать, кто он.
    */
   'config:changed': ConfigReport
+  /**
+   * Ход обновления (5.4). Отдельным событием, а не через `config:changed`:
+   * проценты скачивания приходят десятками, и слать вместе с ними весь отчёт о
+   * настройках — значит перерисовывать экран настроек на каждый процент.
+   */
+  'update:state': UpdateStatus
 }
 
 export type IpcCallName = keyof IpcCalls
@@ -1006,6 +1048,8 @@ export const IPC_CALLS = [
   'config:get',
   'config:set',
   'startup:set',
+  'update:check',
+  'update:install',
   'index:rebuild',
   'doctor:get',
   'window:open',
@@ -1018,4 +1062,5 @@ export const IPC_EVENTS = [
   'alert:limit',
   'alert:session',
   'config:changed',
+  'update:state',
 ] as const satisfies readonly IpcEventName[]

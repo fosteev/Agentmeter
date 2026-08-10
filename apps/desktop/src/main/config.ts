@@ -37,6 +37,7 @@ import {
 } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial, SourceStatus } from '@agentmeter/ipc'
 import { readStartup, writeStartup, type StartupHost } from './startup.ts'
+import type { UpdateState } from './update.ts'
 
 /** Что настройкам нужно от приложения, чтобы примениться без перезапуска. */
 export interface ConfigTarget {
@@ -57,6 +58,8 @@ export interface ConfigTarget {
    * что мы записали себе в память.
    */
   startup: StartupHost
+  /** Ход обновления (5.4) — состояние загрузчика, а не настройка из файла. */
+  update: UpdateState
 }
 
 /**
@@ -88,6 +91,7 @@ export function configReport(target: ConfigTarget): ConfigReport {
     problems: target.configProblems,
     sources: sourceStatus(target.db, target.config),
     startup: readStartup(target.startup),
+    update: target.update,
   }
 }
 

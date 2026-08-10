@@ -10,7 +10,7 @@
  * файл, не попавший в `files`, путь, который в asar читается иначе, чем на
  * диске, и зависимость, оставшаяся в devDependencies.
  *
- * Восемь проверок, каждая названа по поломке, которую обязана поймать.
+ * Девять проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -157,6 +157,7 @@ let payload: {
   window?: { page?: string }
   tray?: { empty?: boolean }
   startup?: { enabled?: boolean; available?: boolean; reason?: string }
+  updater?: { module?: boolean; error?: string }
   snapshot?: { at?: number; today?: { total?: { value?: number } } }
 } = {}
 try {
@@ -273,5 +274,31 @@ report(
   startup?.available === true && startup.enabled === false,
 )
 
+
+// 9. Ловит: автообновление (5.4), не доехавшее до сборки, — двумя разными
+//    способами. Загрузчик мог остаться в devDependencies и не попасть в asar;
+//    адрес релизов мог не попасть в бандл, и тогда приложение искало бы
+//    обновления неизвестно где. Сети здесь нет ни байта: модуль только
+//    загружается, а адрес читается файлом.
+const feedPath = app === null ? null : join(app.resources, 'app-update.yml')
+const feed = feedPath !== null && existsSync(feedPath) ? readFileSync(feedPath, 'utf8') : null
+const wanted = readFileSync(configPath, 'utf8')
+const owner = wanted.match(/^\s+owner:\s*(\S+)/m)?.[1]
+const repo = wanted.match(/^\s+repo:\s*(\S+)/m)?.[1]
+// `--dir` адрес в бандл не пишет вовсе — это не поломка, но и не проверка.
+// Молчать о пропущенном нельзя: пропуск, о котором не сказано, читается как
+// «проверено».
+const addressed =
+  feed === null
+    ? 'адрес не проверен: сборка --dir его не пишет'
+    : feed.includes(`owner: ${owner}`) && feed.includes(`repo: ${repo}`)
+      ? `адрес ${owner}/${repo}`
+      : `адрес в сборке разошёлся с конфигом: ${feed.replace(/\n/g, ' ').trim()}`
+report(
+  9,
+  'загрузчик обновлений внутри сборки, адрес релизов — из конфига',
+  `${payload.updater?.module === true ? 'модуль на месте' : `модуля нет: ${payload.updater?.error ?? 'приложение не отчиталось'}`}, ${addressed}`,
+  payload.updater?.module === true && !addressed.startsWith('адрес в сборке разошёлся'),
+)
 
 process.exit(failed ? 1 : 0)

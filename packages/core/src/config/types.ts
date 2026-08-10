@@ -48,6 +48,17 @@ export interface Config {
     watch: boolean
   }
 
+  updates: {
+    /**
+     * Проверять обновления автоматически (5.4).
+     *
+     * **Единственный сетевой вызов продукта.** Всё остальное читается с диска,
+     * поэтому настройка выключает проверку целиком — не «спрашивать, но не
+     * скачивать», а не ходить в сеть вовсе.
+     */
+    auto: boolean
+  }
+
   live: {
     /**
      * Как часто трей пересобирает снимок, мс.
@@ -144,6 +155,7 @@ export const DEFAULT_CONFIG: Config = {
     notifyOnIdle: true,
   },
   index: { watch: true },
+  updates: { auto: true },
   live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },
   privacy: { hidePrompts: false, hidePaths: false },
   ui: {

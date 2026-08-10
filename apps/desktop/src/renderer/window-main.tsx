@@ -182,10 +182,17 @@ export function WindowApp() {
       setLocale(report.config.ui.locale)
       setConfigReport(report)
     })
+    // Ход обновления правит одно поле отчёта, а не приезжает отчётом целиком:
+    // проценты скачивания идут десятками, и перерисовывать ими весь экран
+    // настроек значит мигать всем, что на нём есть.
+    const offUpdate = window.agentmeter['on:update:state']((update) => {
+      setConfigReport((current) => (current === null ? current : { ...current, update }))
+    })
     return () => {
       alive = false
       off()
       offConfig()
+      offUpdate()
     }
   }, [])
 
@@ -210,6 +217,19 @@ export function WindowApp() {
    */
   const changeStartup = (enabled: boolean): void => {
     void window.agentmeter['startup:set']({ enabled }).then(setConfigReport)
+  }
+
+  /**
+   * Обновления (5.4). Ответ на «Проверить» — тот же отчёт, а ход дела приезжает
+   * событием `update:state`: процентов скачивания приходят десятки, и слать с
+   * каждым весь отчёт о настройках значило бы перерисовывать экран целиком ради
+   * одной строки.
+   */
+  const checkUpdate = (): void => {
+    void window.agentmeter['update:check']().then(setConfigReport)
+  }
+  const installUpdate = (): void => {
+    void window.agentmeter['update:install']()
   }
 
   useEffect(() => {
@@ -292,7 +312,13 @@ export function WindowApp() {
           onSelectDay={setHistoryDay}
         />
       ) : tab === 'settings' && configReport !== null ? (
-        <SettingsTab report={configReport} onChange={changeConfig} onStartup={changeStartup} />
+        <SettingsTab
+          report={configReport}
+          onChange={changeConfig}
+          onStartup={changeStartup}
+          onCheckUpdate={checkUpdate}
+          onInstallUpdate={installUpdate}
+        />
       ) : (
         tabPlaceholder(tab)
       )}

@@ -43,11 +43,21 @@ export interface SettingsTabProps {
    * настроек, а это — операционную систему (5.3).
    */
   onStartup: (enabled: boolean) => void
+  /** Проверить обновления руками и поставить скачанное (5.4). */
+  onCheckUpdate: () => void
+  onInstallUpdate: () => void
   /** С какого раздела открыть. Нужен витрине и тестам; по умолчанию первый. */
   section?: SettingsSection
 }
 
-export function SettingsTab({ report, onChange, onStartup, section = 'sources' }: SettingsTabProps) {
+export function SettingsTab({
+  report,
+  onChange,
+  onStartup,
+  onCheckUpdate,
+  onInstallUpdate,
+  section = 'sources',
+}: SettingsTabProps) {
   const [active, setActive] = useState<SettingsSection>(section)
   const { config } = report
 
@@ -114,7 +124,17 @@ export function SettingsTab({ report, onChange, onStartup, section = 'sources' }
           <SettingsAppearance config={config} onChange={onChange} />
         ) : null}
         {active === 'privacy' ? <SettingsPrivacy config={config} onChange={onChange} /> : null}
-        {active === 'app' ? <SettingsApp startup={report.startup} onToggle={onStartup} /> : null}
+        {active === 'app' ? (
+          <SettingsApp
+            config={config}
+            startup={report.startup}
+            update={report.update}
+            onChange={onChange}
+            onToggleStartup={onStartup}
+            onCheckUpdate={onCheckUpdate}
+            onInstallUpdate={onInstallUpdate}
+          />
+        ) : null}
       </div>
     </div>
   )

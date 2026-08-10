@@ -31,6 +31,7 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
       { provider: 'codex', path: '/home/u/.codex', readable: false, files: 88, bytes: 42_991_616 },
     ],
     startup: { enabled: false, available: true },
+    update: { phase: 'idle', current: '0.1.0' },
   }
 }
 
@@ -75,7 +76,7 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 describe('экран настроек', () => {
   /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
   it('рисует шесть разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
@@ -88,7 +89,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -102,7 +103,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')
@@ -167,5 +168,45 @@ describe('экран настроек', () => {
 
     expect((warn.props as { max?: number }).max).toBe(90)
     expect((danger.props as { min?: number }).min).toBe(70)
+  })
+
+  /**
+   * Ловит кнопку без поведения — то самое правило, из-за которого тумблера
+   * автозапуска не было до 5.3. «Установить и перезапустить» показывается
+   * ровно тогда, когда ставить есть что; в неустановленном приложении кнопки
+   * нет вовсе, потому что нажать её там нельзя ни с каким исходом.
+   */
+  it('кнопка обновления соответствует фазе, а не всегда одна', () => {
+    const at = (update: ConfigReport['update']): string =>
+      renderToStaticMarkup(
+        <SettingsTab
+          report={{ ...report(), update }}
+          section="app"
+          onChange={() => undefined}
+          onStartup={() => undefined}
+          onCheckUpdate={() => undefined}
+          onInstallUpdate={() => undefined}
+        />,
+      )
+
+    const idle = at({ phase: 'idle', current: '0.1.0' })
+    expect(idle).toContain('data-update-action="check"')
+    expect(idle).not.toContain('data-update-action="install"')
+    expect(idle).toContain('0.1.0')
+
+    const ready = at({ phase: 'ready', current: '0.1.0', version: '0.2.0' })
+    expect(ready).toContain('data-update-action="install"')
+    expect(ready).not.toContain('data-update-action="check"')
+    expect(ready).toContain('0.2.0')
+
+    const dev = at({ phase: 'unsupported', current: '0.1.0' })
+    expect(dev).not.toContain('data-update-action')
+    expect(dev).toContain('только в установленном приложении')
+
+    // Ошибка показывается дословно: пересказ «что-то пошло не так» отнял бы
+    // единственную зацепку.
+    expect(at({ phase: 'error', current: '0.1.0', error: 'ENOTFOUND github.com' })).toContain(
+      'ENOTFOUND github.com',
+    )
   })
 })

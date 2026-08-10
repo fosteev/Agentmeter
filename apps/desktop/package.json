@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@agentmeter/core": "*",
-    "@agentmeter/ipc": "*"
+    "@agentmeter/ipc": "*",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
