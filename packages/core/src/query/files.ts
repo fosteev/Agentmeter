@@ -16,6 +16,8 @@
  */
 import { relative, isAbsolute } from 'node:path'
 import type { Db } from '../index/db.ts'
+import { taskFilter, taskSessions } from './task.ts'
+import type { DayRange } from './types.ts'
 
 export interface ChangedFile {
   /**
@@ -34,14 +36,22 @@ interface FileRow {
   changes: number
 }
 
-export function changedFiles(db: Db, sessionId: string): ChangedFile[] {
+/**
+ * `sessionId` — корень задачи, а не одна сессия: правки сабагента сделаны в том
+ * же дереве и в шапке уже посчитаны. `range` сужает до куска задачи, попавшего
+ * в период ленты, — тот же довод, что у `taskDetail`.
+ */
+export function changedFiles(db: Db, sessionId: string, range?: DayRange): ChangedFile[] {
   const cwd = db.get<{ cwd: string }>('SELECT cwd FROM sessions WHERE id = ?', sessionId)?.cwd
+  const filter = taskFilter(taskSessions(db, sessionId), range)
   const rows = db.all<FileRow>(
-    `SELECT path, count(*) AS changes
+    `SELECT tool_files.path AS path, count(*) AS changes
        FROM tool_files
-      WHERE session_id = ? AND action = 'write'
-      GROUP BY path`,
-    sessionId,
+       JOIN requests ON requests.session_id = tool_files.session_id
+                    AND requests.seq = tool_files.seq
+      WHERE ${filter.sql} AND tool_files.action = 'write'
+      GROUP BY tool_files.path`,
+    ...filter.params,
   )
   // Порядок берётся по показанному пути, а не по тому, что лежит в базе: иначе
   // список, укороченный по каталогу проекта, выглядит неотсортированным —
@@ -59,7 +69,7 @@ export function changedFiles(db: Db, sessionId: string): ChangedFile[] {
  * пути, а не лучше. Признак «снаружи» — точки в начале, а не сравнение строк:
  * `/Users/fost/Projects/agentmeter-old` начинается с `/Users/fost/Projects/agentmeter`.
  */
-function display(path: string, cwd: string | undefined): string {
+export function display(path: string, cwd: string | undefined): string {
   if (cwd === undefined || cwd.length === 0 || !isAbsolute(path)) return path
   const short = relative(cwd, path)
   return short.length === 0 || short.startsWith('..') ? path : short

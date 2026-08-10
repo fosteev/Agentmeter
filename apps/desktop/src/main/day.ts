@@ -19,6 +19,7 @@ import {
   type TaskRow as CoreTaskRow,
   type Totals,
 } from '@agentmeter/core'
+import { measured } from './measured.ts'
 import type {
   DayReport,
   DayTotals,
@@ -45,8 +46,6 @@ const KEEP_ROWS = 5
 const MIN_FOLDED = 2
 /** Сколько проектов показываем поимённо; остальные — строкой «+ N проектов». */
 const KEEP_PROJECTS = 4
-
-const RECONSTRUCTED = 'часть запросов восстановлена по разрыву цепочки кэша, этап 1.3'
 
 export function buildDayReport(db: Db, filter: TodayFilter): DayReport {
   const range = { from: filter.from, to: filter.to }
@@ -85,7 +84,13 @@ function sortTasks(rows: readonly CoreTaskRow[], sort: NonNullable<TodayFilter['
   return [...rows].sort((left, right) => key(right) - key(left) || left.sessionId.localeCompare(right.sessionId))
 }
 
-function toTaskRow(row: CoreTaskRow): TaskRow {
+/**
+ * Строка ленты из строки ядра. Экспортируется потому, что карточка задачи
+ * (`task.ts`) обязана показывать в шапке **ту же** строку, что свёрнутая лента
+ * над ней: собери её вторым похожим кодом — и однажды они разойдутся полем,
+ * которое видно на экране дважды.
+ */
+export function toTaskRow(row: CoreTaskRow): TaskRow {
   const task: TaskRow = {
     sessionId: row.sessionId,
     title: row.title,
@@ -178,12 +183,6 @@ function dominant(project: ProjectSplit): Provider | null {
   if (first === undefined) return null
   if (second !== undefined && second.total === first.total) return null
   return first.provider
-}
-
-function measured(value: number, approximate: boolean): Measured {
-  return approximate
-    ? { value, confidence: 'reconstructed', caveat: RECONSTRUCTED }
-    : { value, confidence: 'exact' }
 }
 
 /**

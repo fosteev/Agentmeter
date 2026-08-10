@@ -256,21 +256,42 @@ describe('карточка задачи', () => {
     const firstResponse = new Promise<TaskCardData | null>((resolve) => (resolveFirst = resolve))
     const secondResponse = new Promise<TaskCardData | null>((resolve) => (resolveSecond = resolve))
     const getTask = vi
-      .fn<(arg: { sessionId: string }) => Promise<TaskCardData | null>>()
+      .fn<
+        (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCardData | null>
+      >()
       .mockReturnValueOnce(firstResponse)
       .mockReturnValueOnce(secondResponse)
     const guarded = createTaskRequestGuard(getTask)
     const firstId = today.tasks[0]!.sessionId
     const secondId = today.tasks[1]!.sessionId
-    const first = guarded(firstId)
-    const second = guarded(secondId)
+    const range = { from: today.range.from, to: today.range.to }
+    const first = guarded(firstId, range)
+    const second = guarded(secondId, range)
     const secondCard = { ...card, task: { ...card.task, sessionId: secondId } }
 
     resolveSecond(secondCard)
     await expect(second).resolves.toBe(secondCard)
     resolveFirst(card)
     await expect(first).resolves.toBeUndefined()
-    expect(getTask).toHaveBeenNthCalledWith(1, { sessionId: firstId })
-    expect(getTask).toHaveBeenNthCalledWith(2, { sessionId: secondId })
+    expect(getTask).toHaveBeenNthCalledWith(1, { sessionId: firstId, ...range })
+    expect(getTask).toHaveBeenNthCalledWith(2, { sessionId: secondId, ...range })
+  })
+
+  /**
+   * Ловит карточку, спрошенную без периода ленты.
+   *
+   * Задача, начатая до полуночи, попадает в оба дня своими кусками. Спроси
+   * карточку без периода — и под строкой на 40M раскроется карточка на 87M,
+   * причём оба числа настоящие. На живых логах это 32 сессии из 578 и 21.5%
+   * расхода.
+   */
+  it('спрашивает карточку тем же периодом, что и лента', async () => {
+    const getTask = vi.fn<
+      (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCardData | null>
+    >(() => Promise.resolve(card))
+    const range = { from: today.range.from, to: today.range.to }
+    await createTaskRequestGuard(getTask)(card.task.sessionId, range)
+
+    expect(getTask).toHaveBeenCalledWith({ sessionId: card.task.sessionId, ...range })
   })
 })

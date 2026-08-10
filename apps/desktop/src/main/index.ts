@@ -51,6 +51,7 @@ import type {
   WindowTab,
 } from '@agentmeter/ipc'
 import { buildDayReport } from './day.ts'
+import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
@@ -326,9 +327,7 @@ function createHandlers(runtime: () => Runtime, openWindow: (tab: WindowTab) => 
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
     'config:get': () => ({ config: runtime().config, problems: [] }),
     'today:get': (filter) => buildDayReport(runtime().db, filter),
-    // Карточка задачи — 3.4. Пока `null`: это «такой задачи нет», и экран
-    // обязан уметь его показать; выдуманная пустая карточка была бы враньём.
-    'task:get': () => null,
+    'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
     'breakdown:get': () => [],
     'config:set': () => ({ problems: [] }),
     'index:rebuild': () => undefined,

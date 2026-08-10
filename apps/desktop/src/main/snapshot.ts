@@ -20,6 +20,7 @@ import {
   type LiveLayer,
   type Totals,
 } from '@agentmeter/core'
+import { measured } from './measured.ts'
 import type {
   ContextUsage,
   DayTotals,
@@ -176,15 +177,11 @@ export function toContext(context: CoreContextFill): ContextUsage {
   return used
 }
 
-const RECONSTRUCTED = 'часть запросов восстановлена по разрыву цепочки кэша, этап 1.3'
-
 /**
- * Точность приписывается не всем полям подряд.
- *
- * Незаписанные запросы (1.3) восстанавливаются по разрыву цепочки кэша, и
- * восстановленное — это всегда `cache_read`. Значит помечать оценкой `input` и
- * `output` нечестно в другую сторону: они прочитаны как есть. А сумма наследует
- * худшую из четырёх, потому что содержит восстановленное внутри себя.
+ * Точность приписывается не всем полям подряд: восстановленное — это всегда
+ * `cache_read`, а сумма наследует худшую из четырёх, потому что содержит его
+ * внутри себя. Сам перевод живёт в `measured.ts` — фраза оговорки видна
+ * пользователю, и копий у неё быть не должно.
  */
 function toDayTotals(
   totals: Totals | null,
@@ -193,19 +190,12 @@ function toDayTotals(
   projects: number,
 ): DayTotals {
   const exact = (value: number): Measured => ({ value, confidence: 'exact' })
-  const cacheRead: Measured = approximate
-    ? { value: totals?.cacheRead ?? 0, confidence: 'reconstructed', caveat: RECONSTRUCTED }
-    : exact(totals?.cacheRead ?? 0)
-  const total: Measured = approximate
-    ? { value: totals?.total ?? 0, confidence: 'reconstructed', caveat: RECONSTRUCTED }
-    : exact(totals?.total ?? 0)
-
   return {
     input: exact(totals?.input ?? 0),
     output: exact(totals?.output ?? 0),
     cacheWrite: exact(totals?.cacheWrite ?? 0),
-    cacheRead,
-    total,
+    cacheRead: measured(totals?.cacheRead ?? 0, approximate),
+    total: measured(totals?.total ?? 0, approximate),
     requests: totals?.requests ?? 0,
     sessions: sessions ?? 0,
     projects,

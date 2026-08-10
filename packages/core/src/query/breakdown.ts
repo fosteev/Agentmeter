@@ -1,5 +1,6 @@
 import type { Db, SqlValue } from '../index/db.ts'
 import type { MarginalBasis } from '../sources/types.ts'
+import { taskFilter, taskSessions } from './task.ts'
 import { emptyTotals, sourceCount, totalsFromRow } from './today.ts'
 import type {
   BreakdownReport,
@@ -9,7 +10,16 @@ import type {
   TotalsRow,
 } from './types.ts'
 
-type Scope = { range: DayRange } | { sessionId: string }
+/**
+ * Разложить можно период либо задачу. Задача — это дерево сессий: сабагенты
+ * сводятся в корень так же, как в `taskRows`, иначе ось `agent` на одной сессии
+ * всегда возвращала бы один `main`, а карточка недосчитывала бы вызовов, о
+ * которых шапка над ней уже отчиталась.
+ *
+ * `range` у задачи необязателен и означает то же, что у ленты: показать кусок
+ * задачи, попавший в период. Без него — вся задача целиком.
+ */
+type Scope = { range: DayRange } | { sessionId: string; range?: DayRange }
 
 interface TotalRow {
   input: number
@@ -31,7 +41,7 @@ interface TokenRow {
 }
 
 export function breakdownReport(db: Db, scope: Scope): BreakdownReport {
-  const filter = scopeFilter(scope)
+  const filter = scopeFilter(db, scope)
   const totalRow = db.get<TotalRow>(
     `SELECT coalesce(sum(requests.input), 0) AS input,
             coalesce(sum(requests.output), 0) AS output,
@@ -129,14 +139,14 @@ function totalRows(
     .map((row) => ({ key: row.key, totals: totalsFromRow(row) }))
 }
 
-function scopeFilter(scope: Scope): { sql: string; params: SqlValue[] } {
-  if ('range' in scope) {
+function scopeFilter(db: Db, scope: Scope): { sql: string; params: SqlValue[] } {
+  if (!('sessionId' in scope)) {
     return {
       sql: 'requests.ts >= ? AND requests.ts < ?',
       params: [scope.range.from, scope.range.to],
     }
   }
-  return { sql: 'requests.session_id = ?', params: [scope.sessionId] }
+  return taskFilter(taskSessions(db, scope.sessionId), scope.range)
 }
 
 function tokenSum(values: Record<MarginalBasis, number>): number {

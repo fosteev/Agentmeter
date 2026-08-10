@@ -66,23 +66,33 @@ export function requestToday(
   return getToday(filter)
 }
 
-type TaskGetter = (arg: { sessionId: string }) => Promise<TaskCard | null>
+type TaskGetter = (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCard | null>
 
+/**
+ * Период уезжает вместе с идентификатором: карточка обязана показывать тот же
+ * кусок задачи, что и свёрнутая строка над ней (контракт `task:get`). Берётся
+ * он из фильтра ленты, а не из «сегодня» по часам процесса — иначе окно,
+ * открытое до полуночи и раскрытое после, спросило бы про другой день.
+ */
 export function requestTask(
   sessionId: string,
+  range: { from: number; to: number },
   getTask: TaskGetter = window.agentmeter['task:get'],
 ): Promise<TaskCard | null> {
-  return getTask({ sessionId })
+  return getTask({ sessionId, from: range.from, to: range.to })
 }
 
 export function createTaskRequestGuard(
   getTask: TaskGetter = window.agentmeter['task:get'],
-): (sessionId: string | null) => Promise<TaskCard | null | undefined> {
+): (
+  sessionId: string | null,
+  range: { from: number; to: number },
+) => Promise<TaskCard | null | undefined> {
   let latest = 0
-  return async (sessionId) => {
+  return async (sessionId, range) => {
     const request = ++latest
     if (sessionId === null) return null
-    const card = await requestTask(sessionId, getTask)
+    const card = await requestTask(sessionId, range, getTask)
     return request === latest ? card : undefined
   }
 }
@@ -137,8 +147,9 @@ export function WindowApp() {
   }, [tab, todayFilter])
 
   const handleTaskToggle = (sessionId: string): void => {
+    if (todayFilter === null) return
     setTaskCard(null)
-    void taskRequest.current(sessionId).then((card) => {
+    void taskRequest.current(sessionId, todayFilter).then((card) => {
       if (card !== undefined) setTaskCard(card)
     })
   }

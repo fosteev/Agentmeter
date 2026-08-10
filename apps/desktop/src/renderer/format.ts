@@ -13,7 +13,7 @@
  * забудут передать — и число молча станет форматироваться дефолтом. Значение
  * ставится один раз при монтировании (`main.tsx`) и в витрине.
  */
-import { formatTokens as format } from '@agentmeter/core/format'
+import { formatTokens as format, plural as pluralize } from '@agentmeter/core/format'
 
 let current = 'ru'
 
@@ -32,14 +32,12 @@ export function formatTokens(value: number): string {
 /**
  * Число со словом в нужном падеже: «1 сессия», «22 сессии», «8 проектов».
  *
- * Формы перечисляются в порядке `Intl.PluralRules` — one/few/many. Руками
- * писать правила русского счёта не надо: на 11 и 111 они разные, и ошибку
- * никто не заметит месяцами.
+ * Правила счёта лежат в общем форматтере ядра — с 3.4 склонять приходится и
+ * main (`timelineNote`), а два набора правил на один экран однажды разойдутся
+ * на 11 и 111, где формы разные и ошибку никто не заметит месяцами.
  */
 export function plural(value: number, forms: readonly [string, string, string]): string {
-  const category = new Intl.PluralRules(current).select(value)
-  const index = category === 'one' ? 0 : category === 'few' ? 1 : 2
-  return `${new Intl.NumberFormat(current).format(value)} ${forms[index] ?? forms[2]}`
+  return pluralize(value, forms, current)
 }
 
 /**

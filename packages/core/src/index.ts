@@ -75,4 +75,4 @@ export * from './query/index.ts'
  * рендерер обязан брать его без этого файла, иначе в браузерный бандл уедет
  * `node:sqlite`. Здесь он для CLI и тестов, которые и так тянут ядро целиком.
  */
-export { formatTokens } from './format/tokens.ts'
+export { formatTokens, plural } from './format/tokens.ts'
