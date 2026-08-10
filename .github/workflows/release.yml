@@ -32,9 +32,8 @@ jobs:
       # Проверки перед упаковкой, а не после: собранный и выложенный черновик
       # с красными тестами — это релиз, который кто-то скачает.
       - run: npm run check
-      - run: npm run -w @agentmeter/desktop build
       # Подписи нет — это 5.2, сертификатов пока не существует. Здесь об этом
       # сказано вслух, потому что молчание читается как «подписано».
-      - run: npx --workspace @agentmeter/desktop electron-builder --publish always
+      - run: npm run -w @agentmeter/desktop release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
