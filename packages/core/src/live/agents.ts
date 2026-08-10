@@ -12,6 +12,7 @@ import type { Db, SqlValue } from '../index/db.ts'
 import { defaultClaudeHome, defaultCodexHome } from '../index/paths.ts'
 import { readLiveSessions, type ProcessStartCache } from '../sources/claude/live.ts'
 import type { Entrypoint, LiveSession, Provider } from '../sources/types.ts'
+import { collectContext, type ContextFill } from './context.ts'
 import {
   DEFAULT_RATE_WINDOW_MS,
   observedSpan,
@@ -113,6 +114,9 @@ export function collectAgents(
   const usage = usageFor(db, ids)
   const rateWindowMs = opts.rateWindowMs ?? DEFAULT_LIVE_OPTIONS.rateWindowMs
   const recent = windowTokens(db, ids, at - rateWindowMs, at)
+  // Контекст — по собственному id сессии, без свёртки сабагентов: у сабагента
+  // своё окно, и подмешать его в родителя значит показать чужой контекст.
+  const context = collectContext(db, ids, at)
 
   const agents: LiveAgent[] = []
 
@@ -138,6 +142,7 @@ export function collectAgents(
         meta,
         usage,
         recent,
+        context,
         rateWindowMs,
       }),
     )
@@ -161,6 +166,7 @@ export function collectAgents(
         meta,
         usage,
         recent,
+        context,
         rateWindowMs,
       }),
     )
@@ -172,7 +178,7 @@ export function collectAgents(
   // — последний кусок транскрипта вотчер дочитывает уже после смерти процесса,
   // и замороженное число было бы меньше настоящего.
   for (const entry of graveyard) {
-    agents.push(doneAgent(entry, usage.get(entry.agent.sessionId)))
+    agents.push(doneAgent(entry, usage.get(entry.agent.sessionId), context.get(entry.agent.sessionId)))
   }
 
   forgetGone(
@@ -214,7 +220,11 @@ function harvestGone(
   return out
 }
 
-function doneAgent(entry: { agent: LiveAgent; endedAt: number }, usage: Usage | undefined): LiveAgent {
+function doneAgent(
+  entry: { agent: LiveAgent; endedAt: number },
+  usage: Usage | undefined,
+  context: ContextFill | undefined,
+): LiveAgent {
   const agent: LiveAgent = {
     ...entry.agent,
     state: 'done',
@@ -229,6 +239,9 @@ function doneAgent(entry: { agent: LiveAgent; endedAt: number }, usage: Usage | 
     agent.approximate = usage.reconstructed > 0
     agent.lastRequestTs = usage.lastRequestTs
   }
+  // Контекст перечитывается по той же причине, что и расход: последний кусок
+  // транскрипта вотчер дочитывает уже после смерти процесса.
+  if (context !== undefined) agent.context = context
   return agent
 }
 
@@ -250,6 +263,7 @@ interface BuildInput {
   meta: Map<string, SessionMeta>
   usage: Map<string, Usage>
   recent: Map<string, number>
+  context: Map<string, ContextFill>
   rateWindowMs: number
 }
 
@@ -301,6 +315,8 @@ function buildAgent(input: BuildInput): LiveAgent {
     liveness: input.liveness,
   }
   if (usage !== undefined) agent.lastRequestTs = usage.lastRequestTs
+  const context = input.context.get(input.sessionId)
+  if (context !== undefined) agent.context = context
   if (meta?.branch) agent.branch = meta.branch
   if (meta?.model) agent.model = meta.model
   if (input.cliVersion !== undefined) agent.cliVersion = input.cliVersion

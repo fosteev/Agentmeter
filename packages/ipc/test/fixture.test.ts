@@ -57,8 +57,10 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
       true,
     )
     expect(snapshot.agents.some((agent) => agent.approximate)).toBe(true)
+    // Все четыре состояния, включая `idle` из 2.2: макетом оно не нарисовано,
+    // и без строки в фикстуре проверять его нечем.
     expect(new Set(snapshot.agents.map((agent) => agent.state))).toEqual(
-      new Set(['working', 'waiting', 'done']),
+      new Set(['working', 'waiting', 'idle', 'done']),
     )
     const done = snapshot.agents.find((agent) => agent.state === 'done')!
     expect(done.endedAt).toBeLessThan(snapshot.at)
@@ -81,6 +83,34 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
     )
     expect(total.confidence).toBe(worst.confidence)
     expect(total.caveat).toBe(worst.caveat)
+  })
+
+  /**
+   * Ловит вход, на котором проверки 2.6 зелены на любом коде.
+   *
+   * У заполнения контекста три случая, и они разные по природе: размер окна
+   * написал провайдер (Codex), размер окна выведен из наблюдений (Claude) и
+   * выводить не из чего вовсе — тогда поля нет. Останься в фикстуре один из
+   * трёх, и «оценка отмечена, точное — нет» проверяла бы пустоту.
+   */
+  it('несёт все три случая заполнения контекста', () => {
+    const withContext = snapshot.agents.filter((agent) => agent.context !== undefined)
+    expect(withContext.some((agent) => agent.context!.confidence === 'exact')).toBe(true)
+    expect(withContext.some((agent) => agent.context!.confidence === 'estimate')).toBe(true)
+    expect(snapshot.agents.some((agent) => agent.context === undefined)).toBe(true)
+
+    for (const agent of withContext) {
+      const { used, window, fill, confidence, caveat } = agent.context!
+      // Доля обязана быть той самой долей: разойдись она с числами, и попап
+      // покажет полосу одной длины, а подпись — другого процента.
+      expect(fill).toBeCloseTo(used / window, 6)
+      expect(fill).toBeGreaterThan(0)
+      expect(fill).toBeLessThanOrEqual(1)
+      // Оценка без объяснения заставляет гадать, что именно неточно, —
+      // неточен здесь только знаменатель.
+      if (confidence === 'estimate') expect(caveat).toBeTruthy()
+      else expect(caveat).toBeUndefined()
+    }
   })
 
   /**

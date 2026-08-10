@@ -112,13 +112,80 @@ describe('попап на фикстуре', () => {
     expect(snapshot.today.total.value).toBe(sum)
   })
 
-  /** Ловит потерянные состояния: все три строки макета должны нарисоваться. */
+  /** Ловит потерянные состояния: все четыре строки должны нарисоваться. */
   it('рисует каждого агента снимка', () => {
     for (const agent of snapshot.agents) {
       expect(markup).toContain(agent.project)
     }
     expect(markup).toContain('ждёт ответа')
+    expect(markup).toContain('молчит')
     expect(markup).toContain('завершился')
+  })
+})
+
+/**
+ * Заполнение контекстного окна (2.6). В макете его нет, поэтому проверяется не
+ * совпадение с эталоном, а два свойства, ради которых этап делался.
+ */
+describe('указатель контекста в строке агента', () => {
+  // background:linear-gradient(to top, var(--claude) 0 89%, var(--s2) 89% 100%)
+  const GAUGE = /linear-gradient\(to top, var\(--[a-z0-9]+\) 0 (\d+)%, var\(--s2\) (\d+)% 100%\)/g
+  const gauges = [...markup.matchAll(GAUGE)].map(([, from, to]) => ({
+    from: Number(from),
+    to: Number(to),
+  }))
+
+  /**
+   * Ловит выдуманное заполнение. Указатель обязан появиться ровно у тех
+   * агентов, у которых размер окна есть, и показать их долю: у Claude окна нет
+   * ни в логе, ни в имени модели, и нарисованная там полоска — это доля,
+   * посчитанная от числа, которого никто не знает.
+   */
+  it('полоска только там, где окно известно, и длиной ровно в остаток', () => {
+    const known = snapshot.agents.filter((agent) => agent.context !== undefined)
+    expect(known.length).toBeGreaterThan(0)
+    expect(snapshot.agents.some((agent) => agent.context === undefined)).toBe(true)
+    expect(gauges.length).toBe(known.length)
+
+    // Середина размытой границы — то же число, что резкая: размывается
+    // положение, а не доля.
+    const middles = gauges.map((gauge) => (gauge.from + gauge.to) / 2).sort((a, b) => a - b)
+    const expected = known
+      .map((agent) => Math.round((1 - agent.context!.fill) * 100))
+      .sort((a, b) => a - b)
+    expect(middles).toEqual(expected)
+  })
+
+  /**
+   * Ловит оценку, выданную за измерение, — тот же класс ошибки, что штриховка
+   * у полосы лимита. Размер окна Codex написал провайдер, размер окна Claude мы
+   * вывели из наблюдений, и на экране это обязано различаться.
+   */
+  it('у выведенного размера окна граница размыта, у написанного провайдером — резкая', () => {
+    const exact = snapshot.agents.filter((a) => a.context?.confidence === 'exact')
+    const estimate = snapshot.agents.filter((a) => a.context?.confidence === 'estimate')
+    expect(exact.length).toBeGreaterThan(0)
+    expect(estimate.length).toBeGreaterThan(0)
+
+    expect(gauges.filter((gauge) => gauge.from === gauge.to).length).toBe(exact.length)
+    expect(gauges.filter((gauge) => gauge.from < gauge.to).length).toBe(estimate.length)
+  })
+
+  /**
+   * Ловит полоску без объяснения. Три пикселя молча — это украшение: число,
+   * его единицы и природа знаменателя живут только в подсказке, и потеряй её
+   * попап, оценку от измерения отличить будет нечем вовсе.
+   */
+  it('подсказка называет долю, оба числа и природу знаменателя', () => {
+    for (const agent of snapshot.agents) {
+      const context = agent.context
+      if (context === undefined) continue
+      const sign = context.confidence === 'exact' ? '' : '≈'
+      expect(markup).toContain(
+        `контекст ${sign}${Math.round(context.fill * 100)}% · ${formatTokens(context.used)} из ${sign}${formatTokens(context.window)}`,
+      )
+      if (context.caveat !== undefined) expect(markup).toContain(context.caveat)
+    }
   })
 })
 

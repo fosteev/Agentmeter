@@ -13,7 +13,14 @@
       "state": "working",
       "tokens": 38000,
       "approximate": false,
-      "rate": 12400
+      "rate": 12400,
+      "context": {
+        "used": 108000,
+        "window": 1000000,
+        "fill": 0.108,
+        "confidence": "estimate",
+        "caveat": "размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6"
+      }
     },
     {
       "sessionId": "22222222-2222-4222-8222-222222222222",
@@ -27,6 +34,25 @@
       "state": "waiting",
       "tokens": 214000,
       "approximate": true,
+      "rate": 0,
+      "context": {
+        "used": 870000,
+        "window": 1000000,
+        "fill": 0.87,
+        "confidence": "estimate",
+        "caveat": "размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6"
+      }
+    },
+    {
+      "sessionId": "44444444-4444-4444-8444-444444444444",
+      "provider": "claude",
+      "project": "dotfiles",
+      "cwd": "/Users/probe/Projects/dotfiles",
+      "entrypoint": "cli",
+      "startedAt": 1786439100000,
+      "state": "idle",
+      "tokens": 4200,
+      "approximate": false,
       "rate": 0
     },
     {
@@ -42,7 +68,13 @@
       "endedAt": 1786439400000,
       "tokens": 12000,
       "approximate": false,
-      "rate": 0
+      "rate": 0,
+      "context": {
+        "used": 129200,
+        "window": 258400,
+        "fill": 0.5,
+        "confidence": "exact"
+      }
     }
   ],
   "limits": [

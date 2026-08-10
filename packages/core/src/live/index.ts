@@ -23,6 +23,13 @@ export type { LiveOptions } from './agents.ts'
 export { DEFAULT_LIVE_OPTIONS } from './agents.ts'
 export type { LiveAgent, LiveSnapshot, LiveState, SessionLifetime } from './types.ts'
 export { loadLifetimes, appendLifetimes } from './lifetimes.ts'
+export {
+  CLAUDE_WINDOWS,
+  OBSERVED_WINDOW_DAYS,
+  collectContext,
+  windowFromObserved,
+} from './context.ts'
+export type { ContextFill } from './context.ts'
 export { processState, processStartTimes } from './process.ts'
 export { claudeTurn, codexTurn, deriveState, readTurn } from './state.ts'
 export type { StateInput, TurnKind, TurnRead } from './state.ts'

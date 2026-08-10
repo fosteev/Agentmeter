@@ -106,6 +106,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
               endedAgo={agent.endedAt === undefined ? undefined : ago(at - agent.endedAt)}
               model={agent.model}
               entrypoint={ENTRYPOINT[agent.entrypoint] || undefined}
+              context={context(agent)}
             />
           ))}
         </div>
@@ -147,6 +148,27 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
       />
     </div>
   )
+}
+
+/**
+ * Заполнение контекстного окна для строки агента (2.6).
+ *
+ * Доля приезжает посчитанной, здесь только слова. Знак «≈» стоит и у процента,
+ * и у размера окна: неизвестен именно размер, а не занятое — занятое написано в
+ * логе. Причина дописывается текстом, как у окна лимита без процента: пометка
+ * без объяснения заставляет гадать, что именно неточно.
+ */
+function context(agent: LiveAgent): { fill: number; approximate: boolean; hint: string } | undefined {
+  const usage = agent.context
+  if (usage === undefined) return undefined
+  const estimate = usage.confidence !== 'exact'
+  const sign = estimate ? '≈' : ''
+  const head = `контекст ${sign}${Math.round(usage.fill * 100)}% · ${formatTokens(usage.used)} из ${sign}${formatTokens(usage.window)}`
+  return {
+    fill: usage.fill,
+    approximate: estimate,
+    hint: usage.caveat === undefined ? head : `${head} — ${usage.caveat}`,
+  }
 }
 
 /**

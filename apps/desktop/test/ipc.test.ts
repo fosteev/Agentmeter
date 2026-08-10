@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { IPC_CALLS, IPC_EVENTS } from '@agentmeter/ipc'
 import { registerIpc, type IpcHandlers } from '../src/main/ipc.ts'
+import { toContext } from '../src/main/snapshot.ts'
 import { createClient } from '../src/preload/client.ts'
 
 // Проводка контракта 0.4. Проверки названы по поломке, которую ловят.
@@ -62,5 +63,27 @@ describe('каналы main и preload — ровно контракт', () => {
       }
     }
     expect(suspicious).toEqual([])
+  })
+})
+
+describe('происхождение размера контекстного окна доезжает до окна', () => {
+  /**
+   * Ловит оценку, ставшую измерением на границе main и renderer (2.6). Доля
+   * заполнения выглядит одинаково правдоподобно в обоих случаях, а различает
+   * их ровно одно поле — и оно проставляется здесь, там, где известно
+   * происхождение знаменателя, а не там, где его рисуют.
+   */
+  it('написанное провайдером остаётся точным, выведенное — оценкой с причиной', () => {
+    expect(toContext({ used: 129_200, window: 258_400, fill: 0.5, source: 'log' })).toEqual({
+      used: 129_200,
+      window: 258_400,
+      fill: 0.5,
+      confidence: 'exact',
+    })
+
+    const guessed = toContext({ used: 108_000, window: 1_000_000, fill: 0.108, source: 'observed' })
+    expect(guessed.confidence).toBe('estimate')
+    // Пометка без объяснения заставляет гадать, что именно неточно.
+    expect(guessed.caveat).toBeTruthy()
   })
 })

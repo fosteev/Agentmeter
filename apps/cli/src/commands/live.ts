@@ -24,6 +24,7 @@ export function renderLive(snapshot: LiveSnapshot, locale: string): string {
           { header: 'Тишина', width: 8 },
           { header: 'Токены', width: 10, align: 'right' },
           { header: 'Темп', width: 11, align: 'right' },
+          { header: 'Контекст', width: 9, align: 'right' },
           { header: 'Запросов', width: 9, align: 'right' },
         ],
         snapshot.agents.map((agent) => row(agent, snapshot.at, locale)),
@@ -49,8 +50,21 @@ function row(agent: LiveAgent, at: number, locale: string): string[] {
     formatDuration(at - agent.lastActivityAt, locale),
     `${agent.approximate ? '≈' : ''}${formatTokens(agent.tokens, locale)}`,
     agent.rate === 0 ? '—' : `${formatTokens(agent.rate, locale)}/мин`,
+    // Прочерк, а не «0%»: размера окна у Claude в логах нет вовсе, и пустое
+    // заполнение читалось бы как «контекст свободен» (2.6).
+    contextCell(agent),
     String(agent.requests),
   ]
+}
+
+/**
+ * Заполнение контекстного окна. Знак «≈» — там, где размер окна выведен из
+ * наблюдений, а не написан провайдером: у Codex он в логе есть, у Claude нет.
+ */
+function contextCell(agent: LiveAgent): string {
+  const context = agent.context
+  if (context === undefined) return '—'
+  return `${context.source === 'log' ? '' : '≈'}${Math.round(context.fill * 100)}%`
 }
 
 function stateName(state: LiveAgent['state']): string {

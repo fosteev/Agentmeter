@@ -1,4 +1,5 @@
 import type { Entrypoint, Provider } from '../sources/types.ts'
+import type { ContextFill } from './context.ts'
 import type { TurnKind } from './state.ts'
 
 /**
@@ -63,6 +64,14 @@ export interface LiveAgent {
   rate: number
   /** Есть восстановленные запросы — число показывается со знаком `≈`. */
   approximate: boolean
+  /**
+   * Заполнение контекстного окна последним запросом (2.6).
+   *
+   * Поля нет вовсе, когда размер окна не из чего взять: у Claude провайдер его
+   * не пишет ни в лог, ни в имя модели, и пока наблюдений не хватает, доля
+   * была бы выдумана. Правила — [`context.ts`](./context.ts).
+   */
+  context?: ContextFill
   /**
    * Жив ли процесс достоверно. У Claude это факт (pid проверен), у Codex —
    * догадка по свежести роллаута, и врать про её природу нельзя.

@@ -3,7 +3,7 @@
  *
  *     node --experimental-strip-types scripts/probe/live-probe.ts
  *
- * Девять проверок. Каждая названа по поломке, которую обязана поймать, а не по
+ * Одиннадцать проверок. Каждая названа по поломке, которую обязана поймать, а не по
  * форме сравнения: проверка, написанная под форму, зеленеет на сломанном коде.
  */
 import {
@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   DEFAULT_CONFIG,
+  OBSERVED_WINDOW_DAYS,
   createLiveLayer,
   dayRange,
   defaultClaudeHome,
@@ -27,6 +28,7 @@ import {
   ingestAll,
   openDb,
   readLimitWindows,
+  windowFromObserved,
   type ClaudeLimits,
 } from '../../packages/core/src/index.ts'
 import { processState } from '../../packages/core/src/live/process.ts'
@@ -233,6 +235,48 @@ try {
     'появление и исчезновение укладываются в критерий',
     `pollMs=${DEFAULT_CONFIG.live.pollMs} видна за ${appearMs.toFixed(0)} мс (порог 2000) смерть замечена за ${vanishMs.toFixed(0)} мс (порог 5000), состояние=${afterDeath[0]?.state ?? 'строки нет'}`,
     emptyBefore === 0 && appeared && vanished && appearMs < 2_000 && vanishMs < 5_000,
+  )
+
+  // 10. Ловит: лестницу окон, занижающую знаменатель (2.6). Проверка не против
+  //     себя: числитель написан провайдером в каждый запрос, и окно, в которое
+  //     он не влезает, — доказанная ошибка, а не мнение. Заодно требует, чтобы
+  //     верхняя ступень лестницы кем-то использовалась: если весь диск влезает
+  //     в 200k, проверка зелена на любой лестнице и не значит ничего.
+  const claudeMax = db.all<{ model: string; mx: number }>(
+    `SELECT model, max(context_tokens) AS mx
+     FROM requests
+     WHERE model LIKE 'claude-%' AND ts >= ?
+     GROUP BY model`,
+    Date.now() - OBSERVED_WINDOW_DAYS * 86_400_000,
+  )
+  const tooSmall = claudeMax.filter((row) => (windowFromObserved(row.mx) ?? 0) < row.mx)
+  const needsBigRung = claudeMax.filter((row) => windowFromObserved(row.mx) !== 200_000)
+  report(
+    10,
+    'выведенное окно вмещает всё, что видел диск',
+    `моделей=${claudeMax.length} не влезло=${tooSmall.length} потребовавших окна больше 200k=${needsBigRung.length} максимум=${Math.max(0, ...claudeMax.map((row) => row.mx))}`,
+    claudeMax.length > 0 && tooSmall.length === 0 && needsBigRung.length > 0,
+  )
+
+  // 11. Ловит: перепутанный источник знаменателя. Сегодня `model_context_window`
+  //     пишет только Codex, и обе стороны важны. Пропади он — точное число
+  //     молча станет оценкой; появись он у Claude — вся выкладка 2.6 устарела,
+  //     и гадать по наблюдениям больше не надо.
+  const windowsByProvider = db.all<{ provider: string; total: number; known: number }>(
+    `SELECT sessions.provider AS provider, count(*) AS total,
+            coalesce(sum(requests.context_window IS NOT NULL), 0) AS known
+     FROM requests JOIN sessions ON sessions.id = requests.session_id
+     GROUP BY sessions.provider`,
+  )
+  const codexWindows = windowsByProvider.find((row) => row.provider === 'codex')
+  const claudeWindows = windowsByProvider.find((row) => row.provider === 'claude')
+  report(
+    11,
+    'размер окна пишет Codex и не пишет Claude',
+    `codex ${codexWindows?.known ?? 0}/${codexWindows?.total ?? 0} claude ${claudeWindows?.known ?? 0}/${claudeWindows?.total ?? 0}`,
+    (codexWindows?.known ?? 0) > 0 &&
+      (claudeWindows?.total ?? 0) > 0 &&
+      (claudeWindows?.known ?? 0) === 0,
   )
 
   if (aliveOnDisk.length === 0) {

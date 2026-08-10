@@ -50,6 +50,11 @@ export interface AgentRowProps {
    * разные числа, не сказав, какое точное.
    */
   approximate?: boolean | undefined
+  /**
+   * Заполнение контекстного окна (2.6). Доля 0..1, признак оценки и готовая
+   * подпись — компонент ничего не делит и ничего не форматирует.
+   */
+  context?: { fill: number; approximate: boolean; hint: string } | undefined
 }
 
 const STATUS_LABEL: Record<Exclude<AgentStatus, 'done'>, string> = {
@@ -69,7 +74,7 @@ const LABEL: Record<Provider, string> = {
 }
 
 export function AgentRow(props: AgentRowProps) {
-  const { provider, status, density = 'panel' } = props
+  const { provider, status, density = 'panel', context } = props
   const popup = density === 'popup'
   const done = status === 'done'
   const accent = done ? 'var(--tx3)' : ACCENT[provider]
@@ -85,8 +90,12 @@ export function AgentRow(props: AgentRowProps) {
         background: done ? 'transparent' : popup ? 'var(--s1)' : 'var(--s2)',
         opacity: done ? 0.55 : 1,
       }}
+      // Подсказка висит на всей строке, а не на самой полоске: три пикселя —
+      // не цель для курсора, и объяснение, до которого нельзя дотянуться,
+      // равносильно его отсутствию.
+      title={context?.hint}
     >
-      <div style={{ background: accent, borderRadius: 2 }} />
+      <div style={{ background: stripe(accent, context), borderRadius: 2 }} />
       <div
         style={{
           display: 'flex',
@@ -229,6 +238,38 @@ function PopupLines({
       </div>
     </>
   )
+}
+
+/**
+ * Полоска слева как указатель остатка контекста (2.6).
+ *
+ * Места в строке нет: высота в попапе 40, третьей строки быть не может, а во
+ * второй уже стоит «4 мин · ≈38.2k · ждёт ответа · 12.4k/мин» и справа модель с
+ * точкой входа — при mono 11 это 367 пикселей из 372 доступных, то есть даже
+ * «· 54%» не влезает. Зато трёхпиксельная полоска акцента занимает всю высоту
+ * строки и не несёт ни одного числа, а провайдера в попапе называет ещё и бейдж
+ * рядом с проектом — значит её можно нагрузить второй ролью, не отняв первую.
+ *
+ * Считается снизу вверх и показывает **остаток**, а не занятое: свежая сессия
+ * должна выглядеть полной, а не пустой, иначе самая частая строка списка
+ * теряет цвет провайдера ни за что.
+ *
+ * Оценка отмечена размытой границей вместо штриховки. Штриховка — язык
+ * `LimitBar` и `BreakdownRow`, где заливка широкая; на трёх пикселях диагональ
+ * в 3–7 px превращается в грязь, то есть пометка была бы соблюдена буквой и
+ * потеряна по сути. Размытая граница говорит ровно то, что здесь неизвестно:
+ * не доля мутная, а положение границы — размер окна у Claude провайдер не
+ * пишет вовсе. Число со знаком «≈» стоит в подсказке.
+ */
+const SOFT_EDGE = 8
+
+function stripe(accent: string, context: AgentRowProps['context']): string {
+  if (context === undefined) return accent
+  const left = Math.round((1 - Math.min(1, Math.max(0, context.fill))) * 100)
+  const blur = context.approximate ? SOFT_EDGE : 0
+  const from = Math.max(0, left - blur)
+  const to = Math.min(100, left + blur)
+  return `linear-gradient(to top, ${accent} 0 ${from}%, var(--s2) ${to}% 100%)`
 }
 
 // Темп мёртвого агента не показывается вовсе: «12k/мин» под «завершился»

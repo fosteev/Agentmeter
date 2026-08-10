@@ -13,12 +13,13 @@ import {
   limitsReport,
   todayReport,
   type Config,
+  type ContextFill as CoreContextFill,
   type Db,
   type LiveAgent as CoreLiveAgent,
   type LiveLayer,
   type Totals,
 } from '@agentmeter/core'
-import type { DayTotals, LiveAgent, Measured, TraySnapshot } from '@agentmeter/ipc'
+import type { ContextUsage, DayTotals, LiveAgent, Measured, TraySnapshot } from '@agentmeter/ipc'
 
 export function buildSnapshot(
   db: Db,
@@ -64,7 +65,30 @@ function toAgent(agent: CoreLiveAgent): LiveAgent {
   if (agent.branch !== undefined) result.branch = agent.branch
   if (agent.model !== undefined) result.model = agent.model
   if (agent.endedAt !== undefined) result.endedAt = agent.endedAt
+  if (agent.context !== undefined) result.context = toContext(agent.context)
   return result
+}
+
+const OBSERVED_WINDOW =
+  'размер окна Claude в логи не пишется — выведен из наблюдавшегося максимума, этап 2.6'
+
+/**
+ * Происхождение размера окна переводится в точность здесь, а не в компоненте.
+ *
+ * У Codex знаменатель написал провайдер (`model_context_window`), у Claude его
+ * нет вовсе, и мы берём наименьшее стандартное окно, вмещающее наблюдавшийся
+ * максимум. Первое — измерение, второе — оценка, и различить их обязано то
+ * место, которое знает, откуда число, а не то, которое его рисует.
+ */
+export function toContext(context: CoreContextFill): ContextUsage {
+  const used: ContextUsage = {
+    used: context.used,
+    window: context.window,
+    fill: context.fill,
+    confidence: context.source === 'log' ? 'exact' : 'estimate',
+  }
+  if (context.source !== 'log') used.caveat = OBSERVED_WINDOW
+  return used
 }
 
 const RECONSTRUCTED = 'часть запросов восстановлена по разрыву цепочки кэша, этап 1.3'
