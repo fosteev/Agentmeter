@@ -133,6 +133,49 @@ describe('buildSpendScreen', () => {
   })
 
   /**
+   * Ловит совет, выданный про то, чем пользуются, и совет, обрезанный молча.
+   *
+   * Сеется руками: в фикстурах серверов MCP нет вовсе — имён `mcp__*` в
+   * отложенных списках там не бывает, — и проверка «советуем только про
+   * неиспользованное» на них зелена при любом правиле.
+   */
+  it('советует только про то, чего не звали, и говорит, сколько скрыл', () => {
+    seedServers([
+      { source: 'jira', tokens: 900, tools: 62, calls: 0 },
+      { source: 'serena', tokens: 500, tools: 23, calls: 4 },
+      { source: 'sentry', tokens: 300, tools: 24, calls: 0 },
+      { source: 'figma', tokens: 200, tools: 12, calls: 0 },
+      { source: 'gmail', tokens: 100, tools: 8, calls: 0 },
+    ])
+
+    const advice = buildSpendScreen(db, ALL).advice!
+
+    expect(advice.map((row) => row.source)).toEqual(['jira', 'sentry', 'figma'])
+    expect(advice.at(-1)!.hidden).toBe(1)
+    expect(advice[0]!.headline).toContain('62')
+    expect(advice[0]!.text).toContain('Отключение вернёт')
+  })
+
+  /**
+   * Ловит совет, промолчавший про жадный режим. Там схемы неотделимы от
+   * системного промпта, цена больше показанной, и выдать нижнюю оценку за всю
+   * экономию — это соврать в самую заметную сторону (1.7: разница 17 раз).
+   */
+  it('жадный режим назван прямо в тексте совета', () => {
+    seedServers([{ source: 'jira', tokens: 900, tools: 62, calls: 0, deferred: false }])
+
+    const advice = buildSpendScreen(db, ALL).advice!
+
+    expect(advice).toHaveLength(1)
+    expect(advice[0]!.text).toContain('жадным')
+  })
+
+  /** Ловит пустой список советов вместо отсутствия поля. */
+  it('когда советовать нечего, поля нет вовсе', () => {
+    expect(buildSpendScreen(db, ALL).advice).toBeUndefined()
+  })
+
+  /**
    * Ловит экран, собранный нулями: «на префикс ушло ноль» — утверждение, и на
    * периоде без запросов оно ложное.
    */
@@ -172,6 +215,27 @@ describe('BreakdownTab', () => {
     expect(residual).not.toContain('0 из 0')
   })
 
+  /**
+   * Ловит карточку совета, не доехавшую до экрана: сам совет собран в main и
+   * проверен там, но нарисовать его окно может и забыть — а это единственное
+   * место, где он вообще виден.
+   */
+  it('совет виден карточкой с суммой и знаком минуса', () => {
+    seedServers([{ source: 'jira', tokens: 900, tools: 62, calls: 0 }])
+    const screen = buildSpendScreen(db, ALL)
+    const html = render(screen)
+
+    expect(html).toContain('data-breakdown-advice="jira"')
+    const advice = screen.advice![0]!
+    // Знак минуса и знак оценки стоят рядом, и оба обязаны быть: «вернёт
+    // столько-то» — это обещание, а внутри него восстановленные запросы (1.3).
+    expect(html).toContain(
+      `−${advice.tokens.confidence === 'exact' ? '' : '≈'}${formatTokens(advice.tokens.value)}`,
+    )
+    expect(html).toContain('62')
+    expect(html).toContain('Отключение вернёт')
+  })
+
   /** Ловит переключатель, не сообщающий о своём состоянии и о нажатии. */
   it('переключатель называет выбранный режим и зовёт обработчик', () => {
     const seen: Array<'day' | 'session'> = []
@@ -197,6 +261,57 @@ describe('BreakdownTab', () => {
 
 function render(screen: SpendScreen | null): string {
   return renderToStaticMarkup(<BreakdownTab screen={screen} onScopeChange={() => undefined} />)
+}
+
+/**
+ * Сессия с серверами MCP в префиксе и вызовами. Руками, потому что в фикстурах
+ * ни одного `mcp__*` в отложенных списках нет.
+ */
+function seedServers(
+  servers: Array<{ source: string; tokens: number; tools: number; calls: number; deferred?: boolean }>,
+): void {
+  const prefix = servers.reduce((sum, server) => sum + server.tokens, 0) + 100
+  db.run(
+    `INSERT INTO sessions (id, provider, source_path, cwd, project, started_at, ended_at,
+                           is_sidechain, prefix_tokens, tools_deferred)
+     VALUES ('seeded', 'claude', '/tmp/seeded.jsonl', '/tmp', 'seed', 1000, 2000, 0, ?, ?)`,
+    prefix,
+    servers.every((server) => server.deferred !== false) ? 1 : 0,
+  )
+  servers.forEach((server, idx) => {
+    db.run(
+      `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis, items)
+       VALUES ('seeded', ?, 'mcpTools', ?, 0, ?, 'estimated', ?)`,
+      idx,
+      server.source,
+      server.tokens,
+      server.tools,
+    )
+  })
+  db.run(
+    `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis, items)
+     VALUES ('seeded', ?, 'system', NULL, 0, 100, 'residual', 0)`,
+    servers.length,
+  )
+  db.run(
+    `INSERT INTO requests (session_id, seq, request_id, ts, model, input, output,
+                           cache_write, cache_read, context_tokens, origin)
+     VALUES ('seeded', 0, 'seeded#0', 1500, 'seed-model', ?, 0, 0, 0, ?, 'log')`,
+    prefix,
+    prefix,
+  )
+  let idx = 0
+  for (const server of servers) {
+    for (let call = 0; call < server.calls; call += 1) {
+      db.run(
+        `INSERT INTO tool_calls (session_id, seq, idx, name, kind, server, marginal_tokens, marginal_basis)
+         VALUES ('seeded', 0, ?, ?, 'mcp', ?, 0, 'measured')`,
+        idx++,
+        `mcp__${server.source}__tool${call}`,
+        server.source,
+      )
+    }
+  }
 }
 
 function row(markup: string, key: string): string {

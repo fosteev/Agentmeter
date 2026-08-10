@@ -195,6 +195,28 @@ export const ru = {
     deferredTools: 'Отложенные инструменты',
     userTurn: 'Первая реплика',
     other: 'Прочее',
+    adviceHeadline: '{{source}} · {{tools}} · {{calls}}',
+    adviceTools_one: '{{count}} инструмент',
+    adviceTools_few: '{{count}} инструмента',
+    adviceTools_many: '{{count}} инструментов',
+    adviceCalls_one: '{{count}} вызов',
+    adviceCalls_few: '{{count}} вызова',
+    adviceCalls_many: '{{count}} вызовов',
+    adviceText_one:
+      'Сервер не использовался ни разу за {{count}} сессию, но его описания грузились в каждую. Отключение вернёт {{tokens}}.',
+    adviceText_few:
+      'Сервер не использовался ни разу за {{count}} сессии, но его описания грузились в каждую. Отключение вернёт {{tokens}}.',
+    adviceText_many:
+      'Сервер не использовался ни разу за {{count}} сессий, но его описания грузились в каждую. Отключение вернёт {{tokens}}.',
+    adviceEager_one:
+      ' В {{count}} сессии набор был жадным — там он стоил больше, и насколько, из логов не видно.',
+    adviceEager_few:
+      ' В {{count}} сессиях набор был жадным — там он стоил больше, и насколько, из логов не видно.',
+    adviceEager_many:
+      ' В {{count}} сессиях набор был жадным — там он стоил больше, и насколько, из логов не видно.',
+    adviceHidden_one: 'и ещё {{count}} такой сервер',
+    adviceHidden_few: 'и ещё {{count}} таких сервера',
+    adviceHidden_many: 'и ещё {{count}} таких серверов',
     emptyIndex: 'Первичное индексирование — развёртка появится после чтения логов',
     emptyScope: 'За этот период запросов не было',
     sessions_one: '{{count}} сессия',

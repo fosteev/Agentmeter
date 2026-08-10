@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ingestFile, loadedCategories, spendSplit, type DayRange, type SourceFile } from '../../src/index.ts'
+import {
+  ingestFile,
+  loadedCategories,
+  savings,
+  spendSplit,
+  type DayRange,
+  type SourceFile,
+} from '../../src/index.ts'
 import { openDb, type Db } from '../../src/index/db.ts'
 
 /**
@@ -121,6 +128,40 @@ describe('loadedCategories', () => {
   })
 })
 
+describe('savings', () => {
+  /**
+   * Ловит совет про сервер, которым пользуются, и совет, забывший про режим.
+   *
+   * Жадный набор — не мелочь: там схемы уехали в системный промпт, цена сервера
+   * больше показанной, и насколько, из логов не видно (1.7, разница в 17 раз).
+   * Молчание здесь выдало бы нижнюю оценку за всю экономию.
+   */
+  it('советует только про неиспользованное и считает жадные сессии', () => {
+    seed({
+      blocks: [
+        { category: 'mcpTools', source: 'jira', tokens: 600, items: 62 },
+        { category: 'mcpTools', source: 'serena', tokens: 300, items: 23 },
+        { category: 'system', tokens: 100, basis: 'residual' },
+      ],
+      calls: [{ name: 'mcp__serena__find_symbol', server: 'serena' }],
+      deferred: false,
+    })
+
+    const rows = savings(db, allTime)
+
+    expect(rows.map((row) => row.source)).toEqual(['jira'])
+    expect(rows[0]).toMatchObject({ loaded: 62, sessions: 1, unmeasured: 1, projects: ['seed'] })
+    expect(rows[0]!.tokens).toBeGreaterThan(0)
+  })
+
+  /** Ловит совет, выданный там, где серверов нет вовсе. */
+  it('без серверов советовать нечего', () => {
+    ingest({ path: join(claudeDir, 'plain.jsonl'), provider: 'claude', kind: 'session' })
+
+    expect(savings(db, allTime)).toEqual([])
+  })
+})
+
 function ingest(file: SourceFile): void {
   expect(ingestFile(db, file).parsed).toBe(true)
 }
@@ -140,6 +181,8 @@ function seed(options: {
   calls?: Array<{ name: string; server: string }>
   skills?: string[]
   agentTypes?: string[]
+  /** Был ли в наборе `ToolSearch`. По умолчанию да — цена измерена. */
+  deferred?: boolean
 }): void {
   const prefix = options.blocks.reduce((sum, block) => sum + block.tokens, 0)
   const sessions = [
@@ -150,10 +193,11 @@ function seed(options: {
     db.run(
       `INSERT INTO sessions (id, provider, source_path, cwd, project, started_at, ended_at,
                              is_sidechain, prefix_tokens, tools_deferred, agent_type)
-       VALUES (?, 'claude', ?, '/tmp', 'seed', 1000, 2000, 0, ?, 1, ?)`,
+       VALUES (?, 'claude', ?, '/tmp', 'seed', 1000, 2000, 0, ?, ?, ?)`,
       session.id,
       `/tmp/${session.id}.jsonl`,
       session.id === 'main' ? prefix : 0,
+      options.deferred === false ? 0 : 1,
       session.agentType,
     )
   }

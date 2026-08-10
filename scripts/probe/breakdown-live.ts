@@ -1,5 +1,5 @@
 /**
- * Экран развёртки (4.2) на всех живых логах.
+ * Экран развёртки и советы по экономии (4.2, 4.3) на всех живых логах.
  *
  *     node --experimental-strip-types scripts/probe/breakdown-live.ts
  */
@@ -92,10 +92,26 @@ try {
     servers.length > 0 && idle.length > 0,
   )
 
+  const advice = all.advice ?? []
+  const called = new Set(
+    (all.recurring.find((row) => row.key === 'mcpTools estimated')?.sources ?? [])
+      .filter((source) => source.calls > 0)
+      .map((source) => source.source),
+  )
+  const wrong = advice.filter((row) => called.has(row.source)).length
+  const silent = advice.length < idle.length && advice.at(-1)?.hidden === undefined
+  report(
+    6,
+    'совет про неиспользованное и без молчаливой обрезки',
+    `советов ${advice.length} из ${idle.length}, про использованное ${wrong}, скрыто ${advice.at(-1)?.hidden ?? 0}` +
+      (advice[0] ? `; первый — «${advice[0].headline}»` : ''),
+    advice.length > 0 && wrong === 0 && !silent,
+  )
+
   const negative = rows.filter((row) => row.period.value < 0 || row.perSession.value < 0).length
   const noLabel = rows.filter((row) => row.label.length === 0).length
   report(
-    6,
+    7,
     'строки называются и не уходят в минус',
     `rows=${rows.length} безымянных=${noLabel} отрицательных=${negative}`,
     noLabel === 0 && negative === 0,

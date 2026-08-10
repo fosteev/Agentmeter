@@ -160,6 +160,21 @@ export const en = {
     deferredTools: 'Deferred tools',
     userTurn: 'First message',
     other: 'Other',
+    adviceHeadline: '{{source}} · {{tools}} · {{calls}}',
+    adviceTools_one: '{{count}} tool',
+    adviceTools_other: '{{count}} tools',
+    adviceCalls_one: '{{count}} call',
+    adviceCalls_other: '{{count}} calls',
+    adviceText_one:
+      'The server was never used across {{count}} session, yet its descriptions loaded into every one. Turning it off returns {{tokens}}.',
+    adviceText_other:
+      'The server was never used across {{count}} sessions, yet its descriptions loaded into every one. Turning it off returns {{tokens}}.',
+    adviceEager_one:
+      ' In {{count}} session the tool set was eager — it cost more there, and the logs do not say how much.',
+    adviceEager_other:
+      ' In {{count}} sessions the tool set was eager — it cost more there, and the logs do not say how much.',
+    adviceHidden_one: 'and {{count}} more such server',
+    adviceHidden_other: 'and {{count}} more such servers',
     emptyIndex: 'First indexing — the breakdown appears once the logs are read',
     emptyScope: 'No requests in this period',
     sessions_one: '{{count}} session',

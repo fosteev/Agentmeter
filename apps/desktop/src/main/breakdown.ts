@@ -14,19 +14,24 @@ import {
   breakdownReport,
   hasRequests,
   loadedCategories,
+  savings,
   spendSplit,
   sourceCount,
   t,
   type Db,
   type LoadedCategory,
   type LoadedSource,
+  type Saving,
   type RequestScope,
 } from '@agentmeter/core'
+import { formatTokens } from '@agentmeter/core/format'
+import { locale } from '@agentmeter/core/i18n'
 import { measured } from './measured.ts'
 import { toSpendSplit } from './day.ts'
 import type {
   BreakdownRow,
   Measured,
+  SpendAdvice,
   SpendCategoryRow,
   SpendScreen,
   SpendSourceRow,
@@ -92,6 +97,7 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
     // этом не меняются, меняются только абсолютные числа.
     ...scaled(toSpendSplit(split, approximate), perSession ? sessions : 1),
     recurring: categories.map((row) => toCategoryRow(row, approximate, perSession, sessions)),
+    ...toAdvice(savings(db, range, scope), approximate, perSession, sessions),
     tools: tools.tool.map(toToolRow),
     toolCalls: tools.tool.reduce((sum, row) => sum + basisSum(row.calls), 0),
     beforeFirstWord: beforeFirstWord(categories, approximate, sessions, perSession),
@@ -106,6 +112,56 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
       ),
     },
   }
+}
+
+/**
+ * Советы по экономии (4.3) — что грузилось в каждую сессию и не понадобилось.
+ *
+ * Показываются три самых дорогих, остальные названы числом: молчаливая обрезка
+ * читается как «это всё», а на живых логах таких серверов девятнадцать. Фраза
+ * собирается здесь, потому что это суждение — «отключение вернёт столько-то», —
+ * а не подстановка приехавшего числа в шаблон (правило 3.0).
+ *
+ * Поля нет вовсе, когда советовать нечего: пустой список на экране обещал бы,
+ * что советы бывают, но не сегодня.
+ */
+const ADVICE_SHOWN = 3
+
+function toAdvice(
+  rows: readonly Saving[],
+  approximate: boolean,
+  perSession: boolean,
+  sessions: number,
+): { advice?: SpendAdvice[] } | Record<string, never> {
+  if (rows.length === 0) return {}
+  const shown = rows.slice(0, ADVICE_SHOWN).map((row, index): SpendAdvice => {
+    const tokens = perSession ? Math.round(row.tokens / sessions) : row.tokens
+    const advice: SpendAdvice = {
+      source: row.source,
+      tokens: measured(tokens, approximate),
+      headline: t('breakdown.adviceHeadline', {
+        source: row.source,
+        tools: t('breakdown.adviceTools', { count: row.loaded }),
+        calls: t('breakdown.adviceCalls', { count: 0 }),
+      }),
+      text:
+        t('breakdown.adviceText', {
+          count: row.sessions,
+          tokens: formatTokens(tokens, locale()),
+        }) +
+        // Жадный режим называется прямо в тексте: там схемы неотделимы от
+        // системного промпта, цена больше показанной, и насколько — неизвестно.
+        // Промолчать значило бы выдать нижнюю оценку за всю экономию.
+        (row.unmeasured > 0
+          ? t('breakdown.adviceEager', { count: row.unmeasured })
+          : ''),
+    }
+    if (index === ADVICE_SHOWN - 1 && rows.length > ADVICE_SHOWN) {
+      advice.hidden = rows.length - ADVICE_SHOWN
+    }
+    return advice
+  })
+  return { advice: shown }
 }
 
 /** Тот же `split`, поделённый на число сессий, когда экран показывает сессию. */

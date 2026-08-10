@@ -176,6 +176,38 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
             perSession ? t('breakdown.columnPerSession') : t('breakdown.columnPeriod'),
           ]} />
           <SpendCategoryTable rows={screen.recurring} />
+          {(screen.advice ?? []).map((advice) => (
+            <div
+              key={advice.source}
+              data-breakdown-advice={advice.source}
+              style={{
+                padding: '10px 12px',
+                border: '1px dashed color-mix(in oklch, var(--alarm) 55%, transparent)',
+                borderRadius: 6,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                background: 'color-mix(in oklch, var(--alarm) 7%, transparent)',
+              }}
+              title={advice.tokens.caveat}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ ...mono(11.5), color: 'var(--alarm)' }}>{advice.headline}</span>
+                <span style={{ ...mono(12), color: 'var(--alarm)', fontWeight: 600 }}>
+                  −{advice.tokens.confidence === 'exact' ? '' : '≈'}
+                  {formatTokens(advice.tokens.value)}
+                </span>
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--tx2)', lineHeight: 1.5 }}>
+                {advice.text}
+              </div>
+              {advice.hidden === undefined ? null : (
+                <div style={{ fontSize: 11.5, color: 'var(--tx3)' }}>
+                  {t('breakdown.adviceHidden', { count: advice.hidden })}
+                </div>
+              )}
+            </div>
+          ))}
           <div
             data-breakdown-total="before-first-word"
             style={{
