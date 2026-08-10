@@ -25,6 +25,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'ipc',
+          root: './packages/ipc',
+          include: ['test/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'desktop',
           root: './apps/desktop',
           include: ['test/**/*.test.ts'],
