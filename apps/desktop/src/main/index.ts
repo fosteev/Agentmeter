@@ -491,7 +491,15 @@ async function runSmoke(): Promise<void> {
       await new Promise<void>((resolve) => setTimeout(resolve, 100))
     }
     const [, shrunk] = window.getContentSize()
-    popupReport = { ...fit, measured: first, shrunk }
+    // Попап обязан быть выпадашкой, а не окном. На macOS обычное окно
+    // принадлежит своему рабочему столу, и клик по значку с другого стола
+    // **переключает пространство**: человек нажал на значок в панели и уехал на
+    // другой экран. Флаги эти выставляются в `createPopup` и снимаются молча —
+    // с виду попап открывается, просто не там, где на него смотрят.
+    const spaces = process.platform === 'darwin' ? window.isVisibleOnAllWorkspaces() : true
+    popupReport = { ...fit, measured: first, shrunk, spaces, onTop: window.isAlwaysOnTop() }
+    if (!spaces) problems.push('попап живёт на одном рабочем столе: клик со второго уедет на первый')
+    if (!window.isAlwaysOnTop()) problems.push('попап не поверх окон: откроется под чужим окном')
     if (shrunk !== SHRUNK) {
       problems.push(`попап не сжался под содержимое: ${shrunk} точек вместо ${SHRUNK}`)
     }
@@ -874,6 +882,16 @@ function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWind
     frame: !frameless,
     resizable: page === 'gallery',
     skipTaskbar: frameless,
+    // Попап — не окно, а выпадашка из панели, и на macOS разница не
+    // косметическая. Обычное окно принадлежит рабочему столу, на котором
+    // создано: клик по значку с другого стола **переключает пространство** —
+    // человек нажал на значок в панели и уехал в другое приложение на другом
+    // экране. `panel` делает окно вспомогательным (NSPanel), а
+    // `setVisibleOnAllWorkspaces` ниже — общим для всех столов.
+    ...(frameless && process.platform === 'darwin' ? { type: 'panel' as const } : {}),
+    // Поверх остальных: попап открывается над тем, с чем человек работает, и
+    // уходить под чужое окно ему незачем — он живёт до первого клика мимо.
+    alwaysOnTop: frameless,
     // Белая вспышка на тёмной теме видна ровно один раз — при каждом открытии
     // попапа, то есть по десять раз на дню.
     backgroundColor: '#00000000',
@@ -884,6 +902,21 @@ function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWind
       sandbox: true,
     },
   })
+  if (frameless) {
+    // Видно на всех рабочих столах и поверх полноэкранного приложения. Второе
+    // отдельным флагом: без него попап на полноэкранном окне не показывается
+    // вовсе — значок нажат, а не происходит ничего.
+    // `skipTransformProcessType` не даёт Electron дёргать тип процесса на
+    // каждый показ: на macOS это моргание иконкой в доке у приложения, которое
+    // из дока убрано намеренно.
+    window.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    })
+    // Уровень меню, а не «просто поверх»: попап выпадает из панели, и над ним
+    // не должно оказаться чужое окно, тоже объявившее себя верхним.
+    window.setAlwaysOnTop(true, 'pop-up-menu')
+  }
   void window.loadFile(`${WEB}/${page}.html`)
   return window
 }
