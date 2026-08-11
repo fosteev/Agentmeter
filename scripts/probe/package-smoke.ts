@@ -165,20 +165,37 @@ try {
 } catch {
   payload = {}
 }
-const alive =
-  run.status === 0 &&
-  Boolean(payload.electron) &&
-  Boolean(payload.chrome) &&
-  payload.window?.page === 'window.html' &&
-  payload.tray?.empty === false &&
-  typeof payload.snapshot?.today?.total?.value === 'number'
+// Что именно обязано доехать. Списком, а не одним `&&`: неудача обязана
+// называть недостающее — «вывода нет» одинаково звучало и когда приложение
+// молчит, и когда оно всё напечатало, а проверка смотрит не на то поле.
+//
+// Суммы за сутки среди условий нет намеренно. На раннере логов агентов не
+// бывает, и день там честно пуст: требовать число значит требовать чужие
+// данные — проверка падала бы на пустом входе, то есть ровно там, где продукт
+// работает правильно (три пустых экрана, пункт 15 CLAUDE.md). Проверяется, что
+// снимок **собран**: метка времени есть всегда, а сумма — только там, где
+// работали.
+const needed: [string, boolean][] = [
+  ['процесс вышел нулём', run.status === 0],
+  ['версия electron', Boolean(payload.electron)],
+  ['версия chrome', Boolean(payload.chrome)],
+  ['страница окна', payload.window?.page === 'window.html'],
+  ['непустая иконка трея', payload.tray?.empty === false],
+  ['снимок собран', typeof payload.snapshot?.at === 'number'],
+]
+const missing = needed.filter(([, ok]) => !ok).map(([name]) => name)
+const total = payload.snapshot?.today?.total?.value
 report(
   3,
   'запускается вне репозитория, поднимает окно и трей',
-  alive
-    ? `electron ${payload.electron}, chrome ${payload.chrome}, сумма за сутки ${payload.snapshot?.today?.total?.value}`
-    : `exit=${run.status}, проблемы: ${(payload.problems ?? []).join(' · ') || 'вывода нет'}`,
-  alive,
+  missing.length === 0
+    ? `electron ${payload.electron}, chrome ${payload.chrome}, ${
+        typeof total === 'number' ? `сумма за сутки ${total}` : 'логов агентов на машине нет'
+      }`
+    : `exit=${run.status}, нет: ${missing.join(' · ')}${
+        (payload.problems ?? []).length > 0 ? `; жалобы: ${payload.problems!.join(' · ')}` : ''
+      }`,
+  missing.length === 0,
 )
 
 // 4. Ловит: подмену Electron нодой в упакованном виде. У собранного приложения
