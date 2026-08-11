@@ -22,8 +22,15 @@
  * Шрифты подключаются файлами из репозитория: в макете они с Google Fonts, и
  * без сети вёрстка поехала бы на системных подстановках — молча и
  * правдоподобно.
+ *
+ * Подписи заменяются английскими по словарю (`dictionary.js`) — в памяти
+ * страницы, а не правкой макета: он эталон вёрстки, и его строки держат
+ * числовую приёмку. Кадр после замены проверяется на кириллицу: снимок с
+ * половиной подписей на русском читается как недоделка, а заметить это на
+ * шести картинках глазами — вопрос везения.
  */
 import { app, BrowserWindow } from 'electron'
+import { DICTIONARY } from './dictionary.js'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -77,11 +84,25 @@ async function capture() {
   await window.webContents.executeJavaScript(fontPatch())
 
   const failures = []
+  const applied = await window.webContents.executeJavaScript(translate())
+  console.log(
+    `словарь: заменено ${applied.replaced} из ${DICTIONARY.length}, убрано ${applied.dropped}`,
+  )
+  // Правило, которое перестало срабатывать, выглядит как «всё в порядке»:
+  // словарь, промахнувшийся мимо макета целиком, дал бы русские снимки и ни
+  // одной жалобы.
+  if (applied.replaced === 0) failures.push('словарь не заменил ни одной подписи')
+  if (applied.dropped === 0) failures.push('словарь не убрал ни одного лишнего блока')
+
   for (const shot of SHOTS) {
     const box = await window.webContents.executeJavaScript(measure(shot.label))
     if (box === null) {
       failures.push(`${shot.file}: в макете нет раздела «${shot.label}»`)
       continue
+    }
+    const left = await window.webContents.executeJavaScript(cyrillic(shot.label))
+    if (left.length > 0) {
+      failures.push(`${shot.file}: осталось по-русски — ${left.slice(0, 3).join(' · ')}`)
     }
     // Ещё одна пауза уже в main: страница о своей перерисовке не сообщает, а
     // безоконный рендер догоняет её не мгновенно.
@@ -177,5 +198,76 @@ function measure(label) {
       width: Math.round(rect.width),
       height: Math.round(rect.height),
     }
+  })()`
+}
+
+/**
+ * Замена подписей по словарю и снятие блоков, которых в продукте нет.
+ *
+ * Сравнение — по всему тексту узла целиком, а не по вхождению подстроки: так
+ * «все» из фильтра ленты не превращает в «all» половину слова в соседнем
+ * абзаце. Узлы перебираются один раз и заменяются на месте, порядок правил
+ * значения не имеет.
+ */
+function translate() {
+  return `(() => {
+    const dictionary = new Map(${JSON.stringify(DICTIONARY)})
+    let replaced = 0
+    let dropped = 0
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    const nodes = []
+    while (walker.nextNode()) nodes.push(walker.currentNode)
+    for (const node of nodes) {
+      const value = node.nodeValue
+      const key = value.trim()
+      const to = dictionary.get(key)
+      if (to === undefined) continue
+      if (to === '__DROP_SELF__' || to === '__DROP_ROW__') {
+        let target = node.parentElement
+        if (to === '__DROP_ROW__') {
+          while (target && !getComputedStyle(target).gridTemplateColumns.includes(' ')) {
+            target = target.parentElement
+          }
+        }
+        if (target) {
+          target.remove()
+          dropped += 1
+        }
+        continue
+      }
+      // Пробелы вокруг сохраняются: в макете есть узлы вида «Плагины ␣3», где
+      // соседний пробел держит вёрстку строки.
+      node.nodeValue = value.replace(key, to)
+      replaced += 1
+    }
+    return { replaced, dropped }
+  })()`
+}
+
+/** Что осталось по-русски внутри снимаемого экрана — список для жалобы. */
+function cyrillic(label) {
+  return `(() => {
+    const heads = [...document.querySelectorAll('div')].filter(
+      (node) => node.textContent.trim().startsWith(${JSON.stringify(label)}),
+    )
+    const head = heads.at(-1)
+    if (!head) return []
+    const scope = head.children.length > 0 ? head : head.parentElement
+    const screen = [...scope.querySelectorAll('div')].find((node) => {
+      const style = getComputedStyle(node)
+      return (
+        style.borderTopLeftRadius === '12px' &&
+        style.overflow === 'hidden' &&
+        node.getBoundingClientRect().width >= 300
+      )
+    })
+    if (!screen) return []
+    const left = new Set()
+    const walker = document.createTreeWalker(screen, NodeFilter.SHOW_TEXT)
+    while (walker.nextNode()) {
+      const text = walker.currentNode.nodeValue.trim()
+      if (text && /[А-Яа-яЁё]/.test(text)) left.add(text)
+    }
+    return [...left]
   })()`
 }

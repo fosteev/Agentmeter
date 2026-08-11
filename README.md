@@ -29,9 +29,10 @@ to be never called, and they cost 11.4M tokens.
 
 ![Spend breakdown](docs/screenshots/breakdown.png)
 
-The screens above come from the project's design reference, so the labels in
-them are Russian. The app itself ships with **both English and Russian**
-interfaces and follows your system language by default.
+The screens above are rendered from the project's design reference with the
+app's English wording — the same strings the interface itself uses. The app
+ships with **both English and Russian** and follows your system language by
+default.
 
 ![Today](docs/screenshots/today.png)
 
