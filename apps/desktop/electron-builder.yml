@@ -57,6 +57,14 @@ files:
 
 mac:
   category: public.app-category.developer-tools
+  # Нативный значок в menu bar: на macOS 26 пункт от Electron 43 в панель не
+  # встаёт, и его рисует отдельный процесс на Swift (`menubar/`). Кладётся
+  # ресурсом, а не в asar: asar — архив, а этот файл надо запускать. Собран
+  # универсальным (`scripts/build-menubar.js`), потому что dmg два, а хелпер
+  # один; проверяется в упаковке проверкой 10 `package-smoke.ts`.
+  extraResources:
+    - from: menubar/build/agentmeter-menubar
+      to: agentmeter-menubar
   target:
     - target: dmg
       arch: [arm64, x64]
@@ -81,6 +89,13 @@ nsis:
   allowToChangeInstallationDirectory: true
 
 linux:
+  # Имя исполняемого файла — руками, и это не косметика. На Linux
+  # electron-builder берёт его из `name` пакета, а он у нас скоупный:
+  # `@agentmeter/desktop` превращается в `@agentmeterdesktop`, и сборка
+  # AppImage падает на недопустимых символах в пути. На macOS и Windows имя
+  # берётся из `productName`, поэтому там это не всплывало вовсе — первый
+  # релиз собрал два инсталлятора из трёх.
+  executableName: agentmeter
   category: Development
   synopsis: Локальный счётчик токенов для кодинг-агентов
   target:

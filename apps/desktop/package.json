@@ -6,7 +6,8 @@
   "main": "dist/main/index.js",
   "description": "Electron: main (окно, трей, IPC) и рендерер (попап, витрина компонентов)",
   "scripts": {
-    "build": "tsc --build && npm run build:preload && npm run build:web",
+    "build": "tsc --build && npm run build:preload && npm run build:web && npm run build:menubar",
+    "build:menubar": "node scripts/build-menubar.js",
     "build:preload": "vite build --config vite.preload.config.ts",
     "build:web": "vite build",
     "dev": "npm run build && node scripts/launch.js --dev",

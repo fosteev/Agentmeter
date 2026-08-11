@@ -40,6 +40,7 @@ CSV/JSON и состав статей префикса по наведению. 
 | атрибуция и стартовый префикс               | `packages/core/src/attribution/`                            |
 | окна лимита                                 | `packages/core/src/limits/`                                 |
 | живой слой: кто работает, в каком состоянии | `packages/core/src/live/`                                   |
+| значок в menu bar на macOS (нативный)       | `apps/desktop/menubar/`, мост — `src/main/menubar.ts`       |
 | агрегаты под экраны                         | `packages/core/src/query/`                                  |
 | контракт main↔renderer                      | `packages/ipc/src/index.ts`                                 |
 | трей, окна, проводка IPC                    | `apps/desktop/src/main/`                                    |
@@ -294,6 +295,20 @@ CSV/JSON и состав статей префикса по наведению. 
     совпасть между окнами разной длины, а окна с чужим расходом обрезаются —
     процент считается по аккаунту, а не по машине. Подробности —
     [`1.9-usage.md`](docs/roadmap/1.9-usage.md).
+
+22. **`Tray` из Electron на macOS 26 в menu bar не встаёт.** Пункт создаётся, но
+    система паркует его за нижней кромкой экрана: `getBounds()` отдаёт `y`,
+    равный высоте экрана, Accessibility показывает у процесса ту же координату,
+    и там же оказываются пункты **всех** Electron-приложений на машине (Cursor,
+    Docker Desktop) — тогда как нативные соседи стоят на панели. Дело не в
+    картинке: пункт вообще без картинки, одним текстом, уезжает туда же, а
+    нативный `NSStatusItem` в тех же условиях встаёт нормально. Поэтому на macOS
+    значок ведёт отдельный процесс на Swift
+    ([`menubar/AgentmeterBar.swift`](apps/desktop/menubar/AgentmeterBar.swift),
+    мост — [`main/menubar.ts`](apps/desktop/src/main/menubar.ts)), на Windows и
+    Linux остаётся `Tray`. Рисование туда **не переехало**: растр считает
+    `tray-icon.ts`, хелпер получает готовый PNG. Опасна здесь тишина —
+    приложение работает, индекс дописывается, а выглядит незапущенным.
 
 ## Тексты интерфейса
 

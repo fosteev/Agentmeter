@@ -74,6 +74,7 @@ import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
+import { barBinaryPath, startNativeBar, type NativeBar } from './menubar.ts'
 import { readStartup, type StartupHost } from './startup.ts'
 import {
   drainSnapshot,
@@ -1040,6 +1041,14 @@ function main(): void {
   let window: BrowserWindow | undefined
   let main: BrowserWindow | undefined
   let tray: Tray | undefined
+  /**
+   * Нативный значок на macOS. Живёт вместо `tray`, а не рядом: два пункта в
+   * панели означали бы два приложения. `undefined` — либо не macOS, либо
+   * хелпер не поднялся, и тогда работает `tray`.
+   */
+  let bar: NativeBar | undefined
+  /** Приложение выходит. Смерть хелпера после этого — норма, а не авария. */
+  let quitting = false
   let timer: NodeJS.Timeout | undefined
   let tick = 0
   /** Когда приложение поднялось. Ноль — ещё не поднялось (см. `ACTIVATE_GRACE_MS`). */
@@ -1124,12 +1133,27 @@ function main(): void {
    * меняется без перезапуска (3.6), а меню, собранное однажды, застыло бы на
    * языке запуска — та же ловушка, что с `t()` на верхнем уровне модуля.
    */
-  const trayMenu = (): Menu =>
-    Menu.buildFromTemplate([
-      { label: t('menu.export'), click: () => void exportToFile() },
+  /**
+   * Меню по правой кнопке — одним списком на оба значка.
+   *
+   * У `Tray` меню строится Electron, у нативного хелпера — из тех же пунктов на
+   * стороне Swift, и обратно приезжает `id`. Держать два списка нельзя: пункт,
+   * добавленный в один, молча не появился бы во втором, а разница видна только
+   * на той платформе, которой сейчас нет под рукой.
+   */
+  const trayActions = (): { id: string; label: string; run: () => void }[] => [
+    { id: 'export', label: t('menu.export'), run: () => void exportToFile() },
+    { id: 'quit', label: t('menu.quit'), run: () => app.quit() },
+  ]
+
+  const trayMenu = (): Menu => {
+    const [first, ...rest] = trayActions()
+    return Menu.buildFromTemplate([
+      { label: first!.label, click: first!.run },
       { type: 'separator' },
-      { label: t('menu.quit'), click: () => app.quit() },
+      ...rest.map((action) => ({ label: action.label, click: action.run })),
     ])
+  }
 
   /**
    * Выгрузка в файл. Формат выбирается расширением, которое человек назвал сам:
@@ -1234,8 +1258,15 @@ function main(): void {
     show(planNotifications(notifyState, current, runtime!.config))
   }
 
+  /**
+   * Куда прижимать попап. У нативного значка рамку присылает хелпер, у `Tray`
+   * её отдаёт Electron; `undefined` — пункта ещё нет, и попап встанет по
+   * курсору, а не в угол экрана.
+   */
+  const anchor = (): Rectangle | undefined => bar?.frame() ?? tray?.getBounds()
+
   const paintTray = (current: TraySnapshot): void => {
-    if (tray === undefined || tray.isDestroyed()) return
+    if (bar === undefined && (tray === undefined || tray.isDestroyed())) return
     const state = trayState(current, runtime!.config)
     // Отпечаток — ровно то, что видно на иконке. Процент округляется до целого:
     // полоса в 16 точек дробей не показывает, а перерисовка на каждый десятый
@@ -1245,15 +1276,23 @@ function main(): void {
     }`
     if (key === painted) return
     painted = key
-    tray.setImage(trayIcon(state))
-    tray.setToolTip(trayTooltip(state))
+    const image = trayIcon(state)
+    const tooltip = trayTooltip(state)
+    if (bar !== undefined) {
+      // Хелперу растр уезжает картинкой: точки макетные (16), пикселей вдвое —
+      // экран ретиновый, и картинка в точку размером выглядела бы мылом.
+      bar.setIcon(image.toPNG({ scaleFactor: 2 }), TRAY_SIZE, tooltip)
+      return
+    }
+    tray!.setImage(image)
+    tray!.setToolTip(tooltip)
   }
 
   const resizePopup = (height: number): void => {
     if (window === undefined || window.isDestroyed() || gallery) return
     // Открытый попап прижат к трею: снизу на Windows и Linux — там окно,
     // выросшее на сто точек, уехало бы под панель, если не пересчитать угол.
-    if (fitPopup(window, height) && window.isVisible()) positionPopup(window, tray?.getBounds())
+    if (fitPopup(window, height) && window.isVisible()) positionPopup(window, anchor())
   }
 
   const toggle = (): void => {
@@ -1262,10 +1301,56 @@ function main(): void {
       window.hide()
       return
     }
-    positionPopup(window, tray?.getBounds())
+    positionPopup(window, anchor())
     emit('live:update', snapshot())
     window.show()
     window.focus()
+  }
+
+  /** Значок средствами Electron. Работает везде, кроме macOS 26 — см. `menubar.ts`. */
+  const createTray = (state: TrayState): Tray => {
+    const one = new Tray(trayIcon(state))
+    one.setToolTip(trayTooltip(state))
+    one.on('click', toggle)
+    // Контекстное меню вешается на правую кнопку, а не через `setContextMenu`:
+    // тот на macOS перехватывает и левый клик, а левым открывается попап —
+    // главное, ради чего значок в трее и стоит.
+    one.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
+    return one
+  }
+
+  /**
+   * Значок нативным хелпером (macOS).
+   *
+   * `undefined` — хелпера нет или он не поднялся; вызывающий обязан ответить
+   * обычным `Tray`. Молчаливое отсутствие значка — ровно та поломка, из-за
+   * которой хелпер и написан: приложение работает, а выглядит незапущенным.
+   */
+  const startBar = (state: TrayState): NativeBar | undefined => {
+    const started = startNativeBar({
+      binary: barBinaryPath(app.isPackaged, process.resourcesPath, join(here, '../..')),
+      onClick: toggle,
+      onMenu: (id) => trayActions().find((action) => action.id === id)?.run(),
+      onExit: () => {
+        bar = undefined
+        // Хелпер умер посреди работы — значок исчез вместе с ним. Кроме выхода
+        // из приложения, это всегда авария, и остаться без единственного входа
+        // хуже, чем показать значок, который на этой macOS может не встать.
+        if (quitting || tray !== undefined) return
+        tray = createTray(trayState(snapshot(), runtime!.config))
+        painted = ''
+      },
+    })
+    if (started === undefined) return undefined
+    started.setMenu(barMenu())
+    started.setIcon(trayIcon(state).toPNG({ scaleFactor: 2 }), TRAY_SIZE, trayTooltip(state))
+    return started
+  }
+
+  /** Те же пункты, что у `trayMenu`, но списком для хелпера: разделитель — пустой. */
+  const barMenu = (): { id?: string; label?: string }[] => {
+    const [first, ...rest] = trayActions()
+    return [{ id: first!.id, label: first!.label }, {}, ...rest.map(({ id, label }) => ({ id, label }))]
   }
 
   /**
@@ -1281,9 +1366,14 @@ function main(): void {
     const current = runtime!.config
     const wasPollMs = current.live.pollMs
     const wasWatching = current.index.watch
+    const wasLocale = current.ui.locale
     const report = setConfig(runtime!, patch)
     const next = runtime!.config
     nativeTheme.themeSource = next.ui.theme
+    // Меню у `Tray` строится на каждый клик и язык берёт сам; у хелпера оно
+    // отправлено один раз и без этой строки осталось бы на языке запуска —
+    // причём заметно это только по правой кнопке, куда заглядывают редко.
+    if (next.ui.locale !== wasLocale) bar?.setMenu(barMenu())
     if (next.live.pollMs !== wasPollMs) {
       if (timer) clearInterval(timer)
       timer = setInterval(poll, next.live.pollMs)
@@ -1458,14 +1548,13 @@ function main(): void {
     }
 
     if (!gallery) {
-      const first = snapshot()
-      tray = new Tray(trayIcon(trayState(first, runtime.config)))
-      tray.setToolTip(trayTooltip(trayState(first, runtime.config)))
-      tray.on('click', toggle)
-      // Контекстное меню вешается на правую кнопку, а не через
-      // `setContextMenu`: тот на macOS перехватывает и левый клик, а левым
-      // открывается попап — главное, ради чего значок в трее и стоит.
-      tray.on('right-click', () => tray?.popUpContextMenu(trayMenu()))
+      const state = trayState(snapshot(), runtime.config)
+      // На macOS значок ведёт нативный хелпер: `Tray` из Electron 43 там в
+      // панель не встаёт вовсе (замеры — в шапке `menubar.ts`). На остальных
+      // платформах `Tray` работает, и второй механизм ради единообразия
+      // означал бы вторую поломку.
+      if (process.platform === 'darwin') bar = startBar(state)
+      if (bar === undefined) tray = createTray(state)
       // На macOS иконка в доке приложению без окон не нужна.
       if (process.platform === 'darwin') app.dock?.hide()
     }
@@ -1523,8 +1612,12 @@ function main(): void {
   })
 
   app.on('before-quit', () => {
+    quitting = true
     if (timer) clearInterval(timer)
     tray?.destroy()
+    // Хелпер — отдельный процесс, и своей смерти от закрытия приложения он не
+    // видит: без этой строки значок остался бы в панели пережившим приложение.
+    bar?.destroy()
     if (runtime) closeRuntime(runtime)
   })
 }

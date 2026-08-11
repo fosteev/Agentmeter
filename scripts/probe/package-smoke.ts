@@ -10,7 +10,7 @@
  * файл, не попавший в `files`, путь, который в asar читается иначе, чем на
  * диске, и зависимость, оставшаяся в devDependencies.
  *
- * Девять проверок, каждая названа по поломке, которую обязана поймать.
+ * Десять проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -300,5 +300,39 @@ report(
   `${payload.updater?.module === true ? 'модуль на месте' : `модуля нет: ${payload.updater?.error ?? 'приложение не отчиталось'}`}, ${addressed}`,
   payload.updater?.module === true && !addressed.startsWith('адрес в сборке разошёлся'),
 )
+
+// 10. Ловит: нативный значок в menu bar, не доехавший до сборки. На macOS 26
+//     `Tray` из Electron 43 в панель не встаёт вовсе, и значок рисует
+//     отдельный процесс на Swift — то есть без этого файла установленное
+//     приложение выглядит незапущенным, оставаясь работающим. Ловится три
+//     поломки сразу: файл не попал в `extraResources`, он собран под одну
+//     архитектуру из двух (dmg два, хелпер один), и он не запускается — а
+//     запуск здесь настоящий, потому что «файл на месте» ничего не говорит о
+//     том, стартует ли он.
+if (process.platform !== 'darwin') {
+  console.log('— 10. нативный значок menu bar: не macOS, хелпера в сборке нет намеренно')
+} else {
+  const helper = app === null ? null : join(app.resources, 'agentmeter-menubar')
+  const present = helper !== null && existsSync(helper)
+  const arches = present
+    ? spawnSync('lipo', ['-archs', helper!], { encoding: 'utf8' }).stdout.trim()
+    : ''
+  // Хелпер живёт, пока открыт его stdin, и уходит, когда труба закрывается.
+  // Поэтому запуск проверяется первой строкой в stdout: она приходит до любой
+  // команды, а `input: ''` закрывает трубу сразу и не оставляет процесс жить.
+  const started = present
+    ? spawnSync(helper!, [], { encoding: 'utf8', input: '', timeout: 10_000 })
+    : null
+  const ready = started?.stdout?.includes('"t":"ready"') === true
+  const universal = arches.includes('arm64') && arches.includes('x86_64')
+  report(
+    10,
+    'нативный значок menu bar внутри сборки, universal и запускается',
+    present
+      ? `${arches || 'архитектуры не прочитаны'}, ${ready ? 'стартует' : 'не отчитался при запуске'}`
+      : `нет файла ${helper ?? '—'}`,
+    present && universal && ready,
+  )
+}
 
 process.exit(failed ? 1 : 0)
