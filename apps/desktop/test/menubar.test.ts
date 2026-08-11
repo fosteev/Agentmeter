@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { describe, expect, it } from 'vitest'
 import {
@@ -105,11 +106,13 @@ describe('нативный значок в menu bar', () => {
    * видна только у установленного.
    */
   it('бинарник ищется в ресурсах у собранного и в сборке у исходников', () => {
+    // Склейка своя у каждой системы: путь собирается `join`, и сверять его
+    // зашитой косой значит проверять платформу, а не выбор ветки.
     expect(barBinaryPath(true, '/A/Contents/Resources', '/repo')).toBe(
-      '/A/Contents/Resources/agentmeter-menubar',
+      join('/A/Contents/Resources', 'agentmeter-menubar'),
     )
     expect(barBinaryPath(false, '/A/Contents/Resources', '/repo')).toBe(
-      '/repo/menubar/build/agentmeter-menubar',
+      join('/repo', 'menubar', 'build', 'agentmeter-menubar'),
     )
   })
 

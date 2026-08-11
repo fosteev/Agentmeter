@@ -189,9 +189,9 @@ describe('затронутые файлы задачи', () => {
       // системы, на которой считали, — отсюда `join` вместо зашитой косой.
       '/proj/shared/config.yaml',
       join('src', 'handlers.ts'),
-      'src/history.ts',
-      'src/legacy.ts',
-      'src/retry.ts',
+      join('src', 'history.ts'),
+      join('src', 'legacy.ts'),
+      join('src', 'retry.ts'),
     ])
   })
 

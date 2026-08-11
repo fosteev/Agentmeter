@@ -14,7 +14,32 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Черновик заводится **до** сборок и одной джобой. Три сборки, каждая из
+  # которых создаёт релиз сама, — это гонка: на первом релизе она родила два
+  # черновика на один тег, и во втором лежал один осиротевший блокмап.
+  # electron-builder существующий черновик находит по тегу и доливает в него.
+  draft:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "черновик $tag уже есть"
+          else
+            gh release create "$tag" --draft --title "$tag" --notes-file .github/release-notes.md
+          fi
+
   build:
+    needs: draft
+    # Тег без черновика невозможен, а `workflow_dispatch` идёт без тега вовсе —
+    # и пропущенная джоба остановила бы сборку молча.
+    if: always() && needs.draft.result != 'failure'
     strategy:
       fail-fast: false
       matrix:
