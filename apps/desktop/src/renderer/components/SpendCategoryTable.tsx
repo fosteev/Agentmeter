@@ -1,4 +1,5 @@
 import type { SpendCategoryRow } from '@agentmeter/ipc'
+import { SpendDetail } from './SpendDetail.tsx'
 import { formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 
@@ -10,6 +11,11 @@ import { hatch } from '../paint.ts'
  * названием считается здесь: это доля внутри своей диаграммы, у неё нет ни
  * текста рядом, ни второго потребителя (правило 3.0). А «2 из 9» и сами
  * токены приезжают готовыми — их видно числом.
+ *
+ * По наведению строка раскрывает состав (4.9) — [`SpendDetail`](./SpendDetail.tsx).
+ * Сторона раскрытия решается здесь и без измерений DOM: нижняя половина списка
+ * открывается вверх. Замерять высоту было бы точнее и непроверяемо — тесты окна
+ * рендерят статическую разметку, размеров в ней нет.
  */
 export interface SpendCategoryTableProps {
   rows: SpendCategoryRow[]
@@ -22,12 +28,20 @@ export function SpendCategoryTable({ rows }: SpendCategoryTableProps) {
 
   return (
     <div data-spend-categories style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-      {rows.map((row) => (
+      {rows.map((row, index) => (
         <div
           key={row.key}
           data-spend-category={row.key}
-          style={{ display: 'grid', gridTemplateColumns: GRID, gap: 12, alignItems: 'center' }}
-          title={row.period.caveat}
+          // Подсказка открывается и с клавиатуры: `:focus-within` в `tokens.css`
+          // без этого не срабатывает — у строки нет ни одного фокусируемого узла.
+          tabIndex={0}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: GRID,
+            gap: 12,
+            alignItems: 'center',
+            position: 'relative',
+          }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
             <span style={{ fontSize: 12.5 }}>
@@ -61,10 +75,14 @@ export function SpendCategoryTable({ rows }: SpendCategoryTableProps) {
               ? t('breakdown.unmeasurable')
               : t('breakdown.usedOf', { used: row.used, loaded: row.loaded })}
           </span>
-          <span style={{ ...mono(12, 'right'), fontWeight: 600 }}>
+          {/* Оговорка про точность переехала с целой строки на само число: два
+              всплывающих окна на одном узле — родное `title` и своя подсказка —
+              перекрывают друг друга, а объясняет `caveat` именно знак `≈`. */}
+          <span style={{ ...mono(12, 'right'), fontWeight: 600 }} title={row.period.caveat}>
             {row.period.confidence === 'exact' ? '' : '≈'}
             {formatTokens(row.period.value)}
           </span>
+          <SpendDetail row={row} up={index >= rows.length / 2} />
         </div>
       ))}
     </div>

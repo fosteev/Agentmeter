@@ -128,6 +128,89 @@ describe('loadedCategories', () => {
   })
 })
 
+/**
+ * Состав статьи поимённо (4.9).
+ *
+ * Сеется руками по той же причине, что и всё выше: в фикстурах имена
+ * обезличены и **повторяются** внутри одного листинга, поэтому объединение по
+ * имени на них схлопывает десятки записей в единицы — проверить на таком входе
+ * ни охват, ни порядок нельзя.
+ */
+describe('состав статьи', () => {
+  /**
+   * Ловит две поломки сразу: охват, посчитанный по вхождениям вместо сессий
+   * (скилл, лежавший в двух сессиях, — это два, а не сколько-то ещё), и
+   * порядок, отданный алфавиту, — первым обязано стоять то, что лежит чаще, то
+   * есть стоит дороже.
+   */
+  it('имена приезжают с охватом по сессиям и по убыванию охвата', () => {
+    seedComposition([
+      // `alpha` назван дважды в одной сессии: листинг приезжает и целиком, и
+      // дельтой, а в обезличенных фикстурах имена и вовсе повторяются подряд.
+      // Считай мы записи вместо сессий — вышло бы «в 3 из 2».
+      { id: 'a', blocks: [{ category: 'skills', tokens: 400, names: ['alpha', 'alpha', 'beta'] }] },
+      { id: 'b', blocks: [{ category: 'skills', tokens: 400, names: ['alpha', 'gamma'] }] },
+    ])
+
+    const skills = loadedCategories(db, allTime).find((row) => row.category === 'skills')!
+
+    expect(skills.sessions).toBe(2)
+    expect(skills.unnamed).toBe(0)
+    expect(skills.names).toEqual([
+      { name: 'alpha', sessions: 2 },
+      { name: 'beta', sessions: 1 },
+      { name: 'gamma', sessions: 1 },
+    ])
+  })
+
+  /**
+   * Ловит молчание про сессии без состава. День смешивает провайдеров: у Codex
+   * память приезжает безымянными блоками, и «в 1 из 2» без этого числа читается
+   * как «во второй сессии памяти не было», хотя она там была и стоила денег.
+   */
+  it('сессия, не назвавшая состав, считается отдельно, а не занижает охват', () => {
+    seedComposition([
+      { id: 'a', blocks: [{ category: 'memory', tokens: 300, names: ['/proj/CLAUDE.md'] }] },
+      { id: 'b', blocks: [{ category: 'memory', tokens: 300 }] },
+    ])
+
+    const memory = loadedCategories(db, allTime).find((row) => row.category === 'memory')!
+
+    expect(memory.sessions).toBe(2)
+    expect(memory.unnamed).toBe(1)
+    expect(memory.names).toEqual([{ name: '/proj/CLAUDE.md', sessions: 1 }])
+  })
+
+  /**
+   * Ловит состав, собранный без оглядки на статью: одно и то же имя может
+   * лежать в разных категориях (скилл и сабагент зовут одинаково сплошь и
+   * рядом), и слитый список приписал бы одному другое.
+   */
+  it('состав не перетекает между статьями', () => {
+    seedComposition([
+      {
+        id: 'a',
+        blocks: [
+          // Имя нарочно одно на две статьи: скилл и сабагент зовут одинаково
+          // сплошь и рядом (`code-review` есть и там, и там). Собери состав по
+          // одному имени — и одна из статей осталась бы без него вовсе.
+          { category: 'skills', tokens: 300, names: ['code-review'] },
+          { category: 'agents', tokens: 300, names: ['code-review'] },
+        ],
+      },
+    ])
+
+    const rows = loadedCategories(db, allTime)
+
+    expect(rows.find((row) => row.category === 'skills')!.names).toEqual([
+      { name: 'code-review', sessions: 1 },
+    ])
+    expect(rows.find((row) => row.category === 'agents')!.names).toEqual([
+      { name: 'code-review', sessions: 1 },
+    ])
+  })
+})
+
 describe('savings', () => {
   /**
    * Ловит совет про сервер, которым пользуются, и совет, забывший про режим.
@@ -240,4 +323,56 @@ function seed(options: {
       call.server,
     )
   })
+}
+
+/**
+ * Несколько сессий со своим составом префикса. Отдельно от `seed`, потому что
+ * охват имени измеряется только поперёк сессий: на одной он всегда полный.
+ */
+function seedComposition(
+  sessions: Array<{
+    id: string
+    blocks: Array<{ category: string; tokens: number; names?: string[] }>
+  }>,
+): void {
+  for (const session of sessions) {
+    const prefix = session.blocks.reduce((sum, block) => sum + block.tokens, 0)
+    db.run(
+      `INSERT INTO sessions (id, provider, source_path, cwd, project, started_at, ended_at,
+                             is_sidechain, prefix_tokens, tools_deferred)
+       VALUES (?, 'claude', ?, '/tmp', 'seed', 1000, 2000, 0, ?, 1)`,
+      session.id,
+      `/tmp/${session.id}.jsonl`,
+      prefix,
+    )
+    db.run(
+      `INSERT INTO requests (session_id, seq, request_id, ts, model, input, output,
+                             cache_write, cache_read, context_tokens, origin)
+       VALUES (?, 0, ?, 1000, 'seed-model', ?, 0, 0, 0, ?, 'log')`,
+      session.id,
+      `${session.id}#0`,
+      prefix,
+      prefix,
+    )
+    session.blocks.forEach((block, idx) => {
+      db.run(
+        `INSERT INTO prefix_blocks (session_id, idx, category, source, bytes, tokens, basis, items)
+         VALUES (?, ?, ?, NULL, 0, ?, 'estimated', ?)`,
+        session.id,
+        idx,
+        block.category,
+        block.tokens,
+        block.names?.length ?? 1,
+      )
+      block.names?.forEach((name, ord) => {
+        db.run(
+          `INSERT INTO prefix_items (session_id, idx, ord, name) VALUES (?, ?, ?, ?)`,
+          session.id,
+          idx,
+          ord,
+          name,
+        )
+      })
+    })
+  }
 }

@@ -111,6 +111,15 @@ function splitByLargestRemainder(weights: number[], total: number): number[] {
   return shares.map((share) => share.tokens)
 }
 
+/**
+ * Схлопывание блоков одной статьи. Имена при этом склеиваются, а не теряются
+ * (4.9): отложенные тулы приезжают по блоку на имя, файлы памяти — по блоку на
+ * файл, и после агрегации других носителей состава не остаётся.
+ *
+ * Отсутствие имён заразно: блок без них, слитый с блоком с ними, дал бы список,
+ * который выглядит полным, не будучи им. Поэтому имена остаются только тогда,
+ * когда их назвали **все** слагаемые.
+ */
 function aggregateEstimated(blocks: PrefixBlock[]): PrefixBlock[] {
   const aggregated = new Map<string, PrefixBlock>()
   for (const block of blocks) {
@@ -120,6 +129,8 @@ function aggregateEstimated(blocks: PrefixBlock[]): PrefixBlock[] {
       current.bytes += block.bytes
       current.tokens += block.tokens
       current.items += block.items
+      if (current.names && block.names) current.names = [...current.names, ...block.names]
+      else delete current.names
     } else {
       aggregated.set(key, { ...block, basis: 'estimated' })
     }

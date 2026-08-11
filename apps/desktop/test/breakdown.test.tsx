@@ -1,14 +1,15 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
-import type { SpendScreen } from '@agentmeter/ipc'
+import type { SpendCategoryRow, SpendScreen } from '@agentmeter/ipc'
 import { buildSpendScreen, rereadTimes } from '../src/main/breakdown.ts'
 import { buildDayReport } from '../src/main/day.ts'
 import { BreakdownTab } from '../src/renderer/components/BreakdownTab.tsx'
+import { SpendCategoryTable } from '../src/renderer/components/SpendCategoryTable.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
 
 /**
@@ -411,6 +412,163 @@ describe('BreakdownTab', () => {
     expect(render(empty)).not.toContain('data-spend-categories')
   })
 })
+
+/**
+ * Подсказка состава по наведению (4.9).
+ *
+ * Показом управляет CSS, а не состояние: тесты рендерят статическую разметку,
+ * и подсказка на `useState` осталась бы непроверяемой. Отсюда две половины
+ * проверки — содержимое в разметке и правило показа в файле стилей; без второй
+ * половины удалённое правило дало бы карточку, висящую поверх экрана всегда.
+ */
+describe('состав статьи по наведению (4.9)', () => {
+  /**
+   * Ловит карточку, вставшую в поток: она нарисована в разметке у каждой строки
+   * всегда, и без выноса из потока десять карточек растянули бы колонку втрое
+   * ещё до всякого наведения.
+   */
+  it('карточка есть у каждой строки и вынесена из потока', () => {
+    const html = render(buildSpendScreen(db, ALL))
+
+    expect(html).toContain('data-spend-detail="skills estimated"')
+    expect(html).toContain('data-spend-detail="system residual"')
+    expect(html).toMatch(/data-spend-detail="skills estimated" style="position:absolute/)
+    // Якорь выноса — сама строка: без `position: relative` карточка уедет к
+    // ближайшему предку с позицией, то есть на другой конец экрана.
+    expect(html).toMatch(/data-spend-category="skills estimated"[^>]*position:relative/)
+  })
+
+  /**
+   * Ловит правило показа, потерянное вместе с файлом стилей. Разметка при этом
+   * остаётся зелёной: карточка есть, просто видна она всегда и всюду.
+   */
+  it('карточка спрятана стилями и открывается наведением и фокусом', () => {
+    const css = readFileSync(
+      fileURLToPath(new URL('../src/renderer/tokens.css', import.meta.url)),
+      'utf8',
+    )
+    const hidden = /\[data-spend-detail\]\s*\{[^}]*visibility:\s*hidden/
+
+    expect(css).toMatch(hidden)
+    expect(css).toContain('[data-spend-category]:hover [data-spend-detail]')
+    expect(css).toContain('[data-spend-category]:focus-within [data-spend-detail]')
+  })
+
+  /**
+   * Ловит пустую карточку у статьи, которую перечислить нечем. Остаток не
+   * состоит из штук, и пустой список сказал бы «мы посмотрели и не нашли», —
+   * а мы туда даже не смотрели.
+   */
+  it('у остатка стоит фраза, а не пустой список', () => {
+    const html = render(buildSpendScreen(db, ALL))
+
+    expect(html).toContain('data-spend-detail-note')
+    expect(html).toContain('Измеренный остаток')
+  })
+
+  /**
+   * Ловит молча обрезанный список: двенадцать строк из тридцати шести читаются
+   * как весь набор, и человек уносит с экрана неверное «у меня двенадцать
+   * скиллов».
+   */
+  it('обрезанный список признаётся в обрезке', () => {
+    const html = renderToStaticMarkup(
+      <SpendCategoryTable rows={[categoryRow(18, 4)]} />,
+    )
+
+    expect(html).toContain('data-spend-detail-name="name-00"')
+    expect(html).not.toContain('data-spend-detail-name="name-12"')
+    expect(html).toContain('data-spend-detail-more="6"')
+    expect(html).toContain('и ещё 6')
+  })
+
+  /**
+   * Ловит охват, напечатанный у каждой строки: «в 4 из 4» на всех именах — это
+   * шум, из которого не следует ни одного решения, а вот «в 1 из 4» следует.
+   */
+  it('охват показывается только там, где он неполный', () => {
+    const html = renderToStaticMarkup(
+      <SpendCategoryTable rows={[categoryRow(2, 4, [4, 1])]} />,
+    )
+
+    expect(html).toContain('в 1 из 4')
+    expect(html).not.toContain('в 4 из 4')
+  })
+
+  /**
+   * Ловит утверждение, которого никто не измерял: «16 из 1». У инструкций MCP
+   * блок один на сервер, то есть загруженного там всегда единица, а звали у
+   * serena шестнадцать инструментов — дробь получается больше единицы и
+   * выглядит при этом настоящей. Инструменты считает только статья серверов.
+   */
+  it('дробь «звали из загруженных» стоит лишь там, где загруженное — инструменты', () => {
+    const servers = renderToStaticMarkup(<SpendCategoryTable rows={[sourceRow('mcpTools estimated')]} />)
+    const instructions = renderToStaticMarkup(
+      <SpendCategoryTable rows={[sourceRow('mcpInstructions estimated')]} />,
+    )
+
+    expect(servers).toContain('16 из 62')
+    expect(instructions).not.toContain('16 из 1')
+    expect(instructions).toContain('238 вызовов')
+  })
+
+  /**
+   * Ловит две всплывающие подсказки на одном узле: родное `title` со строки
+   * перекрывает свою карточку, а объясняет оговорка про восстановленные запросы
+   * именно знак `≈` рядом с числом.
+   */
+  it('оговорка про точность висит на числе, а не на всей строке', () => {
+    const html = render(buildSpendScreen(db, ALL))
+
+    expect(html).not.toMatch(/data-spend-category="[^"]*"[^>]*title=/)
+  })
+})
+
+/** Строка с разрезом по серверам — числа взяты с живых логов (serena). */
+function sourceRow(key: string): SpendCategoryRow {
+  return {
+    key,
+    label: 'MCP',
+    perSession: { value: 1000, confidence: 'exact' },
+    period: { value: 10_000, confidence: 'exact' },
+    loaded: 1,
+    used: 1,
+    estimate: true,
+    sources: [
+      {
+        source: 'serena',
+        period: { value: 8200, confidence: 'exact' },
+        perSession: { value: 820, confidence: 'exact' },
+        loaded: key === 'mcpTools estimated' ? 62 : 1,
+        used: 16,
+        calls: 238,
+      },
+    ],
+    detail: { names: [], sessions: 1, unnamed: 0 },
+  }
+}
+
+/** Строка колонки с заданным составом — руками, потому что нужен ровно этот. */
+function categoryRow(names: number, sessions: number, coverage?: number[]): SpendCategoryRow {
+  return {
+    key: 'skills estimated',
+    label: 'Скиллы',
+    perSession: { value: 1000, confidence: 'exact' },
+    period: { value: 10_000, confidence: 'exact' },
+    loaded: names,
+    used: 1,
+    estimate: true,
+    sources: [],
+    detail: {
+      names: Array.from({ length: names }, (_, index) => ({
+        name: `name-${String(index).padStart(2, '0')}`,
+        sessions: coverage?.[index] ?? sessions,
+      })),
+      sessions,
+      unnamed: 0,
+    },
+  }
+}
 
 function render(screen: SpendScreen | null): string {
   return renderToStaticMarkup(<BreakdownTab screen={screen} onScopeChange={() => undefined} />)

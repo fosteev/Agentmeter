@@ -148,6 +148,18 @@ function insertPrefixBlocks(db: Db, session: Session): void {
       block.basis,
       block.items,
     )
+    // Имена — только у блоков, где источник их назвал (4.9). Ни одной строки
+    // при `items > 0` значит «состав в логе не назван», и подсказка обязана
+    // сказать это словами, а не показать пустой список.
+    block.names?.forEach((name, ord) => {
+      db.run(
+        `INSERT INTO prefix_items (session_id, idx, ord, name) VALUES (?, ?, ?, ?)`,
+        session.id,
+        idx,
+        ord,
+        name,
+      )
+    })
   })
 }
 

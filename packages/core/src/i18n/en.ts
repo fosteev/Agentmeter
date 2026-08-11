@@ -190,6 +190,18 @@ export const en = {
     perSessionTotal: '{{tokens}} per session',
     calls_one: '{{count}} call',
     calls_other: '{{count}} calls',
+    // Подсказка по наведению на статью (4.9).
+    detailTitle: 'What is inside',
+    detailIn: 'in {{count}} of {{total}}',
+    detailMore_one: 'and {{count}} more',
+    detailMore_other: 'and {{count}} more',
+    detailResidual:
+      'A measured remainder: the system prompt and the schemas of built-in tools. The log does not list what it is made of.',
+    detailSystem: 'The agent’s base instructions, one block. Nothing countable inside.',
+    detailUserTurn: 'Your own first message. The screen never shows prompt texts.',
+    detailUnnamed_one: 'in {{count}} session the source did not name the contents',
+    detailUnnamed_other: 'in {{count}} sessions the source did not name the contents',
+    detailNone: 'The log does not name the contents',
   },
 
   menu: {

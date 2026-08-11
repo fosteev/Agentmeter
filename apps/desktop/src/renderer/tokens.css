@@ -127,6 +127,24 @@
   }
 }
 
+/* Состав статьи префикса по наведению (4.9). Показом управляет CSS, а не
+   состояние React: тесты окна рендерят статическую разметку, и подсказка на
+   useState осталась бы непроверяемой целиком. `visibility`, а не `display`, —
+   чтобы карточка не дёргала раскладку и была видна средствам доступности;
+   `pointer-events` сняты, чтобы карточка не перехватывала наведение у строки
+   под собой. */
+[data-spend-detail] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-spend-category]:hover [data-spend-detail],
+[data-spend-category]:focus-within [data-spend-detail] {
+  visibility: visible;
+  opacity: 1;
+}
+
 body {
   margin: 0;
   background: var(--bg);

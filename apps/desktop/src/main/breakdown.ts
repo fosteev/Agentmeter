@@ -10,6 +10,7 @@
  * сборки, и на вкладке «Сегодня» было бы 41%, а на «Развёртке» 43% про тот же
  * день.
  */
+import { homedir } from 'node:os'
 import {
   breakdownReport,
   cacheRebuilds,
@@ -37,6 +38,7 @@ import type {
   Measured,
   SpendAdvice,
   SpendCategoryRow,
+  SpendDetail,
   SpendScreen,
   SpendSourceRow,
   SpendSplit,
@@ -300,7 +302,58 @@ function toCategoryRow(
     used: row.used,
     estimate: row.basis === 'estimated',
     sources: row.sources.map((source) => toSourceRow(source, approximate, perSession, sessions)),
+    detail: toDetail(row, key),
   }
+}
+
+/**
+ * Пояснения к статьям, которые перечислить нечем, — по ключу строки (4.9).
+ *
+ * Каждой причине своя фраза, и это не многословие. «Пусто» у остатка значит
+ * «состоит не из штук», у первой реплики — «показывать запрещено настройкой», у
+ * памяти Codex — «источник не назвал». Общее слово на три случая сказало бы, что
+ * мы посмотрели и не нашли, — а мы в двух из трёх даже не смотрели.
+ */
+const DETAIL_NOTES = {
+  'system residual': 'breakdown.detailResidual',
+  'toolSchemas residual': 'breakdown.detailResidual',
+  'system estimated': 'breakdown.detailSystem',
+  'userTurn estimated': 'breakdown.detailUserTurn',
+} as const
+
+/**
+ * Состав статьи для подсказки.
+ *
+ * Оговорка про сессии без имён идёт **вместе** со списком, а не вместо него:
+ * день смешивает провайдеров, и статья «Файлы памяти» на дне из Claude и Codex
+ * имеет и настоящие имена, и сессии, где их не назвали.
+ */
+function toDetail(row: LoadedCategory, key: string): SpendDetail {
+  const detail: SpendDetail = {
+    names: row.names.map((item) => ({ name: displayName(row.category, item.name), sessions: item.sessions })),
+    sessions: row.sessions,
+    unnamed: row.unnamed,
+  }
+  const fixed = DETAIL_NOTES[key as keyof typeof DETAIL_NOTES]
+  if (fixed !== undefined) detail.note = t(fixed)
+  else if (row.unnamed > 0) detail.note = t('breakdown.detailUnnamed', { count: row.unnamed })
+  else if (detail.names.length === 0 && row.sources.length === 0)
+    detail.note = t('breakdown.detailNone')
+  return detail
+}
+
+/**
+ * Как имя выглядит на экране.
+ *
+ * Сокращается только показ: в индексе у файла памяти лежит абсолютный путь, и
+ * лежит он там затем, что `displayPath` из лога относителен рабочему каталогу —
+ * один и тот же `CLAUDE.md` записан в разных сессиях тремя строками. Сложи мы
+ * их по показанному виду, и один файл стал бы тремя, каждый «в 1 сессии из 14».
+ */
+function displayName(category: LoadedCategory['category'], name: string): string {
+  if (category !== 'memory') return name
+  const home = homedir()
+  return home !== '' && name.startsWith(`${home}/`) ? `~${name.slice(home.length)}` : name
 }
 
 function toSourceRow(

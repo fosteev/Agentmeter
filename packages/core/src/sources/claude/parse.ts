@@ -358,12 +358,16 @@ function consumeAttachment(state: ParseState, record: JsonObject): void {
   switch (stringField(attachment, 'type')) {
     case 'skill_listing': {
       const content = stringField(attachment, 'content')
-      if (content !== undefined) addPrefixBlock(state, 'skills', content, undefined, entries(content))
+      if (content === undefined) return
+      const listed = entries(attachment, 'names', content)
+      addPrefixBlock(state, 'skills', content, undefined, listed.items, listed.names)
       return
     }
     case 'agent_listing_delta': {
       const content = stringArrayField(attachment, 'addedLines').join('\n')
-      if (content !== '') addPrefixBlock(state, 'agents', content, undefined, entries(content))
+      if (content === '') return
+      const listed = entries(attachment, 'addedTypes', content)
+      addPrefixBlock(state, 'agents', content, undefined, listed.items, listed.names)
       return
     }
     case 'deferred_tools_delta': {
@@ -380,6 +384,7 @@ function consumeAttachment(state: ParseState, record: JsonObject): void {
           tokens: 0,
           basis: 'estimated',
           items: 1,
+          names: [name],
         })
       }
       return
@@ -396,7 +401,11 @@ function consumeAttachment(state: ParseState, record: JsonObject): void {
     case 'nested_memory': {
       const path = stringField(attachment, 'path')
       const content = nestedMemoryContent(attachment.content)
-      if (content !== undefined) addPrefixBlock(state, 'memory', content)
+      // Имя файла памяти — абсолютный путь, а не `displayPath` рядом с ним:
+      // тот относителен рабочему каталогу, и один файл записан в разных
+      // сессиях тремя разными строками.
+      if (content !== undefined)
+        addPrefixBlock(state, 'memory', content, undefined, 1, path === undefined ? undefined : [resolve(path)])
       if (path !== undefined) state.prefixMemoryPaths.add(resolve(path))
       return
     }
@@ -411,6 +420,7 @@ function addPrefixBlock(
   content: string,
   source?: string,
   items = 1,
+  names?: string[],
 ): void {
   const key = `${category}\u0000${source ?? ''}\u0000${content}`
   if (state.prefixKeys.has(key)) return
@@ -422,24 +432,41 @@ function addPrefixBlock(
     tokens: 0,
     basis: 'estimated',
     items,
+    ...(names ? { names } : {}),
   })
 }
 
 /**
- * Сколько штук перечислено в листинге скиллов или сабагентов (4.2).
+ * Что перечислено в листинге скиллов или сабагентов: имена и сколько их (4.2, 4.9).
  *
- * Формат один на оба: `- имя: описание` с начала строки, причём описание может
- * продолжаться на следующих строках — и тогда они начинаются с чего угодно
- * другого. Считаются только начала строк: маркированный список внутри описания
- * иначе насчитал бы лишних скиллов, а описания у половины из них длиной в абзац.
+ * **Имена лежат в самом вложении массивом** — `names` у `skill_listing`,
+ * `addedTypes` у `agent_listing_delta`, — и разбирать текст листинга поверх
+ * этого не надо. Замер по живым логам: массив на месте у 271 сессии из 271 в
+ * обоих вложениях, а его длина всегда совпадает со `skillCount` самого
+ * провайдера.
+ *
+ * Регулярка осталась запасным путём для логов, где массива нет, и она
+ * **занижает**. Формат листинга один на оба вложения, но форм в нём две и идут
+ * они вперемешку — `- имя` и `- имя: описание`, — а считается только вторая.
+ * Считаются при этом начала строк: маркированный список внутри описания иначе
+ * насчитал бы лишних скиллов, а описания у половины из них длиной в абзац. До
+ * 4.9 счёт шёл по одной регулярке, и в худшей сессии выходило 12 скиллов вместо
+ * 36 (задето 7 сессий из 271, CLI 2.1.214–2.1.226). Тем запасной путь и опасен:
+ * он не падает, он тихо делит на три.
  *
  * Сторож на дрейф формата — проба `breakdown-live.ts`: каждый скилл и каждый
  * сабагент, которых в этих сессиях звали, обязан найтись в листинге по имени.
  */
 const LISTING_ENTRY = /^- [A-Za-z0-9][\w :.-]*: /gm
 
-function entries(content: string): number {
-  return content.match(LISTING_ENTRY)?.length ?? 0
+function entries(
+  attachment: JsonObject,
+  field: string,
+  content: string,
+): { items: number; names?: string[] } {
+  const names = stringArrayField(attachment, field)
+  if (names.length > 0) return { items: names.length, names }
+  return { items: content.match(LISTING_ENTRY)?.length ?? 0 }
 }
 
 function nestedMemoryContent(value: unknown): string | undefined {
@@ -598,6 +625,7 @@ function buildSession(state: ParseState, requests: Request[], options: ParseOpti
       tokens: 0,
       basis: 'estimated',
       items: 1,
+      names: [full],
     })
   }
   if (state.userTurnBytes > 0) {

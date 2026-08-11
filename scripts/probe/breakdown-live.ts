@@ -149,6 +149,53 @@ try {
       imageRow.calls === inIndex.images &&
       imageRow.label !== IMAGE_ROW_KEY,
   )
+
+  // 9. Состав статей поимённо (4.9).
+  //
+  // Печатает настоящие имена с диска, а не «состав собран»: проба, сообщающая
+  // о непустом списке, зелена и на списке из мусора. Заодно сторож на дрейф
+  // формата листингов — каждый скилл, который в этих сессиях **звали**, обязан
+  // найтись среди загруженных. Разойдись имена в листинге с именами в
+  // `attributionSkill`, и колонка «использовано» считала бы одно, а подсказка
+  // показывала другое.
+  const composed = ['skills estimated', 'agents estimated', 'memory estimated', 'deferredTools estimated']
+    .map((key) => screen.recurring.find((row) => row.key === key))
+    .filter((row) => row !== undefined)
+  const listed = composed.map(
+    (row) =>
+      `${row.label}: ${row.detail.names.length} имён из ${row.loaded ?? 0} штук` +
+      `, назвали ${row.detail.sessions - row.detail.unnamed} сессий из ${row.detail.sessions}` +
+      (row.detail.names[0] ? ` — ${row.detail.names.slice(0, 5).map((item) => item.name).join(', ')}` : ''),
+  )
+  const skillNames = new Set(
+    (screen.recurring.find((row) => row.key === 'skills estimated')?.detail.names ?? []).map(
+      (item) => item.name,
+    ),
+  )
+  const invoked = db
+    .all<{ skill: string }>(`SELECT DISTINCT skill FROM requests WHERE skill IS NOT NULL`)
+    .map((row) => row.skill)
+  const missing = invoked.filter((skill) => !skillNames.has(skill))
+  report(
+    9,
+    'состав статей назван поимённо',
+    `${listed.join(' · ')}; званных скиллов ${invoked.length}, не нашлось в листинге ${missing.length}` +
+      (missing.length > 0 ? ` (${missing.slice(0, 5).join(', ')})` : ''),
+    composed.length > 0 && skillNames.size > 0 && invoked.length > 0 && missing.length === 0,
+  )
+
+  // 10. Пустота, которую нельзя заполнить, названа словами, а не пустым списком.
+  const speechless = screen.recurring.filter(
+    (row) => row.detail.names.length === 0 && row.sources.length === 0,
+  )
+  const mute = speechless.filter((row) => row.detail.note === undefined)
+  report(
+    10,
+    'статья без состава объясняется словами',
+    `без состава ${speechless.length} (${speechless.map((row) => row.label).join(', ')}), молчащих ${mute.length}`,
+    speechless.length > 0 && mute.length === 0,
+  )
+
 } finally {
   db.close()
   rmSync(temp, { recursive: true, force: true })
