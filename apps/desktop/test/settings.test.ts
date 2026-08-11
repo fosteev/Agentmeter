@@ -12,6 +12,7 @@ import {
   type Db,
 } from '@agentmeter/core'
 import { configReport, setConfig, type ConfigTarget } from '../src/main/config.ts'
+import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
 
 /**
  * Настройки в main (3.6): запись на диск и применение без перезапуска.
@@ -42,8 +43,17 @@ beforeEach(() => {
     // объектом с памятью: проверяется поведение — «что система ответила», — а
     // не то, что мы себе записали.
     startup: fakeHost(),
+    // Хук строки состояния (1.9) пишет в каталог Claude Code. Здесь он
+    // временный: тест, правящий `~/.claude/settings.json` человека, — это не
+    // тест, а происшествие.
+    statusline: statuslineHost(),
+    usage: openJournal(statuslineHost()),
   }
 })
+
+function statuslineHost(): StatuslineHost {
+  return { claudeHome: join(dir, 'claude'), configDir: dir, platform: 'darwin' }
+}
 
 afterEach(() => {
   db.close()

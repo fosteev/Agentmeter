@@ -46,6 +46,25 @@ export function lifetimesPath(): string {
   return join(configDir(), 'lifetimes.jsonl')
 }
 
+/**
+ * Журнал снимков строки состояния (1.9) — и снимок, который переписывает хук.
+ *
+ * Лежат там же, где журнал времён жизни, и по той же причине: пересборка
+ * индекса («снести и перечитать») их касаться не должна. Журнал наблюдений
+ * ретроспективе не поддаётся — до установки хука процентов не знает никто.
+ */
+export function usagePath(): string {
+  return join(configDir(), 'usage.jsonl')
+}
+
+/**
+ * Куда хук кладёт последний полученный JSON. Один файл, а не дозапись: хук
+ * зовётся на каждую отрисовку строки состояния и из нескольких окон сразу.
+ */
+export function usageLatestPath(): string {
+  return join(configDir(), 'usage-latest.json')
+}
+
 export function claudeHome(cfg: Config): string {
   return cfg.sources.claudeHome ?? join(homedir(), '.claude')
 }

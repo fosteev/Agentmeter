@@ -15,6 +15,7 @@ const CLAUDE = join(ROOT, 'fixtures/claude')
 const CODEX = join(ROOT, 'fixtures/codex')
 const PREFIX = join(ROOT, 'fixtures/prefix')
 const LIMITS = join(ROOT, 'fixtures/limits')
+const USAGE = join(ROOT, 'fixtures/usage')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -358,6 +359,60 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     'limits / граница пятичасового окна проверяется минутой',
     stamps.some((t) => border - t > 0 && border - t <= 60_000) && stamps.some((t) => t > border),
     `${turns.length} запросов, последний внутри окна за ${(border - Math.max(...stamps.filter((t) => t < border))) / 1000} с до сброса`,
+  )
+}
+
+// ─── журнал строки состояния (1.9) ───────────────────────────────────────────
+//
+// Фикстура обратная: проценты посчитаны из зашитого ответа. Проверяется здесь
+// не форма, а то, ради чего она взята, — что хотя бы одно окно **обязано** быть
+// отброшено и что проценты действительно сходятся с объявленной правдой.
+// Журнал, «почти» сходящийся с ней, зелен по форме и бесполезен по существу.
+{
+  const journal = readJsonl(join(USAGE, 'journal.jsonl'))
+  const expected = JSON.parse(readFileSync(join(USAGE, 'expected.json'), 'utf8'))
+  const requests = JSON.parse(readFileSync(join(USAGE, 'requests.json'), 'utf8')).requests
+  const { cacheReadWeight: w, fiveHourCap, weeklyCap } = expected.truth
+
+  check(
+    'usage / журнал и запросы на месте',
+    journal.length === 6 && requests.length === 5,
+    `${journal.length} снимков, ${requests.length} запросов`,
+  )
+
+  // Каждый снимок пятичасового окна: сумма наших запросов внутри окна до его
+  // момента, взвешенная зашитым весом, обязана дать ровно записанный процент.
+  const off: string[] = []
+  let foreign = 0
+  for (const row of journal) {
+    for (const [key, cap, minutes] of [
+      ['fiveHour', fiveHourCap, 300],
+      ['weekly', weeklyCap, 10080],
+    ] as const) {
+      const sample = row[key]
+      if (!sample) continue
+      const from = sample.resetsAt - minutes * 60_000
+      const inside = requests.filter((r: any) => r.ts >= from && r.ts <= row.ts)
+      const plain = inside.reduce((s: number, r: any) => s + r.input + r.output + r.cacheWrite, 0)
+      const read = inside.reduce((s: number, r: any) => s + r.cacheRead, 0)
+      const pct = ((plain + w * read) * 100) / cap
+      if (Math.abs(pct - sample.pct) < 1e-9) continue
+      if (sample.pct > pct) foreign += 1
+      else off.push(`${key}@${row.ts}: ${sample.pct} против ${pct.toFixed(4)}`)
+    }
+  }
+  check(
+    'usage / проценты сходятся с зашитым ответом',
+    off.length === 0,
+    off.length === 0 ? `w=${w}, потолки ${fiveHourCap}/${weeklyCap}` : off.join('; '),
+  )
+
+  // Тот самый снимок, который обязан быть отброшен: процент выше, чем оправдывает
+  // наша сумма. Без него фикстура не проверяет отсев вовсе.
+  check(
+    'usage / есть чужой расход, который обязан быть отброшен',
+    foreign > 0 && expected.dropped.length === 2,
+    `снимков с чужим расходом ${foreign}, окон в ожидании ${expected.dropped.length}`,
   )
 }
 

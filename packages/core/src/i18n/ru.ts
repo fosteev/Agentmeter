@@ -507,6 +507,27 @@ export const ru = {
     updateError: 'не удалось проверить: {{message}}',
     launchUnpackaged: 'доступно только в установленном приложении',
     tabApp: 'Приложение',
+
+    // Настоящие лимиты Claude (1.9): хук строки состояния Claude Code.
+    usage: 'Настоящие лимиты Claude',
+    usageNote:
+      '— Claude Code отдаёт процент окна своей строке состояния; хук записывает его на диск. Сети это не требует',
+    usageOn: 'Собирать',
+    usageOff: 'Не собирать',
+    usageInstalled: 'хук стоит в {{path}}',
+    usageAbsent: 'хук не установлен — проценты лимита Claude остаются оценкой',
+    usageChained: 'прежняя команда строки состояния сохранена и вызывается: {{command}}',
+    usageCollected: '{{points}} · {{windows}}',
+    usagePoints_one: '{{count}} снимок',
+    usagePoints_few: '{{count}} снимка',
+    usagePoints_many: '{{count}} снимков',
+    usageWindows_one: '{{count}} окно',
+    usageWindows_few: '{{count}} окна',
+    usageWindows_many: '{{count}} окон',
+    usageWeight: 'вес чтения кэша {{weight}} — измерено',
+    usageFew: 'данных мало, лимиты остаются оценкой',
+    usageNoClaude: 'каталог Claude Code не найден: {{path}}',
+    usageBadSettings: 'файл настроек Claude Code не разбирается, трогать его не будем: {{path}}',
   },
 
   /** CLI: заголовки колонок и сообщения команд. */

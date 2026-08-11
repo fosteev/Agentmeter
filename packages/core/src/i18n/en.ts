@@ -399,6 +399,25 @@ export const en = {
     updateError: 'check failed: {{message}}',
     launchUnpackaged: 'available in an installed app only',
     tabApp: 'Application',
+
+    // Real Claude limits (1.9): the Claude Code status line hook.
+    usage: 'Real Claude limits',
+    usageNote:
+      '— Claude Code hands the window percentage to its status line; the hook writes it to disk. No network involved',
+    usageOn: 'Collect',
+    usageOff: 'Do not collect',
+    usageInstalled: 'hook is set in {{path}}',
+    usageAbsent: 'hook is not installed — Claude limit percentages stay estimated',
+    usageChained: 'your previous status line command is kept and still runs: {{command}}',
+    usageCollected: '{{points}} · {{windows}}',
+    usagePoints_one: '{{count}} snapshot',
+    usagePoints_other: '{{count}} snapshots',
+    usageWindows_one: '{{count}} window',
+    usageWindows_other: '{{count}} windows',
+    usageWeight: 'cache read weight {{weight}} — measured',
+    usageFew: 'not enough data yet, limits stay estimated',
+    usageNoClaude: 'Claude Code directory not found: {{path}}',
+    usageBadSettings: 'the Claude Code settings file does not parse, leaving it alone: {{path}}',
   },
 
   cli: {

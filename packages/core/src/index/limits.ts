@@ -1,5 +1,5 @@
 import type { ClaudeLimits } from '../config/types.ts'
-import { buildClaudeWindows, buildCodexWindows } from '../limits/index.ts'
+import { buildClaudeWindows, buildCodexWindows, type LimitRequest } from '../limits/index.ts'
 import type { LimitObservation, LimitWindow, LimitWindowKind, Provider } from '../sources/types.ts'
 import type { Db, SqlValue } from './db.ts'
 
@@ -65,14 +65,8 @@ export function rebuildLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowSt
      FROM limit_observations
      WHERE provider = 'codex'`,
   )
-  const requests = db.all<RequestRow>(
-    `SELECT ts, input, output, cache_write, cache_read
-     FROM requests
-     JOIN sessions ON sessions.id = requests.session_id
-     WHERE sessions.provider = 'claude'`,
-  )
   const codex = buildCodexWindows(observations.map(observationFromRow))
-  const claude = buildClaudeWindows(requests.map(requestFromRow), limits)
+  const claude = buildClaudeWindows(readClaudeRequests(db), limits)
 
   db.transaction(() => {
     db.run('DELETE FROM limit_windows')
@@ -85,6 +79,29 @@ export function rebuildLimitWindows(db: Db, limits: ClaudeLimits): LimitWindowSt
   })
 
   return { observations: observations.length, codex: codex.length, claude: claude.length }
+}
+
+/**
+ * Запросы Claude из индекса — вход и пересборки окон, и калибровки (1.9).
+ *
+ * Одной функцией, а не двумя запросами по месту: разойдись они условием (скажем,
+ * один научился отбрасывать восстановленные запросы), и калибровка считала бы
+ * вес по одной выборке, а окна показывали процент по другой. Провайдер
+ * тарифицирует все, поэтому фильтров здесь нет.
+ *
+ * `from` сужает выборку по времени: калибровке нужны запросы не старше самого
+ * старого окна в журнале, а это дни, а не вся история.
+ */
+export function readClaudeRequests(db: Db, from = 0): LimitRequest[] {
+  return db
+    .all<RequestRow>(
+      `SELECT ts, input, output, cache_write, cache_read
+       FROM requests
+       JOIN sessions ON sessions.id = requests.session_id
+       WHERE sessions.provider = 'claude' AND requests.ts >= ?`,
+      from,
+    )
+    .map(requestFromRow)
 }
 
 /** Окна из индекса, по возрастанию якоря. */
@@ -170,13 +187,7 @@ function observationFromRow(row: ObservationRow): LimitObservation {
   }
 }
 
-function requestFromRow(row: RequestRow): {
-  ts: number
-  input: number
-  output: number
-  cacheWrite: number
-  cacheRead: number
-} {
+function requestFromRow(row: RequestRow): LimitRequest {
   return {
     ts: row.ts,
     input: row.input,

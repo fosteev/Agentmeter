@@ -1,0 +1,6 @@
+{"ts":1777630200000,"sessionId":"aaaa1111","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":17.5,"resetsAt":1777647600000},"weekly":{"pct":0.875,"resetsAt":1777939200000}}
+{"ts":1777633200000,"sessionId":"aaaa1111","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":45,"resetsAt":1777647600000},"weekly":{"pct":2.25,"resetsAt":1777939200000}}
+{"ts":1777638600000,"sessionId":"aaaa1111","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":80,"resetsAt":1777647600000},"weekly":{"pct":4,"resetsAt":1777939200000}}
+{"ts":1777652400000,"sessionId":"bbbb2222","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":8,"resetsAt":1777669200000},"weekly":{"pct":4.4,"resetsAt":1777939200000}}
+{"ts":1777656600000,"sessionId":"bbbb2222","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":28.75,"resetsAt":1777669200000},"weekly":{"pct":5.4375,"resetsAt":1777939200000}}
+{"ts":1777674600000,"sessionId":"cccc3333","cliVersion":"2.1.85","contextWindowSize":200000,"fiveHour":{"pct":40,"resetsAt":1777690800000},"weekly":{"pct":7.4375,"resetsAt":1777939200000}}

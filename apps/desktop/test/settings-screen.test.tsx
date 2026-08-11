@@ -7,6 +7,7 @@ import { SettingsAlerts } from '../src/renderer/components/SettingsAlerts.tsx'
 import { SettingsAppearance } from '../src/renderer/components/SettingsAppearance.tsx'
 import { SettingsPrivacy } from '../src/renderer/components/SettingsPrivacy.tsx'
 import { SettingsTab } from '../src/renderer/components/SettingsTab.tsx'
+import { SettingsUsage } from '../src/renderer/components/SettingsUsage.tsx'
 import { setLocale } from '../src/renderer/format.ts'
 
 /**
@@ -32,6 +33,14 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
     ],
     startup: { enabled: false, available: true },
     update: { phase: 'idle', current: '0.1.0' },
+    usage: {
+      installed: false,
+      settingsPath: '/home/u/.claude/settings.json',
+      points: 0,
+      windows: 0,
+      weight: null,
+      hookVersion: 1,
+    },
   }
 }
 
@@ -76,7 +85,7 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 describe('экран настроек', () => {
   /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
   it('рисует шесть разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
@@ -89,7 +98,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -103,7 +112,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')
@@ -134,6 +143,62 @@ describe('экран настроек', () => {
     const html = renderToStaticMarkup(tree)
     expect(html).toContain('Русский')
     expect(html).toContain('English')
+  })
+
+  /**
+   * Ловит тумблер хука, ушедший в общий канал настроек: он правит **чужой**
+   * файл, `~/.claude/settings.json`, и `config:set` его не поставит вовсе —
+   * ручка щёлкала бы и не делала ничего.
+   */
+  it('тумблер хука зовёт свой канал, а не правку конфига', () => {
+    const onToggle = vi.fn()
+    const onChange = vi.fn()
+    const tree = SettingsUsage({ usage: report().usage, onToggle })
+
+    find(tree, 'data-setting', 'statusline').props.onChange!({
+      currentTarget: { value: '', checked: true },
+    })
+
+    expect(onToggle).toHaveBeenCalledWith(true)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Ловит правдоподобный коэффициент вместо «данных мало». Это тот самый экран,
+   * на котором соблазн показать красивое число сильнее всего: пока вес `null`,
+   * лимиты Claude помечены оценкой, и написать здесь что-то похожее на
+   * измерение нельзя.
+   */
+  it('без калибровки вместо веса стоит «данных мало»', () => {
+    const empty = renderToStaticMarkup(SettingsUsage({ usage: report().usage, onToggle: () => undefined }))
+    expect(empty).toContain('данных мало')
+    expect(empty).toContain('0 снимков')
+    expect(empty).toContain('хук не установлен')
+
+    const measured = renderToStaticMarkup(
+      SettingsUsage({
+        usage: { ...report().usage, installed: true, points: 42, windows: 4, weight: 0.18 },
+        onToggle: () => undefined,
+      }),
+    )
+    expect(measured).toContain('0.18')
+    expect(measured).toContain('измерено')
+    expect(measured).not.toContain('данных мало')
+  })
+
+  /**
+   * Ловит потерянную чужую команду строки состояния: она сохранена и
+   * вызывается, и человек обязан это видеть — иначе установка выглядит как
+   * подмена его настройки.
+   */
+  it('чужая команда строки состояния названа вслух', () => {
+    const html = renderToStaticMarkup(
+      SettingsUsage({
+        usage: { ...report().usage, installed: true, chained: 'my-status.sh --short' },
+        onToggle: () => undefined,
+      }),
+    )
+    expect(html).toContain('my-status.sh --short')
   })
 
   /** Ловит тумблер приватности, отправляющий чужое поле. */

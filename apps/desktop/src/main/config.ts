@@ -37,6 +37,13 @@ import {
 } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial, SourceStatus } from '@agentmeter/ipc'
 import { readStartup, writeStartup, type StartupHost } from './startup.ts'
+import {
+  installHook,
+  removeHook,
+  usageStatus,
+  type StatuslineHost,
+  type UsageJournal,
+} from './statusline.ts'
 import type { UpdateState } from './update.ts'
 
 /** Что настройкам нужно от приложения, чтобы примениться без перезапуска. */
@@ -60,6 +67,19 @@ export interface ConfigTarget {
   startup: StartupHost
   /** Ход обновления (5.4) — состояние загрузчика, а не настройка из файла. */
   update: UpdateState
+  /** Чем спрашивать про хук строки состояния (1.9) — три пути, не `app`. */
+  statusline: StatuslineHost
+  /** Журнал наблюдений строки состояния и последняя калибровка по нему. */
+  usage: UsageJournal
+  /**
+   * Чем кончилась последняя попытка поставить или снять хук.
+   *
+   * Отдельно от `configProblems`: там замечания к **нашему** файлу настроек, а
+   * это отказ чужого. И отдельно от того, что расскажет перечитывание: запись
+   * могла не пройти по правам, и тогда перечитанное состояние честно скажет
+   * «не стоит», не сказав почему, — то есть тумблер щёлкнет и промолчит.
+   */
+  usageProblem?: string
 }
 
 /**
@@ -92,6 +112,7 @@ export function configReport(target: ConfigTarget): ConfigReport {
     sources: sourceStatus(target.db, target.config),
     startup: readStartup(target.startup),
     update: target.update,
+    usage: usageStatus(target.statusline, target.usage, target.usageProblem),
   }
 }
 
@@ -105,6 +126,35 @@ export function configReport(target: ConfigTarget): ConfigReport {
 export function setStartup(target: ConfigTarget, enabled: boolean): ConfigReport {
   writeStartup(target.startup, enabled)
   return configReport(target)
+}
+
+/**
+ * Поставить или снять хук строки состояния (1.9).
+ *
+ * Пишет в **чужой** файл — `~/.claude/settings.json`, — и потому зовётся только
+ * из явного действия человека. В наш конфиг при этом уезжает ровно одно: что
+ * стояло в `statusLine` до нас. Дословным JSON и только при установке поверх
+ * пустого места: поставь хук дважды — и «прежним» стал бы он сам, а чужая
+ * настройка потерялась бы навсегда.
+ */
+export function setStatusline(target: ConfigTarget, enabled: boolean): ConfigReport {
+  delete target.usageProblem
+  if (!enabled) {
+    const problems = removeHook(target.statusline, target.config.statusline.previous)
+    if (problems.length > 0) {
+      target.usageProblem = problems[0]!
+      return configReport(target)
+    }
+    return setConfig(target, { statusline: { previous: null } })
+  }
+  const result = installHook(target.statusline)
+  if (result.problems.length > 0) {
+    target.usageProblem = result.problems[0]!
+    return configReport(target)
+  }
+  return result.previous === undefined
+    ? configReport(target)
+    : setConfig(target, { statusline: { previous: result.previous } })
 }
 
 /**

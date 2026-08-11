@@ -1,0 +1,40 @@
+{
+  "_": "Что приезжает на stdin команде statusLine. Снято с Claude Code 2.1.85 11 августа 2026, обезличено; значимая часть сохранена дословно, включая дробный процент и resets_at в СЕКУНДАХ — в журнал он ложится миллисекундами, и перевод делает ровно одно место (parseStatusLine).",
+  "samples": [
+    {
+      "_": "Обычный вызов: rate_limits на месте.",
+      "stdin": {
+        "session_id": "aaaa1111-2222-3333-4444-555566667777",
+        "transcript_path": "/home/user/.claude/projects/demo/aaaa1111.jsonl",
+        "cwd": "/home/user/projects/demo",
+        "version": "2.1.85",
+        "model": { "id": "claude-opus-5", "display_name": "Opus 5" },
+        "workspace": { "current_dir": "/home/user/projects/demo" },
+        "rate_limits": {
+          "five_hour": { "used_percentage": 13, "resets_at": 1777647600 },
+          "seven_day": { "used_percentage": 14.000000000000002, "resets_at": 1777939200 }
+        },
+        "context_window": { "context_window_size": 200000, "used_percentage": 15 }
+      },
+      "snapshot": {
+        "ts": 1777630200000,
+        "sessionId": "aaaa1111-2222-3333-4444-555566667777",
+        "cliVersion": "2.1.85",
+        "contextWindowSize": 200000,
+        "fiveHour": { "pct": 13, "resetsAt": 1777647600000 },
+        "weekly": { "pct": 14.000000000000002, "resetsAt": 1777939200000 }
+      }
+    },
+    {
+      "_": "Начало сессии: запроса к API ещё не было, и ключа rate_limits в объекте нет вовсе. Это не ошибка и не повод писать строку в журнал — окна в ней не будет, а дедуп по (процент, resets_at) такую строку не отсеет, и файл рос бы на каждый вызов хука.",
+      "stdin": {
+        "session_id": "aaaa1111-2222-3333-4444-555566667777",
+        "transcript_path": "/home/user/.claude/projects/demo/aaaa1111.jsonl",
+        "version": "2.1.85",
+        "model": { "id": "claude-opus-5", "display_name": "Opus 5" },
+        "context_window": { "context_window_size": 200000, "used_percentage": 3 }
+      },
+      "snapshot": null
+    }
+  ]
+}

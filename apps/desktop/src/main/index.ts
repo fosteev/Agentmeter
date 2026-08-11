@@ -10,7 +10,7 @@
  * Чего здесь намеренно нет: автообновления — это M5. Меню трея появилось в 4.8
  * и состоит из одного пункта: выгрузки расхода в файл.
  */
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeFileSync } from 'node:fs'
 import {
@@ -46,6 +46,7 @@ import {
   LIVE_URGENCY,
   exportRows,
   toCsv,
+  type Calibration,
   type Config,
   type Db,
   type IngestProgress as CoreIngestProgress,
@@ -64,7 +65,7 @@ import type {
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
-import { configReport, setConfig, setStartup } from './config.ts'
+import { configReport, setConfig, setStartup, setStatusline } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
@@ -74,6 +75,14 @@ import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
 import { buildSnapshot } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 import { readStartup, type StartupHost } from './startup.ts'
+import {
+  drainSnapshot,
+  openJournal,
+  recalibrate,
+  refreshHook,
+  type StatuslineHost,
+  type UsageJournal,
+} from './statusline.ts'
 import type { AppUpdater } from 'electron-updater'
 import {
   applyAuto,
@@ -157,6 +166,15 @@ const UPDATE_EVERY_MS = 6 * 3_600_000
  * меньше паузы между «приложение поднялось» и «человек до него добрался».
  */
 const ACTIVATE_GRACE_MS = 3_000
+/**
+ * Как часто пересчитывать вес чтения кэша по журналу строки состояния (1.9).
+ *
+ * Не на каждый снимок: калибровка читает запросы Claude за все дни, покрытые
+ * журналом, и на опросе раз в секунду это был бы полный проход по индексу
+ * шестьдесят раз в минуту. Пять минут против журнала, который копится днями, —
+ * задержка, которой не видно.
+ */
+const CALIBRATE_EVERY_MS = 5 * 60_000
 
 interface Runtime {
   db: Db
@@ -174,6 +192,12 @@ interface Runtime {
   startup: StartupHost
   /** Ход обновления (5.4). Живёт в памяти: перезапуск начинает проверку заново. */
   update: UpdateState
+  /** Куда ставится хук строки состояния и где лежит его журнал (1.9). */
+  statusline: StatuslineHost
+  /** Накопленные снимки строки состояния и последняя калибровка по ним. */
+  usage: UsageJournal
+  /** Что не приняла последняя попытка поставить или снять хук. */
+  usageProblem?: string
   /**
    * Кто был живым на последнем снимке и насколько срочен — вход закрепления
    * строк в ленте (6.1).
@@ -280,6 +304,11 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
   // Тот же объект, а не его копия: разложи его здесь через `...` — и правка
   // порогов в настройках меняла бы копию, до которой слою нет дела.
   const live = createLiveLayer(db, liveOptions)
+  const statusline: StatuslineHost = {
+    claudeHome: sources.claudeHome,
+    configDir: dirname(configPath()),
+    platform: process.platform,
+  }
   const runtime: Runtime = {
     db,
     live,
@@ -291,8 +320,14 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     // знать не должен — его проверяют без запуска приложения.
     startup: app,
     update: initialUpdateState(app.getVersion(), app.isPackaged, config.updates.auto),
+    statusline,
+    usage: openJournal(statusline),
     issues: ingested?.issues ?? [],
   }
+  // Тело хука меняется вместе с приложением, а лежит он в каталоге настроек и
+  // сам собой не обновится. Ставить его здесь при этом нельзя: установка — это
+  // правка чужого файла, и разрешает её человек кнопкой, а не запуск.
+  refreshHook(statusline)
   if (defer) {
     runtime.pending = ingestSteps(db, { ...sources, progress: true })
     runtime.indexing = {
@@ -375,6 +410,9 @@ async function runSmoke(): Promise<void> {
         (patch) => setConfig(runtime, patch),
         // Смоук автозапуск не трогает: включить его значило бы записать
         // приложение в «Объекты входа» того, кто прогнал проверку.
+        () => configReport(runtime),
+        // И чужой файл настроек тоже: хук строки состояния ставится согласием
+        // человека, а не прогоном проверки.
         () => configReport(runtime),
         // И в сеть не ходит: проверка обновлений — единственный сетевой вызов
         // продукта, и смоук обязан оставаться проверкой того, что на диске.
@@ -602,6 +640,7 @@ function createHandlers(
   openWindow: (tab: WindowTab) => void,
   changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
   changeStartup: (enabled: boolean) => ConfigReport,
+  changeStatusline: (enabled: boolean) => ConfigReport,
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
   resizePopup: (height: number) => void,
@@ -629,6 +668,9 @@ function createHandlers(
     // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
     // знать незачем: ответ тот же отчёт, и рассылается он так же.
     'startup:set': ({ enabled }) => changeStartup(enabled),
+    // Хук строки состояния пишется в чужой файл настроек, поэтому канал зовётся
+    // только кнопкой в окне — и никогда стартом приложения.
+    'statusline:set': ({ enabled }) => changeStatusline(enabled),
     'update:check': () => checkUpdate(),
     'update:install': () => installUpdate(),
     'index:rebuild': () => undefined,
@@ -663,6 +705,12 @@ function createHandlers(
  * упорядочен одинаково, иначе «сверху самый важный» означает разное в трее и в
  * окне.
  */
+/** Разошлись ли числа настолько, чтобы переписывать настройку. */
+function differs(current: number | null, next: number | null, epsilon: number): boolean {
+  if (next === null) return false
+  return current === null || Math.abs(current - next) > epsilon
+}
+
 function rememberLive(runtime: Runtime, snapshot: TraySnapshot): TraySnapshot {
   runtime.liveSessions = new Map(
     snapshot.agents
@@ -1117,8 +1165,56 @@ function main(): void {
     }
   }
 
+  /**
+   * Дочитать снимок строки состояния и, если набежало новое, пересчитать вес
+   * чтения кэша (1.9).
+   *
+   * Стоит на опросе трея, а не на вотчере файла: снимок переписывается на
+   * каждую отрисовку строки состояния — вотчер дёргался бы десятки раз на одно
+   * наблюдение. Сам разбор дешёвый (сравнение времени файла), а калибровка —
+   * нет: она читает запросы Claude за дни, и потому идёт по таймеру.
+   */
+  const collectUsage = (): void => {
+    if (runtime === undefined) return
+    if (drainSnapshot(runtime.statusline, runtime.usage) === null) return
+    if (Date.now() - runtime.usage.calibratedAt < CALIBRATE_EVERY_MS) return
+    applyCalibration(recalibrate(runtime.db, runtime.usage))
+  }
+
+  /**
+   * Записать измеренное в настройки — но только измеренное.
+   *
+   * Вес чтения кэша уезжает в конфиг всегда, когда калибровка сошлась: в логах
+   * его нет, спросить не у кого, и другого источника у этого числа не будет.
+   * А вот потолки записываются, только если человек **не** выбирал план: его
+   * выбор — это заявление о подписке, и перебивать заявление измерением значит
+   * драться с кнопкой, которую он только что нажал. Разошлись — видно в
+   * настройках, решает он.
+   */
+  const applyCalibration = (calibration: Calibration): void => {
+    if (!calibration.ok || runtime === undefined) return
+    const claude = runtime.config.limits.claude
+    const patch: DeepPartial<Config['limits']['claude']> = {}
+    if (differs(claude.cacheReadWeight, calibration.cacheReadWeight, 1e-3)) {
+      patch.cacheReadWeight = calibration.cacheReadWeight
+    }
+    if (claude.plan === null) {
+      if (differs(claude.fiveHourCap, calibration.fiveHourCap, 1)) {
+        patch.fiveHourCap = calibration.fiveHourCap
+      }
+      if (differs(claude.weeklyCap, calibration.weeklyCap, 1)) {
+        patch.weeklyCap = calibration.weeklyCap
+      }
+    }
+    if (Object.keys(patch).length > 0) changeConfig({ limits: { claude: patch } })
+  }
+
   const poll = (): void => {
     tick += 1
+    // До проверки «смотрит ли кто-то»: наблюдение строки состояния такое же
+    // невосстановимое, как журнал времён жизни рядом. Процент окна, не
+    // записанный сегодня, задним числом не узнает никто — ни мы, ни провайдер.
+    collectUsage()
     const shown = listeners().length > 0
     if (!shown && tick % HIDDEN_POLL_FACTOR !== 0) return
     // При закрытом попапе снимок всё равно снимается, только вшестеро реже.
@@ -1220,6 +1316,27 @@ function main(): void {
   }
 
   /**
+   * Хук строки состояния (1.9): поставить или снять и разослать.
+   *
+   * Отдельно от `changeConfig` по той же причине, что автозапуск, только резче:
+   * пишется он в **чужой** файл настроек. Единственный путь сюда — кнопка в
+   * окне; ни старт приложения, ни применение конфига этого канала не трогают.
+   *
+   * Калибровка пересчитывается сразу после установки: журнал мог остаться с
+   * прошлого раза, и показывать «0 снимков» над непустым файлом было бы враньём
+   * ровно того сорта, от которого этап и затевался.
+   */
+  const changeStatusline = (enabled: boolean): ConfigReport => {
+    let report = setStatusline(runtime!, enabled)
+    if (enabled && runtime!.usage.snapshots.length > 0) {
+      applyCalibration(recalibrate(runtime!.db, runtime!.usage))
+      report = configReport(runtime!)
+    }
+    emit('config:changed', report)
+    return report
+  }
+
+  /**
    * Автообновление (5.4) — вся механика в одном месте.
    *
    * `electron-updater` подключается лениво, первым обращением: в неустановленном
@@ -1297,6 +1414,7 @@ function main(): void {
         openMainWindow,
         changeConfig,
         changeStartup,
+        changeStatusline,
         () => checkUpdate(),
         installUpdate,
         resizePopup,

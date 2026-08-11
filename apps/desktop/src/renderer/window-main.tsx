@@ -241,6 +241,16 @@ export function WindowApp() {
   }
 
   /**
+   * Хук строки состояния (1.9) — третий канал того же рода. Пишет он не в наш
+   * файл настроек, а в `~/.claude/settings.json`, и состояние в ответе тоже
+   * перечитано у файла: показать «включено» над записью, которая не прошла,
+   * значило бы соврать самым проверяемым способом.
+   */
+  const changeStatusline = (enabled: boolean): void => {
+    void window.agentmeter['statusline:set']({ enabled }).then(setConfigReport)
+  }
+
+  /**
    * Обновления (5.4). Ответ на «Проверить» — тот же отчёт, а ход дела приезжает
    * событием `update:state`: процентов скачивания приходят десятки, и слать с
    * каждым весь отчёт о настройках значило бы перерисовывать экран целиком ради
@@ -362,6 +372,7 @@ export function WindowApp() {
           report={configReport}
           onChange={changeConfig}
           onStartup={changeStartup}
+          onStatusline={changeStatusline}
           onCheckUpdate={checkUpdate}
           onInstallUpdate={installUpdate}
         />

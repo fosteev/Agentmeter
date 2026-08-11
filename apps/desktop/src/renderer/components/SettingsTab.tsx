@@ -8,6 +8,7 @@ import { SettingsAppearance } from './SettingsAppearance.tsx'
 import { SettingsLimits } from './SettingsLimits.tsx'
 import { SettingsPrivacy } from './SettingsPrivacy.tsx'
 import { SettingsSources } from './SettingsSources.tsx'
+import { SettingsUsage } from './SettingsUsage.tsx'
 
 /**
  * Настройки — раздел 6 макета (строки 1119–1193).
@@ -43,6 +44,11 @@ export interface SettingsTabProps {
    * настроек, а это — операционную систему (5.3).
    */
   onStartup: (enabled: boolean) => void
+  /**
+   * Поставить или снять хук строки состояния (1.9). Третий канал по тому же
+   * поводу: он пишет в файл настроек Claude Code, а не в наш.
+   */
+  onStatusline: (enabled: boolean) => void
   /** Проверить обновления руками и поставить скачанное (5.4). */
   onCheckUpdate: () => void
   onInstallUpdate: () => void
@@ -54,6 +60,7 @@ export function SettingsTab({
   report,
   onChange,
   onStartup,
+  onStatusline,
   onCheckUpdate,
   onInstallUpdate,
   section = 'sources',
@@ -119,6 +126,7 @@ export function SettingsTab({
           <SettingsSources sources={report.sources} problems={report.problems} />
         ) : null}
         {active === 'limits' ? <SettingsLimits config={config} onChange={onChange} /> : null}
+        {active === 'limits' ? <SettingsUsage usage={report.usage} onToggle={onStatusline} /> : null}
         {active === 'alerts' ? <SettingsAlerts config={config} onChange={onChange} /> : null}
         {active === 'appearance' ? (
           <SettingsAppearance config={config} onChange={onChange} />

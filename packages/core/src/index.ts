@@ -23,6 +23,24 @@ export { attributeMarginal, attributePrefix, PREFIX_BYTES_PER_TOKEN } from './at
 export type { MarginalOptions, MarginalStats, PrefixOptions } from './attribution/index.ts'
 export { buildClaudeWindows, buildCodexWindows, currentWindows } from './limits/index.ts'
 export type { LimitRequest } from './limits/index.ts'
+export {
+  CALIBRATION,
+  appendUsageJournal,
+  calibrate,
+  parseStatusLine,
+  readUsageJournal,
+  usageKeys,
+} from './limits/index.ts'
+export type {
+  Calibration,
+  CalibrationBlocker,
+  DroppedWindow,
+  Fit,
+  UsagePoint,
+  UsageSnapshot,
+  UsageWindowKind,
+  UsageWindowSample,
+} from './limits/index.ts'
 export { listLiveSessions, parseSessionFile, parseSubagents } from './sources/claude/index.ts'
 export { parseRolloutFile, readLimits } from './sources/codex/index.ts'
 export { defaultClaudeHome, defaultCodexHome, defaultIndexPath } from './index/paths.ts'
@@ -34,6 +52,7 @@ export type { DiscoverOpts, IngestOptions, IngestProgress, IngestStats } from '.
 export {
   ensureLimitWindows,
   putLimitObservations,
+  readClaudeRequests,
   readLimitWindows,
   rebuildLimitWindows,
 } from './index/limits.ts'
@@ -85,6 +104,8 @@ export {
   lifetimesPath,
   loadConfig,
   saveConfig,
+  usageLatestPath,
+  usagePath,
 } from './config/load.ts'
 export { DEFAULT_CONFIG } from './config/types.ts'
 export type { ClaudeLimits, Config, WindowBounds } from './config/types.ts'
