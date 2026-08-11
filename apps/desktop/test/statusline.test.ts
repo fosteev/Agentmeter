@@ -68,8 +68,12 @@ describe('установка хука', () => {
     expect(settings()['statusLine']).toEqual({ type: 'command', command: hookPath(host) })
     expect(readFileSync(hookPath(host), 'utf8')).toBe(hookBody('darwin'))
     // Без бита исполнения Claude Code получит EACCES и промолчит: в строке
-    // состояния просто ничего не появится.
-    expect(statSync(hookPath(host)).mode & 0o111).toBeGreaterThan(0)
+    // состояния просто ничего не появится. Бит проверяется там, где он есть:
+    // Windows прав доступа в этом виде не хранит вовсе, и `chmod` там ничего не
+    // меняет — сама установка (`statusline.ts`) на win32 его и не зовёт.
+    if (process.platform !== 'win32') {
+      expect(statSync(hookPath(host)).mode & 0o111).toBeGreaterThan(0)
+    }
     expect(readHook(host).installed).toBe(true)
   })
 

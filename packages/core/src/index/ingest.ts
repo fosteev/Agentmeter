@@ -186,7 +186,7 @@ function ingestOne(db: Db, file: SourceFile, memory: MemoryOptions): FileIngestR
     return { parsed: false, requests: 0, failed: false }
   }
 
-  const current = { inode: stat.ino, size: stat.size, mtime: Math.round(stat.mtimeMs) }
+  const current = { inode: fileId(stat.ino), size: stat.size, mtime: Math.round(stat.mtimeMs) }
   const row = db.get<SourceRow>(
     'SELECT inode, size, mtime, offset FROM sources WHERE path = ?',
     file.path,
@@ -220,6 +220,26 @@ function parseFile(file: SourceFile, memory: MemoryOptions): ParseResult {
       : { memoryPaths: claudeMemoryPaths(file.path, memory.claudeHome) }
   if (file.kind === 'subagent') return parseSubagentFile(file.path, parentId(file), options)
   return parseSessionFile(file.path, options)
+}
+
+/**
+ * Идентификатор файла для сверки «тот ли это файл».
+ *
+ * На Windows `ino` — 64-битный индекс файла (`12103423999340064` на живом
+ * раннере), и он больше, чем число в JavaScript представляет точно. Записать
+ * его в базу можно, а вот **прочитать** обратно нельзя: `node:sqlite` роняет
+ * выборку с `ERR_OUT_OF_RANGE`, и падает не первый разбор файла, а второй —
+ * то есть дочитывание, ради которого поле и заведено. На Windows это ломало
+ * индекс целиком, тихо и полностью.
+ *
+ * Ноль здесь значит «идентичности нет»: на POSIX нулевого inode у файла не
+ * бывает, а сверка не остаётся ни с чем — рядом size и mtime, и оба точные.
+ * Схему это не трогает намеренно: несовместимое изменение стоит перестроения
+ * индекса, а он переживает удалённые логи и восстановить их неоткуда (ретеншн,
+ * пункт 19 CLAUDE.md).
+ */
+export function fileId(ino: number): number {
+  return Number.isSafeInteger(ino) ? ino : 0
 }
 
 function statFile(path: string): Stats | undefined {

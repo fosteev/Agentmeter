@@ -21,6 +21,7 @@ import {
   putSource,
   watchSources,
 } from '../../src/index.ts'
+import { fileId } from '../../src/index/ingest.ts'
 import { openDb } from '../../src/index/db.ts'
 import type { Db } from '../../src/index/db.ts'
 import type { SourceFile } from '../../src/index/discover.ts'
@@ -125,6 +126,29 @@ describe('индекс логов', () => {
         'SELECT sum(input) AS input, sum(output) AS output, sum(cache_write) AS cacheWrite, sum(cache_read) AS cacheRead FROM requests',
       ),
     ).toEqual(sumRequests(parseSessionFile(sourcePath).requests))
+  })
+
+  /**
+   * Ловит 64-битный идентификатор файла с Windows, записанный в базу числом.
+   * Записать его SQLite даёт, а прочитать обратно нельзя — `node:sqlite` роняет
+   * выборку с `ERR_OUT_OF_RANGE`, и падает не первый разбор, а дочитывание. На
+   * Windows это ломало индекс целиком: `ingestFile` второй раз по тому же файлу
+   * выбрасывал исключение. На POSIX проверка не сработает никогда — inode там
+   * помещается в число, — поэтому она стоит отдельно от разбора.
+   */
+  it('идентификатор файла шире числа не едет в базу', () => {
+    const windows = 12103423999340064
+    expect(Number.isSafeInteger(windows)).toBe(false)
+    expect(fileId(windows)).toBe(0)
+    // Обычный inode не трогается: по нему видно ротацию файла под тем же путём.
+    expect(fileId(8675309)).toBe(8675309)
+
+    putSource(db, { path: '/log.jsonl', provider: 'claude', kind: 'session' }, {
+      inode: fileId(windows),
+      size: 1,
+      mtime: 2,
+    })
+    expect(db.get<{ inode: number }>('SELECT inode FROM sources')?.inode).toBe(0)
   })
 
   it('ingestAll повторно пропускает неизменившиеся файлы', () => {

@@ -185,8 +185,10 @@ describe('затронутые файлы задачи', () => {
 
     expect(changedFiles(db, claudeSession)).toEqual([])
     expect(changedFiles(db, codexSession).map((file) => file.path)).toEqual([
+      // Внешний путь остаётся как в логе, укороченный пишется разделителем той
+      // системы, на которой считали, — отсюда `join` вместо зашитой косой.
       '/proj/shared/config.yaml',
-      'src/handlers.ts',
+      join('src', 'handlers.ts'),
       'src/history.ts',
       'src/legacy.ts',
       'src/retry.ts',
@@ -201,7 +203,9 @@ describe('затронутые файлы задачи', () => {
     ingestFile(db, { path: join(codexDir, 'rollout.jsonl'), provider: 'codex', kind: 'session' })
     const files = changedFiles(db, sessionId('codex'))
 
-    expect(files.find((file) => file.path.endsWith('handlers.ts'))?.path).toBe('src/handlers.ts')
+    expect(files.find((file) => file.path.endsWith('handlers.ts'))?.path).toBe(
+      join('src', 'handlers.ts'),
+    )
     expect(files.some((file) => file.path === '/proj/shared/config.yaml')).toBe(true)
   })
 

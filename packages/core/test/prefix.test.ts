@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
@@ -22,6 +22,25 @@ interface ExpectedPrefix {
   blocks: PrefixBlock[]
 }
 
+/**
+ * Эталон снят на macOS, и пути в нём записаны по-POSIX. Разбор приводит их к
+ * виду своей системы: на Windows корневой путь получает букву диска. Поэтому
+ * имена эталона проходят то же преобразование, что и разбор.
+ *
+ * Трогаются только пути: в тех же списках лежат имена скиллов, серверов и
+ * инструментов, и `resolve` приклеил бы к ним рабочий каталог — сверка
+ * сломалась бы на обеих системах сразу.
+ */
+const asHere = (blocks: PrefixBlock[]): PrefixBlock[] =>
+  blocks.map((block) =>
+    block.names === undefined
+      ? block
+      : {
+          ...block,
+          names: block.names.map((one) => (one.startsWith('/') ? resolve(one) : one)),
+        },
+  )
+
 describe('prefix attribution', () => {
   for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     it(`совпадает с ручным эталоном ${name}`, () => {
@@ -40,10 +59,10 @@ describe('prefix attribution', () => {
         expected.requestCount,
       )
       expect(result.session.prefixTokens * expected.requestCount).toBe(expected.recurrentTokens)
-      expect(result.session.prefixBlocks).toEqual(expected.blocks)
+      expect(result.session.prefixBlocks).toEqual(asHere(expected.blocks))
 
       // Парсеры уже вызывают атрибуцию; повторный вызов не должен сдвигать цифры.
-      expect(attributePrefix(result.session, result.requests)).toEqual(expected.blocks)
+      expect(attributePrefix(result.session, result.requests)).toEqual(asHere(expected.blocks))
     })
   }
 })
@@ -269,7 +288,10 @@ describe('состав статей префикса', () => {
       'memory',
     )
 
-    expect(listed.names).toEqual(['/fixture/memory/CLAUDE.md'])
+    // Разбор приводит путь к виду своей системы: на Windows корневой
+    // `/fixture/...` получает букву диска. Сверяемся тем же преобразованием —
+    // зашитая строка проверяла бы платформу, а не выбор абсолютного пути.
+    expect(listed.names).toEqual([resolve('/fixture/memory/CLAUDE.md')])
   })
 
   /**

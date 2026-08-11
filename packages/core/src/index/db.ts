@@ -100,6 +100,10 @@ export function openDb(path: string): { db: Db; rebuilt: boolean } {
   )
   if (current === SCHEMA_VERSION) return { db, rebuilt: false }
   if (current > SCHEMA_VERSION) {
+    // Файл закрывается **до** исключения: на Windows открытый дескриптор
+    // держит файл, и после отказа его нельзя ни удалить, ни переименовать —
+    // человек, которому сказали «удалите индекс», сделать этого не может.
+    db.close()
     // База от более новой версии приложения: её структуру мы не знаем.
     throw new Error(
       `индекс версии ${current}, а приложение понимает ${SCHEMA_VERSION} — обновите приложение или удалите индекс`,

@@ -386,7 +386,10 @@ describe('модель выделения запроса', () => {
     const points = timeline()
 
     expect(points[4]!.note).toBeUndefined()
-    expect(points[5]!.note).toBe('большой результат Read — bench/runner.py — 150k в промпт')
+    // Путь в подписи укорочен по каталогу сессии, а разделитель у укороченного
+    // — свой у каждой системы: `join` здесь и есть «как эта система пишет
+    // путь». Зашитая косая проверяла бы платформу, а не выбор запроса.
+    expect(points[5]!.note).toBe(`большой результат Read — ${join('bench', 'runner.py')} — 150k в промпт`)
     expect(points.filter((point) => point.note !== undefined)).toHaveLength(1)
   })
 
@@ -448,7 +451,9 @@ describe('модель выделения запроса', () => {
       ...quiet(4),
     ])
 
-    expect(timeline()[5]!.note).toBe('большой результат Read — src/app.ts — 150k в промпт')
+    expect(timeline()[5]!.note).toBe(
+      `большой результат Read — ${join('src', 'app.ts')} — 150k в промпт`,
+    )
   })
 
   /**
