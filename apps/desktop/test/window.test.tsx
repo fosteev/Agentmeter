@@ -53,6 +53,20 @@ describe('каркас главного окна на контрактных ф�
     }
   })
 
+  /**
+   * Ловит вкладку с фоном от Chromium.
+   *
+   * У `button` без объявленного фона браузер рисует свой `buttonface` —
+   * светло-серый и в тёмной теме, — и невыбранные вкладки оказываются
+   * подсвечены сильнее выбранной. Подсветка ровно одна, и это `--s2`.
+   */
+  it('фон вкладки объявлен, а не оставлен браузеру', () => {
+    const html = renderToStaticMarkup(<WindowTabs active="today" onChange={() => undefined} />)
+
+    expect(html.split('background:transparent').length - 1).toBe(3)
+    expect(html.split('background:var(--s2)').length - 1).toBe(1)
+  })
+
   /** Ловит переключатель, который меняет подсветку, но оставляет прежний экран. */
   it('переключение вкладки меняет честную заглушку', () => {
     let active: WindowTab = 'today'

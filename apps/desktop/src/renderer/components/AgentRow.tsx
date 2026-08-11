@@ -1,4 +1,5 @@
 import type { Provider } from '@agentmeter/core'
+import type { LiveAgent } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { ProviderBadge } from './ProviderBadge.tsx'
 
@@ -21,6 +22,21 @@ import { ProviderBadge } from './ProviderBadge.tsx'
 // равны разделу 0, поэтому витрина и приёмка 2.4 остались нетронутыми.
 
 export type AgentStatus = 'thinking' | 'waiting' | 'idle' | 'done'
+
+/**
+ * Состояние из снимка → вид строки.
+ *
+ * Живёт рядом с точкой и подписью, а не у каждого потребителя: точку рисуют
+ * теперь двое — попап и живая строка ленты (6.1), — и вторая копия таблицы
+ * означала бы, что «ждёт ответа» однажды покрасится по-разному на двух экранах
+ * одного приложения.
+ */
+export const AGENT_STATUS = {
+  working: 'thinking',
+  waiting: 'waiting',
+  idle: 'idle',
+  done: 'done',
+} as const satisfies Record<LiveAgent['state'], AgentStatus>
 
 export interface AgentRowProps {
   provider: Provider
@@ -68,7 +84,7 @@ const STATUS_KEY = {
   idle: 'state.silent',
 } as const
 
-function statusLabel(status: Exclude<AgentStatus, 'done'>): string {
+export function statusLabel(status: Exclude<AgentStatus, 'done'>): string {
   return t(STATUS_KEY[status])
 }
 
@@ -292,7 +308,7 @@ function pace(status: AgentStatus, rate: number | undefined): string | null {
   return ` · ${t('time.perMinute', { tokens: formatTokens(rate) })}`
 }
 
-function Dot({ status }: { status: AgentStatus }) {
+export function Dot({ status }: { status: AgentStatus }) {
   if (status === 'thinking') {
     return (
       <span

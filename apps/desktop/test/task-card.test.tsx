@@ -281,6 +281,36 @@ describe('карточка задачи', () => {
     expect(onToggle).toHaveBeenCalledOnce()
   })
 
+  /**
+   * Ловит карточку, возникшую рывком, и мёртвую анимацию.
+   *
+   * Карточка приезжает из IPC уже после нажатия и сдвигает собой весь список:
+   * без раскрытия нажатую строку и появившийся блок связывает только память
+   * человека. Имя `am-reveal` сверяется с tokens.css — переименуй кадры, и
+   * анимации не станет, а разметка останется прежней.
+   */
+  it('карточка раскрывается, а не возникает', () => {
+    const first = today.tasks[0]!
+    const html = renderToStaticMarkup(
+      <TaskRows
+        tasks={[first]}
+        maxTokens={first.tokens.value}
+        expandedSessionId={first.sessionId}
+        taskCard={card}
+        onToggle={() => undefined}
+      />,
+    )
+    const css = readFileSync(`${root}apps/desktop/src/renderer/tokens.css`, 'utf8')
+
+    expect(html).toContain(`data-task-card-reveal="${first.sessionId}"`)
+    expect(html).toMatch(/animation:am-reveal \d+ms/)
+    expect(css).toMatch(/@keyframes am-reveal\s*\{/)
+    // Высота едет через grid-template-rows: у карточки её заранее нет — она
+    // зависит от того, что приехало из IPC.
+    expect(css).toMatch(/@keyframes am-reveal[\s\S]*grid-template-rows: 0fr/)
+    expect(html).toContain('overflow:hidden')
+  })
+
   /** Ловит ответ предыдущего task:get, показанный после переключения на новую строку. */
   it('отбрасывает запоздавший ответ прошлой задачи', async () => {
     let resolveFirst!: (value: TaskCardData | null) => void

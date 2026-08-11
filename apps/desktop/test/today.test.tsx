@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import type { DayReport, TodayFilter } from '@agentmeter/ipc'
+import type { DayReport, LiveAgent, TodayFilter, TraySnapshot } from '@agentmeter/ipc'
 import { TaskTable } from '../src/renderer/components/TaskTable.tsx'
 import { TodayFilters } from '../src/renderer/components/TodayFilters.tsx'
-import { TodayTab } from '../src/renderer/components/TodayTab.tsx'
+import { TodayTab, liveAgents } from '../src/renderer/components/TodayTab.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
-import { requestToday } from '../src/renderer/window-main.tsx'
+import { liveSignature, requestToday } from '../src/renderer/window-main.tsx'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url))
 
@@ -253,5 +253,134 @@ describe('лента «Сегодня» на контрактных фиксту
     const html = tabMarkup(report)
     expect(html).toContain(`>${formatTokens(report.totals.total.value)}<`)
     expect(html).not.toContain(`>${formatTokens(parts)}<`)
+  })
+})
+
+describe('живые задачи в ленте (6.1)', () => {
+  const base = today.tasks[0]!
+
+  function agent(over: Partial<LiveAgent> = {}): LiveAgent {
+    return {
+      sessionId: base.sessionId,
+      provider: 'claude',
+      project: 'proj',
+      cwd: '/proj',
+      entrypoint: 'cli',
+      startedAt: 0,
+      state: 'working',
+      tokens: 38_200,
+      requests: 12,
+      approximate: false,
+      rate: 12_400,
+      currentTurn: {
+        prompt: 'добавь активные сессии в ленту',
+        startedAt: 1_000,
+        spend: { tokens: { value: 1_200_000, confidence: 'exact' }, requests: 4 },
+      },
+      ...over,
+    }
+  }
+
+  function feed(...agents: LiveAgent[]): string {
+    return renderToStaticMarkup(
+      <TaskTable tasks={today.tasks} folded={null} live={liveAgents(agents)} />,
+    )
+  }
+
+  /**
+   * Ловит ленту, молчащую о происходящем. Строка задачи рассказывает про день
+   * целиком, и без этой подписи у экрана нет ответа на «чем агент занят сейчас»
+   * — при том что ответ прочитан и посчитан.
+   */
+  it('работающая строка называет вопрос, расход хода и темп', () => {
+    const html = row(feed(agent()), base.sessionId)
+    expect(html).toContain('сейчас: «добавь активные сессии в ленту»')
+    expect(html).toContain(`+${formatTokens(1_200_000)} за ход`)
+    expect(html).toContain(`${formatTokens(12_400)}/мин`)
+    // Опознавательные признаки задачи живая подпись не подменяет.
+    expect(html).toContain(base.model!)
+  })
+
+  /**
+   * Ловит «сейчас работает над этим» у агента, который ничего не делает: ход у
+   * человека, модель ответила и стоит. Расход хода при этом остаётся — он уже
+   * случился.
+   */
+  it('у ждущего вопроса нет, а расход хода есть', () => {
+    const html = row(feed(agent({ state: 'waiting', rate: 0 })), base.sessionId)
+    expect(html).not.toContain('добавь активные сессии')
+    expect(html).toContain('ждёт ответа')
+    expect(html).toContain(`+${formatTokens(1_200_000)} за ход`)
+  })
+
+  /**
+   * Ловит вопрос под строкой завершившейся задачи: в попапе её строка держится
+   * выдержкой ради «завершился 2 мин назад», а в ленте закончившаяся задача —
+   * самая обычная, и живой подписи у неё быть не может.
+   */
+  it('завершившийся агент живой подписи не даёт', () => {
+    expect(liveAgents([agent({ state: 'done', endedAt: 1 })]).size).toBe(0)
+    expect(feed(agent({ state: 'done', endedAt: 1 }))).not.toContain('data-task-live')
+  })
+
+  /**
+   * Ловит молчаливое переопределение сортировки: закрепление ставит наверх
+   * строку, которая по выбранному ключу должна быть внизу, и подпись «по
+   * расходу ↓» над таким списком — враньё о том, чем он упорядочен.
+   */
+  it('подпись сортировки признаётся в закреплении, и только когда оно есть', () => {
+    const pinned = renderToStaticMarkup(
+      <TodayFilters filter={filter} onChange={() => undefined} pinned />,
+    )
+    expect(pinned).toContain('сначала активные')
+
+    const plain = renderToStaticMarkup(<TodayFilters filter={filter} onChange={() => undefined} />)
+    expect(plain).not.toContain('сначала активные')
+  })
+
+  /**
+   * Ловит ленту, застывшую под тикающей живой строкой. Отчёт приезжает по
+   * запросу, а снимок — раз в секунду: без пересчёта отпечатка новый агент
+   * стоял бы на своём месте по расходу (то есть внизу или в свёрнутом хвосте),
+   * а числа дня не двигались бы до смены фильтра.
+   */
+  it('лента перезапрашивается на новых запросах и на смене состава живых', () => {
+    const snapshot = (total: number, ...ids: string[]): TraySnapshot =>
+      ({
+        at: 0,
+        agents: ids.map((sessionId) => agent({ sessionId })),
+        limits: [],
+        today: {
+          input: { value: 0, confidence: 'exact' },
+          output: { value: 0, confidence: 'exact' },
+          cacheWrite: { value: 0, confidence: 'exact' },
+          cacheRead: { value: 0, confidence: 'exact' },
+          total: { value: total, confidence: 'exact' },
+          requests: 0,
+          sessions: 0,
+          projects: 0,
+        },
+        problems: [],
+      }) satisfies TraySnapshot
+
+    const one = liveSignature(snapshot(100, 'a'))
+    expect(liveSignature(snapshot(100, 'a'))).toBe(one)
+    expect(liveSignature(snapshot(200, 'a'))).not.toBe(one)
+    expect(liveSignature(snapshot(100, 'a', 'b'))).not.toBe(one)
+    // Перестановка тех же агентов ничего не меняет: порядок в снимке и так
+    // следует состоянию, и перезапрос по нему был бы работой ни за чем.
+    expect(liveSignature(snapshot(100, 'b', 'a'))).toBe(liveSignature(snapshot(100, 'a', 'b')))
+    // А вот смена состояния меняет: закреплённые строки упорядочены срочностью,
+    // и закончивший ход обязан уйти под тех, кто ещё работает.
+    expect(
+      liveSignature({ ...snapshot(100, 'a'), agents: [agent({ sessionId: 'a', state: 'waiting' })] }),
+    ).not.toBe(one)
+    // Завершившийся в отпечаток не входит: закрепление его уже не держит.
+    expect(
+      liveSignature({
+        ...snapshot(100, 'a'),
+        agents: [agent({ sessionId: 'a' }), agent({ sessionId: 'z', state: 'done', endedAt: 1 })],
+      }),
+    ).toBe(one)
   })
 })

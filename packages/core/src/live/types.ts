@@ -1,5 +1,6 @@
 import type { Entrypoint, Provider } from '../sources/types.ts'
 import type { ContextFill } from './context.ts'
+import type { TurnSpend } from './rate.ts'
 import type { TurnKind } from './state.ts'
 
 /**
@@ -73,10 +74,35 @@ export interface LiveAgent {
    */
   context?: ContextFill
   /**
+   * Текущий ход: над чем агент работает прямо сейчас (6.1).
+   *
+   * Поля нет вовсе, когда о ходе не прочитано ничего. Правила и замеры —
+   * [`prompt.ts`](./prompt.ts).
+   */
+  currentTurn?: CurrentTurn
+  /**
    * Жив ли процесс достоверно. У Claude это факт (pid проверен), у Codex —
    * догадка по свежести роллаута, и врать про её природу нельзя.
    */
   liveness: 'process' | 'silence'
+}
+
+/**
+ * Текущий ход агента: чем занят и сколько это уже стоило.
+ *
+ * Обе половины необязательны и приезжают из разных записей лога — текст из
+ * `last-prompt`, начало хода из реплики человека (у Codex обе из
+ * `user_message`). В хвост могла попасть одна из них, и подставить вместо
+ * второй правдоподобное нечем: расход «от старта сессии» — это расход всей
+ * сессии, а он уже стоит в строке рядом.
+ */
+export interface CurrentTurn {
+  /** Что человек набрал, схлопнутое в строку и обрезанное по `PROMPT_CHARS`. */
+  prompt?: string
+  /** Когда он передал слово. */
+  startedAt?: number
+  /** Расход с этого момента. Поля нет вместе с `startedAt`: считать не от чего. */
+  spend?: TurnSpend
 }
 
 export interface LiveSnapshot {

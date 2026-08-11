@@ -3,6 +3,7 @@ import { locale, formatTokens, t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
+import { PopupShell } from './PopupShell.tsx'
 
 // Первичное индексирование — строки 1213–1224 макета. Ширина считается по
 // байтам, а не по файлам: один транскрипт может быть тяжелее другого на три
@@ -49,23 +50,12 @@ export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIn
   const total = today.total.value === 0 ? '' : formatTokens(today.total.value)
 
   return (
-    <div
-      style={{
-        width: 400,
-        height: 600,
-        background: 'var(--bg)',
-        border: '1px solid var(--line)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PopupShell>
       <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
       <div
         style={{
-          flex: 1,
+          flex: '1 1 auto',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -114,6 +104,6 @@ export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIn
         summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
-    </div>
+    </PopupShell>
   )
 }

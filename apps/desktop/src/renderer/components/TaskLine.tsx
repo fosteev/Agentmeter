@@ -1,13 +1,23 @@
 import type { ReactNode } from 'react'
 import type { Provider } from '@agentmeter/core'
-import type { TaskRow } from '@agentmeter/ipc'
+import type { LiveAgent, TaskRow } from '@agentmeter/ipc'
 import { clock, formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 import { span } from '../time.ts'
+import { TaskLive } from './TaskLive.tsx'
 
 export interface TaskLineProps {
   task: TaskRow
   maxTokens: number
+  /**
+   * Агент этой сессии, если он жив прямо сейчас (6.1).
+   *
+   * Приезжает не в строке ленты, а отдельно — из снимка трея, который окно
+   * получает раз в секунду. Лента при этом перезапрашивается редко, и держи мы
+   * состояние агента внутри неё, «думает» застыло бы на экране до следующего
+   * запроса, а «завершился» не появилось бы вовсе.
+   */
+  live?: LiveAgent | undefined
 }
 
 const PROVIDER: Record<Provider, string> = {
@@ -45,7 +55,7 @@ function branchParts(task: TaskRow): ReactNode {
   )
 }
 
-export function TaskLine({ task, maxTokens }: TaskLineProps) {
+export function TaskLine({ task, maxTokens, live }: TaskLineProps) {
   const approximate = estimated(task)
   const width = maxTokens === 0 ? 0 : (task.tokens.value / maxTokens) * 100
   // Подпись собирается здесь, а не в main: это подстановка уже приехавшего
@@ -72,6 +82,13 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+        {/*
+          Живая подпись — третьей строкой, а не вместо второй: во второй стоят
+          модель, длительность и провайдер, и подменять их значит терять
+          опознавательные признаки задачи ровно у той строки, на которую сейчас
+          смотрят. Строка от этого выше соседних — так и надо, работающая
+          задача и должна быть заметна.
+        */}
         {task.title === null ? (
           <>
             <span
@@ -132,6 +149,7 @@ export function TaskLine({ task, maxTokens }: TaskLineProps) {
             </span>
           </>
         )}
+        {live === undefined ? null : <TaskLive agent={live} />}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
         <span

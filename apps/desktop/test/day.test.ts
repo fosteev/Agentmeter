@@ -438,3 +438,111 @@ describe('foldTail', () => {
     expect(foldTail(list(0, 0), 'tokens')).toBeNull()
   })
 })
+
+describe('живые задачи в ленте', () => {
+  /**
+   * Ловит живую сессию, потерянную в собственной ленте. При сортировке по
+   * расходу работающая сейчас задача стоит внизу списка — расходу неоткуда
+   * взяться за минуту, — а на дне из двадцати задач она ещё и в свёрнутом
+   * хвосте. То есть на вопрос «что происходит прямо сейчас» экран отвечает
+   * «ничего», имея ответ.
+   */
+  it('закрепляет живые строки сверху и помечает их', () => {
+    const plain = buildDayReport(db, ALL)
+    const last = plain.tasks.at(-1)!
+    expect(plain.tasks[0]!.sessionId).not.toBe(last.sessionId)
+
+    const report = buildDayReport(db, ALL, undefined, new Map([[last.sessionId, 0]]))
+    expect(report.tasks[0]!.sessionId).toBe(last.sessionId)
+    expect(report.tasks[0]!.live).toBe(true)
+    // Остальные — в прежнем порядке и без пометки: живость не заразна.
+    expect(report.tasks.slice(1).map((task) => task.sessionId)).toEqual(
+      plain.tasks.filter((task) => task.sessionId !== last.sessionId).map((task) => task.sessionId),
+    )
+    expect(report.tasks.slice(1).some((task) => task.live === true)).toBe(false)
+  })
+
+  /** Ловит пометку, приписанную всем подряд: без живых лента прежняя. */
+  it('без живых сессий лента не меняется', () => {
+    const plain = buildDayReport(db, ALL)
+    const empty = buildDayReport(db, ALL, undefined, new Map())
+    expect(empty.tasks.map((task) => task.sessionId)).toEqual(
+      plain.tasks.map((task) => task.sessionId),
+    )
+    expect(empty.tasks.some((task) => task.live === true)).toBe(false)
+  })
+
+  /**
+   * Ловит закреплённую строку, уехавшую под подпись «и ещё 8 задач свернуто».
+   * Живая сессия дешевле порога по построению, и общее правило свернуло бы
+   * ровно то, ради чего в ленту сейчас и смотрят.
+   */
+  it('не сворачивает живые строки в хвост', () => {
+    const live = (...values: number[]) =>
+      values.map(
+        (value, index) =>
+          ({
+            sessionId: `s${index}`,
+            title: `t${index}`,
+            project: 'p',
+            provider: 'claude',
+            startedAt: 0,
+            endedAt: 0,
+            requests: 1,
+            toolCalls: 0,
+            tokens: { value, confidence: 'exact' },
+            // Первые семь — живые и стоят наверху, как их поставил `pinLive`.
+            ...(index < 7 ? { live: true } : {}),
+          }) satisfies TaskRow,
+      )
+
+    // Итог 1000, порог 10: по расходу свернулось бы всё с пятой строки.
+    const tasks = live(2, 3, 4, 5, 6, 7, 8, 400, 300, 200, 60, 5)
+    const folded = foldTail(tasks, 'tokens')
+    expect(folded!.from).toBe(7)
+    expect(tasks.slice(0, folded!.from).every((task) => task.live === true)).toBe(true)
+  })
+
+  /**
+   * Ловит закрепление «просто наверх»: между собой живые строки обязаны идти
+   * тем же порядком, что список в попапе, — работающие, ждущие ответа,
+   * молчащие. Иначе «сверху самый важный» означает в трее и в окне разное, а
+   * список один и тот же.
+   */
+  it('внутри закреплённых порядок — по срочности, дальше по сортировке', () => {
+    const plain = buildDayReport(db, ALL)
+    const [rich, middle, poor] = [plain.tasks[0]!, plain.tasks[1]!, plain.tasks.at(-1)!]
+    expect(rich.tokens.value).toBeGreaterThan(poor.tokens.value)
+
+    // Самая дорогая молчит, самая дешёвая работает, средняя ждёт ответа.
+    const report = buildDayReport(
+      db,
+      ALL,
+      undefined,
+      new Map([
+        [rich.sessionId, 2],
+        [middle.sessionId, 1],
+        [poor.sessionId, 0],
+      ]),
+    )
+    expect(report.tasks.slice(0, 3).map((task) => task.sessionId)).toEqual([
+      poor.sessionId,
+      middle.sessionId,
+      rich.sessionId,
+    ])
+    // Равные по срочности остаются в порядке выбранной сортировки.
+    const tied = buildDayReport(
+      db,
+      ALL,
+      undefined,
+      new Map([
+        [poor.sessionId, 0],
+        [rich.sessionId, 0],
+      ]),
+    )
+    expect(tied.tasks.slice(0, 2).map((task) => task.sessionId)).toEqual([
+      rich.sessionId,
+      poor.sessionId,
+    ])
+  })
+})

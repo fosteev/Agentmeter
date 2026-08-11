@@ -5,6 +5,7 @@ import { ago, span } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
 import { PopupLimit } from './PopupLimit.tsx'
+import { PopupShell } from './PopupShell.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
 
 // «Никого нет» — строки 1237–1252 макета. История берётся только из
@@ -55,18 +56,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
   }).split(MARK)
 
   return (
-    <div
-      style={{
-        width: 400,
-        height: 600,
-        background: 'var(--bg)',
-        border: '1px solid var(--line)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PopupShell>
       <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
       <SectionTitle title={t('popup.working')} padding="14px 14px 6px" />
@@ -92,7 +82,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
 
       <div
         style={{
-          flex: 1,
+          flex: '1 1 auto',
           padding: '16px 14px',
           display: 'flex',
           flexDirection: 'column',
@@ -117,6 +107,6 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
         summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
-    </div>
+    </PopupShell>
   )
 }

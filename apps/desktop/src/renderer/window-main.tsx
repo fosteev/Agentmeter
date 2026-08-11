@@ -84,6 +84,27 @@ export function initialTab(search: string): WindowTab {
   return WINDOW_TABS.some((item) => item.id === value) ? (value as WindowTab) : 'today'
 }
 
+/**
+ * Отпечаток снимка, по которому стоит перезапросить ленту (6.1).
+ *
+ * Две величины: итог дня (в индекс доехали новые запросы) и живые сессии
+ * вместе с их состоянием. Второе — потому что закрепление строк наверху делает
+ * main при сборке, и порядок внутри закреплённых зависит от состояния: агент,
+ * закончивший ход, обязан уйти под тех, кто ещё работает, как он уходит в
+ * попапе. Ни одна из величин здесь не считается — обе приезжают готовыми.
+ *
+ * Порядок агентов в снимке в отпечаток не входит: он и так следует состоянию, а
+ * учитывай мы его отдельно — лента перезапрашивалась бы на перестановке,
+ * которая ничего не меняет.
+ */
+export function liveSignature(snapshot: TraySnapshot): string {
+  const live = snapshot.agents
+    .filter((agent) => agent.state !== 'done')
+    .map((agent) => `${agent.sessionId}:${agent.state}`)
+    .sort()
+  return `${snapshot.today.total.value}|${live.join(',')}`
+}
+
 export function requestToday(
   filter: TodayFilter,
   getToday: (filter: TodayFilter) => Promise<DayReport> = window.agentmeter['today:get'],
@@ -241,14 +262,38 @@ export function WindowApp() {
     })
   }, [config, snapshot])
 
+  /**
+   * Когда лента перезапрашивается (6.1).
+   *
+   * Кроме смены вкладки и фильтра — на два события снимка. Первое: изменился
+   * итог дня, то есть в индекс доехали новые запросы, и числа в ленте устарели
+   * (раньше открытое окно показывало день замороженным до смены фильтра — рядом
+   * с тикающей живой строкой это стало бы заметно сразу). Второе: сменился
+   * состав живых сессий, потому что закрепление строк наверху делает main при
+   * сборке, и новый агент до перезапроса стоял бы на своём месте по расходу —
+   * то есть в самом низу или в свёрнутом хвосте.
+   *
+   * Ключом, а не самим снимком: снимок приезжает раз в секунду и новым объектом
+   * каждый раз, и лента перезапрашивалась бы с той же частотой.
+   */
+  const liveKey = snapshot === null ? '' : liveSignature(snapshot)
+
+  // Пустая лента — только при смене периода и вкладки: там она **другая**, и
+  // показывать старую под новой датой нельзя. Обновление по снимку экран не
+  // гасит, иначе «Загружаем ленту…» мигало бы поверх готового списка каждый
+  // раз, когда агент делает запрос.
+  useEffect(() => {
+    if (tab !== 'today') return
+    setToday(null)
+  }, [tab, todayFilter])
+
   useEffect(() => {
     if (todayFilter === null || tab !== 'today') return
     const request = ++todayRequest.current
-    setToday(null)
     void requestToday(todayFilter).then((report) => {
       if (request === todayRequest.current) setToday(report)
     })
-  }, [tab, todayFilter])
+  }, [tab, todayFilter, liveKey])
 
   useEffect(() => {
     if (todayFilter === null || tab !== 'breakdown') return
@@ -293,6 +338,7 @@ export function WindowApp() {
             filter={todayFilter}
             onFilterChange={setTodayFilter}
             taskCard={taskCard}
+            agents={snapshot.agents}
             onTaskToggle={handleTaskToggle}
           />
           <TodaySide report={today} onOpenBreakdown={() => setTab('breakdown')} />

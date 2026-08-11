@@ -3,6 +3,7 @@ import { formatTokens, t } from '../format.ts'
 import { ago } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
+import { PopupShell } from './PopupShell.tsx'
 
 // Пустое состояние — строки 1203–1211 макета. Нулевая сумма в подвале
 // намеренно скрыта: до первого запуска это не измерение расхода, а отсутствие
@@ -19,29 +20,20 @@ export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
   const total = today.total.value === 0 ? '' : formatTokens(today.total.value)
 
   return (
-    <div
-      style={{
-        width: 400,
-        height: 600,
-        background: 'var(--bg)',
-        border: '1px solid var(--line)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PopupShell>
       <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
       <div
         style={{
-          flex: 1,
+          // Пустое состояние живёт объяснением, а не размером: раньше текст
+          // висел посреди шестисот точек пустоты, теперь окно ровно по нему.
+          flex: '1 1 auto',
+          padding: 24,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 12,
-          padding: 24,
           textAlign: 'center',
         }}
       >
@@ -64,6 +56,6 @@ export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
         summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
-    </div>
+    </PopupShell>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type {
   FoldedTail as FoldedTailData,
+  LiveAgent,
   TaskCard as TaskCardData,
   TaskRow,
 } from '@agentmeter/ipc'
@@ -9,10 +10,22 @@ import { FoldedTail } from './FoldedTail.tsx'
 import { TaskCard } from './TaskCard.tsx'
 import { TaskLine } from './TaskLine.tsx'
 
+/**
+ * Живые агенты по идентификатору сессии (6.1).
+ *
+ * Соединение живого снимка с лентой — поиск по ключу, а не счёт: в строке
+ * появляются числа, посчитанные main, и ни одного, выведенного здесь. Именно
+ * поэтому оно делается в окне, а не в отчёте: снимок приезжает раз в секунду,
+ * а лента — по запросу, и вшитое в неё состояние агента застыло бы до
+ * следующего.
+ */
+export type LiveAgents = ReadonlyMap<string, LiveAgent>
+
 export interface TaskTableProps {
   tasks: TaskRow[]
   folded: FoldedTailData | null
   taskCard?: TaskCardData | null
+  live?: LiveAgents
   onToggle?: (sessionId: string) => void
 }
 
@@ -31,12 +44,14 @@ export function TaskRows({
   maxTokens,
   expandedSessionId,
   taskCard,
+  live,
   onToggle,
 }: {
   tasks: TaskRow[]
   maxTokens: number
   expandedSessionId: string | null
   taskCard: TaskCardData | null
+  live?: LiveAgents
   onToggle: (sessionId: string) => void
 }) {
   return tasks.map((task) => (
@@ -51,10 +66,24 @@ export function TaskRows({
           if (event.key === 'Enter' || event.key === ' ') onToggle(task.sessionId)
         }}
       >
-        <TaskLine task={task} maxTokens={maxTokens} />
+        <TaskLine task={task} maxTokens={maxTokens} live={live?.get(task.sessionId)} />
       </div>
       {expandedSessionId === task.sessionId && taskCard?.task.sessionId === task.sessionId ? (
-        <TaskCard card={taskCard} />
+        /*
+          Карточка приезжает из IPC уже после нажатия, поэтому без раскрытия
+          она просто возникает под строкой и сдвигает список — глазу негде
+          связать нажатую строку с появившимся блоком. Анимация живёт на
+          обёртке (`am-reveal`, tokens.css): высота карточки заранее не
+          известна, а 0fr → 1fr её знать и не требует.
+        */
+        <div
+          data-task-card-reveal={task.sessionId}
+          style={{ display: 'grid', gridTemplateRows: '1fr', animation: 'am-reveal 180ms ease-out' }}
+        >
+          <div style={{ minHeight: 0, overflow: 'hidden' }}>
+            <TaskCard card={taskCard} live={live?.get(task.sessionId)} />
+          </div>
+        </div>
       ) : null}
     </div>
   ))
@@ -64,6 +93,7 @@ export function TaskTable({
   tasks,
   folded,
   taskCard = null,
+  live,
   onToggle = () => undefined,
 }: TaskTableProps) {
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
@@ -112,6 +142,7 @@ export function TaskTable({
           maxTokens={maxTokens}
           expandedSessionId={expandedSessionId}
           taskCard={taskCard}
+          {...(live === undefined ? {} : { live })}
           onToggle={handleToggle}
         />
         {folded === null ? null : (

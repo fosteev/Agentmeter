@@ -1,9 +1,10 @@
-import type { TaskCard as TaskCardData } from '@agentmeter/ipc'
+import type { LiveAgent, TaskCard as TaskCardData } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { BreakdownRow } from './BreakdownRow.tsx'
 import { TaskCardHeader } from './TaskCardHeader.tsx'
 import { TaskFiles } from './TaskFiles.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
+import { TaskLive } from './TaskLive.tsx'
 import { TaskSubagents } from './TaskSubagents.tsx'
 import { TaskTimeline } from './TaskTimeline.tsx'
 import { TokenSplit } from './TokenSplit.tsx'
@@ -22,7 +23,7 @@ const COLUMN = {
   gap: 14,
 } as const
 
-export function TaskCard({ card }: { card: TaskCardData }) {
+export function TaskCard({ card, live }: { card: TaskCardData; live?: LiveAgent | undefined }) {
   const maximum = Math.max(0, ...card.tools.map(({ marginal }) => marginal.value))
 
   return (
@@ -39,6 +40,20 @@ export function TaskCard({ card }: { card: TaskCardData }) {
       }}
     >
       <TaskCardHeader card={card} />
+      {/*
+        Текущий ход — сразу под шапкой и до таймлайна (6.1): всё, что ниже,
+        рассказывает про уже случившееся, а это единственная строка карточки про
+        происходящее. Вопрос здесь целиком, а в ленте он же обрезан по ширине
+        колонки — раскрывают карточку в том числе затем, чтобы дочитать.
+      */}
+      {live === undefined ? null : (
+        <div
+          data-task-card-live
+          style={{ padding: '10px 22px', borderTop: '1px solid var(--line)' }}
+        >
+          <TaskLive agent={live} density="card" />
+        </div>
+      )}
       <TaskTimeline
         timeline={card.timeline}
         provider={card.task.provider}

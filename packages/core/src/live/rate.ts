@@ -53,6 +53,61 @@ export function windowTokens(
   return out
 }
 
+/** Расход одной сессии с начала её текущего хода (6.1). */
+export interface TurnSpend {
+  tokens: number
+  requests: number
+  /** Сколько запросов восстановлено арифметикой (1.3) — для знака `≈`. */
+  reconstructed: number
+}
+
+/**
+ * Расход с начала текущего хода — у каждой сессии свой отсчёт.
+ *
+ * Отдельно от `windowTokens` потому, что там окно общее и скользящее (темп за
+ * последние пять минут), а здесь граница у каждой сессии своя и стоит на месте:
+ * это момент, когда человек передал слово. Свернуть их в одну функцию значило
+ * бы завести необязательный параметр, меняющий смысл ответа.
+ *
+ * Свёртка по `parent_session_id` — та же, что у расхода сессии: сабагент тратит
+ * токены родителя, и ход, в котором его позвали, — родительский.
+ */
+export function turnTokens(
+  db: Db,
+  starts: ReadonlyMap<string, number>,
+  at: number,
+): Map<string, TurnSpend> {
+  const out = new Map<string, TurnSpend>()
+  if (starts.size === 0) return out
+  const pairs = [...starts.entries()].filter(([, from]) => from <= at)
+  if (pairs.length === 0) return out
+  const key = 'coalesce(sessions.parent_session_id, sessions.id)'
+  const rows = db.all<{
+    key: string
+    tokens: number
+    requests: number
+    reconstructed: number
+  }>(
+    `SELECT ${key} AS key,
+            sum(requests.input + requests.output + requests.cache_write + requests.cache_read) AS tokens,
+            count(*) AS requests,
+            coalesce(sum(requests.origin != 'log'), 0) AS reconstructed
+     FROM requests
+     JOIN sessions ON sessions.id = requests.session_id
+     WHERE ${pairs.map(() => `(${key} = ? AND requests.ts >= ?)`).join(' OR ')}
+     GROUP BY key`,
+    ...(pairs.flat() as SqlValue[]),
+  )
+  for (const row of rows) {
+    out.set(row.key, {
+      tokens: row.tokens,
+      requests: row.requests,
+      reconstructed: row.reconstructed,
+    })
+  }
+  return out
+}
+
 /**
  * Токенов в минуту. `spanMs` — сколько времени реально накрыто наблюдением:
  * возраст сессии, обрезанный окном усреднения.

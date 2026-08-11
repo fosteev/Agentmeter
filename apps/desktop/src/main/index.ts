@@ -43,6 +43,7 @@ import {
   openDb,
   watchSources,
   dayRange,
+  LIVE_URGENCY,
   exportRows,
   toCsv,
   type Config,
@@ -96,7 +97,22 @@ const WEB = join(here, '../web')
 const PRELOAD = join(here, '../preload/index.cjs')
 
 const POPUP_WIDTH = 400
-const POPUP_HEIGHT = 600
+/**
+ * Потолок высоты попапа — 600 из макета. Не сама высота: окно подгоняется под
+ * содержимое (`popup:resize`), и до потолка дорастает только длинный список
+ * агентов. Зашитые 600 при коротком содержимом давали пустое поле внизу, а
+ * рамка в один пиксель поверх них не влезала в окно — и скролл появлялся у
+ * самого окна, поверх интерфейса, который прокручивать нечего.
+ */
+const POPUP_MAX_HEIGHT = 600
+/**
+ * Пол высоты попапа. Шапка с подвалом занимают ~100 точек, и окно ниже этого
+ * означает не «мало содержимого», а «рендерер ещё не нарисовал» — такую высоту
+ * ставить нельзя, иначе попап моргнёт полоской на первом кадре.
+ */
+const POPUP_MIN_HEIGHT = 160
+/** Зазор до края рабочей области: попап у края экрана обрезался бы молча. */
+const POPUP_MARGIN = 8
 /**
  * Главное окно (3.1). Размер — из макета (строка 564); минимум подобран по
  * раскладке: правая колонка занимает 300 фиксированных точек, и ниже 900 лента
@@ -133,6 +149,14 @@ const HIDDEN_POLL_FACTOR = 5
  */
 const UPDATE_FIRST_DELAY_MS = 30_000
 const UPDATE_EVERY_MS = 6 * 3_600_000
+/**
+ * Сколько после готовности не считать `activate` кликом человека.
+ *
+ * Событие приходит и от самого запуска, и от клика по значку в доке, а отличить
+ * их Electron не даёт. Три секунды с запасом перекрывают запуск и заведомо
+ * меньше паузы между «приложение поднялось» и «человек до него добрался».
+ */
+const ACTIVATE_GRACE_MS = 3_000
 
 interface Runtime {
   db: Db
@@ -150,6 +174,18 @@ interface Runtime {
   startup: StartupHost
   /** Ход обновления (5.4). Живёт в памяти: перезапуск начинает проверку заново. */
   update: UpdateState
+  /**
+   * Кто был живым на последнем снимке и насколько срочен — вход закрепления
+   * строк в ленте (6.1).
+   *
+   * Берётся из уже собранного снимка, а не собирается заново на каждый запрос
+   * ленты: живой слой обходит реестр процессов и хвосты транскриптов, и второй
+   * такой обход ради одного списка — это работа, которую трей только что
+   * сделал. Завершившихся здесь нет: строка «завершился 2 мин назад» держится в
+   * попапе выдержкой, а в ленте закончившаяся задача — самая обычная, и держать
+   * её наверху значит врать про «сейчас».
+   */
+  liveSessions?: ReadonlyMap<string, number>
   watcher?: Watcher
   /**
    * До чего не добрались на последнем обходе. Держится здесь, а не пересчитыва-
@@ -322,6 +358,11 @@ async function runSmoke(): Promise<void> {
   let windowReport: unknown
   let settingsReport: unknown
   let updaterReport: unknown
+  let popupReport: unknown
+  // Окно и присланная им высота — обработчику канала, который регистрируется
+  // раньше, чем окно создано.
+  let popup: BrowserWindow | undefined
+  let measured: number | undefined
   try {
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     registerIpc(
@@ -339,10 +380,17 @@ async function runSmoke(): Promise<void> {
         // продукта, и смоук обязан оставаться проверкой того, что на диске.
         () => configReport(runtime),
         () => undefined,
+        // Подгонка высоты — тем же кодом, что в приложении: смоук проверяет её
+        // ниже, и заглушка здесь означала бы проверку заглушки.
+        (height) => {
+          measured = height
+          if (popup !== undefined && !popup.isDestroyed()) fitPopup(popup, height)
+        },
       ),
     )
 
     const window = createPopup('index', true)
+    popup = window
     window.webContents.on('preload-error', (_event, path, error) => {
       problems.push(`preload не загрузился (${path}): ${error.message}`)
     })
@@ -362,6 +410,66 @@ async function runSmoke(): Promise<void> {
       'typeof window.agentmeter === "object" && typeof window.agentmeter["snapshot:get"] === "function"',
     )
     if (bridge !== true) problems.push('в окне нет моста window.agentmeter')
+
+    // Высота попапа по содержимому. Проверяется здесь, потому что увидеть это
+    // может только настоящий браузер: юнит-тесты рендерят компоненты в строку и
+    // высоты не считают вовсе, а вопрос ровно про неё. Ловится сразу три вещи:
+    // рендерер не измерил (`ResizeObserver` не завёлся), измерил и не доехало
+    // (канала нет), доехало и не применилось (окно не поменяло размер).
+    for (let waited = 0; measured === undefined && waited < 3_000; waited += 100) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    }
+    const first = measured
+    // Два кадра: `setContentSize` только что сдвинул границу, и мерить до
+    // раскладки значит мерить прошлое состояние.
+    const fit = (await window.webContents.executeJavaScript(
+      `new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve({
+        inner: window.innerHeight,
+        content: Math.ceil(document.getElementById('root').getBoundingClientRect().height),
+        scrollHeight: document.documentElement.scrollHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }))))`,
+    )) as {
+      inner: number
+      content: number
+      scrollHeight: number
+      scrollWidth: number
+      innerWidth: number
+    }
+    // Окно **сжимается** вслед за содержимым. Отдельной проверкой, потому что
+    // равенство выше на живой машине держится и без единой подгонки: список
+    // агентов упирается в потолок, и окно, созданное на 600 точек, случайно
+    // оказывается впору. Содержимое здесь ужимается насильно — правкой рамки
+    // попапа, а не переменной потолка, которую окно пересчитывает на каждом
+    // изменении размера.
+    const SHRUNK = 300
+    await window.webContents.executeJavaScript(
+      `document.getElementById('root').firstElementChild.style.maxHeight = '${SHRUNK}px'`,
+    )
+    for (let waited = 0; measured !== SHRUNK && waited < 3_000; waited += 100) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    }
+    const [, shrunk] = window.getContentSize()
+    popupReport = { ...fit, measured: first, shrunk }
+    if (shrunk !== SHRUNK) {
+      problems.push(`попап не сжался под содержимое: ${shrunk} точек вместо ${SHRUNK}`)
+    }
+    if (first === undefined) problems.push('попап не прислал высоту содержимого')
+    else if (first < POPUP_MIN_HEIGHT || first > POPUP_MAX_HEIGHT) {
+      problems.push(`попап намерил ${first} точек — вне ${POPUP_MIN_HEIGHT}…${POPUP_MAX_HEIGHT}`)
+    }
+    if (fit.content !== fit.inner) {
+      problems.push(`окно попапа ${fit.inner} точек при содержимом ${fit.content}`)
+    }
+    // Прокрутка у самого окна: содержимое, не поместившееся в него хотя бы на
+    // пиксель, даёт полосу поверх интерфейса — и прокручивает не список, а
+    // попап целиком, вместе с рамкой.
+    if (fit.scrollHeight > fit.inner || fit.scrollWidth > fit.innerWidth) {
+      problems.push(
+        `попап прокручивается сам: ${fit.scrollWidth}×${fit.scrollHeight} в окне ${fit.innerWidth}×${fit.inner}`,
+      )
+    }
 
     // Иконка трея (2.7). Растр проверяется юнит-тестами без Electron, а здесь
     // единственное, чего те увидеть не могут: что `nativeImage` этот буфер
@@ -467,6 +575,7 @@ async function runSmoke(): Promise<void> {
       problems,
       tray: trayReport,
       window: windowReport,
+      popup: popupReport,
       settings: settingsReport,
       // Автозапуск (5.3) только читается: включить его в проверке значило бы
       // прописать приложение в «Объекты входа» того, кто её прогнал. В
@@ -495,17 +604,24 @@ function createHandlers(
   changeStartup: (enabled: boolean) => ConfigReport,
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
+  resizePopup: (height: number) => void,
 ): IpcHandlers {
   return {
     'snapshot:get': () =>
-      withIndexing(
+      rememberLive(
         runtime(),
-        buildSnapshot(runtime().db, runtime().live, runtime().config, { issues: runtime().issues }),
+        withIndexing(
+          runtime(),
+          buildSnapshot(runtime().db, runtime().live, runtime().config, {
+            issues: runtime().issues,
+          }),
+        ),
       ),
     'limits:get': () =>
       limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
     'config:get': () => configReport(runtime()),
-    'today:get': (filter) => buildDayReport(runtime().db, filter, runtime().config.privacy),
+    'today:get': (filter) =>
+      buildDayReport(runtime().db, filter, runtime().config.privacy, runtime().liveSessions),
     'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
     'breakdown:get': (filter) => buildSpendScreen(runtime().db, filter),
     'history:get': (arg) => buildHistoryScreen(runtime().db, arg, runtime().config, Date.now()),
@@ -525,10 +641,35 @@ function createHandlers(
     'window:open': ({ tab }) => {
       openWindow(tab)
     },
+    'popup:resize': ({ height }) => {
+      resizePopup(height)
+    },
     'app:quit': () => {
       app.quit()
     },
   }
+}
+
+/**
+ * Запомнить, кто был живым и насколько срочен, — вход закрепления строк в
+ * ленте (6.1).
+ *
+ * Стоит на пути снимка, а не внутри `buildSnapshot`: тот собирает то, что
+ * прочитано, и знать про соседний экран ему незачем. Возвращает свой довод
+ * нетронутым, чтобы не заводить второй вызов рядом с первым.
+ *
+ * Срочность — та же таблица, по которой упорядочен список в попапе
+ * (`LIVE_URGENCY`, 2.1): один и тот же список на двух экранах обязан быть
+ * упорядочен одинаково, иначе «сверху самый важный» означает разное в трее и в
+ * окне.
+ */
+function rememberLive(runtime: Runtime, snapshot: TraySnapshot): TraySnapshot {
+  runtime.liveSessions = new Map(
+    snapshot.agents
+      .filter((agent) => agent.state !== 'done')
+      .map((agent) => [agent.sessionId, LIVE_URGENCY[agent.state]]),
+  )
+  return snapshot
 }
 
 /**
@@ -676,7 +817,7 @@ function trayTooltip(state: TrayState): string {
 function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWindow {
   const window = new BrowserWindow({
     width: page === 'gallery' ? 1280 : POPUP_WIDTH,
-    height: page === 'gallery' ? 900 : POPUP_HEIGHT,
+    height: page === 'gallery' ? 900 : POPUP_MAX_HEIGHT,
     show: false,
     frame: !frameless,
     resizable: page === 'gallery',
@@ -758,6 +899,32 @@ function usableBounds(
 }
 
 /**
+ * Подогнать попап под содержимое (`popup:resize`). Отвечает, изменился ли
+ * размер: тот, кто окно двигает, зря пересчитывать угол не должен.
+ *
+ * Ставится **высота содержимого**, а не окна: в обычном режиме окно
+ * безрамочное и это одно и то же, а под `--dev` попап поднимается с рамкой, и
+ * высота окна включала бы её. Тогда рендерер мерил бы содержимое на рамку
+ * короче, присылал бы новое число, и окно ползло бы вверх на каждом кадре —
+ * молча и только в режиме разработки.
+ *
+ * Потолка два: макетные 600 и рабочая область экрана. Второй не украшение —
+ * содержимое обрезается без всякого скролла (`overflow: hidden` на рамке
+ * попапа), то есть попап, не поместившийся в экран, потерял бы подвал с суммой
+ * за сутки, ничем этого не показав. Тот же потолок знает и рендерер, поэтому
+ * до обрезания дело не доходит: здесь он стоит вторым рубежом.
+ */
+function fitPopup(window: BrowserWindow, height: number): boolean {
+  const area = screen.getDisplayMatching(window.getBounds()).workArea
+  const ceiling = Math.min(POPUP_MAX_HEIGHT, area.height - 2 * POPUP_MARGIN)
+  const wanted = Math.min(Math.max(Math.round(height), POPUP_MIN_HEIGHT), ceiling)
+  const [, current] = window.getContentSize()
+  if (wanted === current) return false
+  window.setContentSize(POPUP_WIDTH, wanted)
+  return true
+}
+
+/**
  * Попап под иконкой трея. Различие между платформами ровно одно: на macOS окно
  * висит под menu bar, на Windows и Linux прижимается к трею в углу рабочей
  * области. Раскладка при этом одна — дублировать её под платформу нельзя.
@@ -824,6 +991,8 @@ function main(): void {
   let tray: Tray | undefined
   let timer: NodeJS.Timeout | undefined
   let tick = 0
+  /** Когда приложение поднялось. Ноль — ещё не поднялось (см. `ACTIVATE_GRACE_MS`). */
+  let readyAt = 0
   // Прошлое состояние иконки. Перерисовывать её раз в секунду незачем: растр
   // меняется только когда меняется число агентов или уровень тревоги, а
   // `setImage` на каждый опрос — это мигание в menu bar на ровном месте.
@@ -890,9 +1059,12 @@ function main(): void {
   }
 
   const snapshot = (): TraySnapshot =>
-    withIndexing(
+    rememberLive(
       runtime!,
-      buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
+      withIndexing(
+        runtime!,
+        buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
+      ),
     )
 
   /**
@@ -976,6 +1148,13 @@ function main(): void {
     painted = key
     tray.setImage(trayIcon(state))
     tray.setToolTip(trayTooltip(state))
+  }
+
+  const resizePopup = (height: number): void => {
+    if (window === undefined || window.isDestroyed() || gallery) return
+    // Открытый попап прижат к трею: снизу на Windows и Linux — там окно,
+    // выросшее на сто точек, уехало бы под панель, если не пересчитать угол.
+    if (fitPopup(window, height) && window.isVisible()) positionPopup(window, tray?.getBounds())
   }
 
   const toggle = (): void => {
@@ -1120,6 +1299,7 @@ function main(): void {
         changeStartup,
         () => checkUpdate(),
         installUpdate,
+        resizePopup,
       ),
     )
 
@@ -1160,6 +1340,36 @@ function main(): void {
     // запуске» у него означало бы «не проверять».
     setTimeout(() => checkUpdate(false), UPDATE_FIRST_DELAY_MS)
     setInterval(() => checkUpdate(false), UPDATE_EVERY_MS)
+
+    // Последней строкой, а не первой: до неё `activate` — это ещё запуск.
+    readyAt = Date.now()
+  })
+
+  /**
+   * Два жеста «открой уже открытое»: клик по значку в доке и повторный запуск
+   * из Spotlight или Finder.
+   *
+   * Приложение без окон достижимо ровно одним способом — значком в menu bar, а
+   * его macOS прячет молча, когда строка переполнена; на ноутбуке с чёлкой это
+   * будни, а не край. В такой день приложение работает, считает и недостижимо:
+   * второй запуск тихо выходил по замку, дока у трейного приложения нет.
+   * Поэтому оба жеста ведут в главное окно — это же и аварийный выход из
+   * спрятанного значка.
+   *
+   * `activate` прилетает и от самого запуска, а не только от клика. Открывать
+   * по нему окно без разбора нельзя: с автозапуском (5.3) человек встречал бы
+   * окно статистики при каждом входе в систему, а приложение обязано стартовать
+   * тихо. Различия в событии нет, поэтому первые секунды после готовности оно
+   * не считается кликом.
+   */
+  const reopen = (): void => {
+    if (runtime === undefined || gallery) return
+    openMainWindow('today')
+  }
+  app.on('second-instance', reopen)
+  app.on('activate', () => {
+    if (readyAt === 0 || Date.now() - readyAt < ACTIVATE_GRACE_MS) return
+    reopen()
   })
 
   app.on('window-all-closed', () => {

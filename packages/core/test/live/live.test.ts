@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -267,6 +267,83 @@ describe('темп', () => {
 
     const agent = live.snapshot(at).agents[0]!
     expect(agent.rate).toBe(Math.round((tokens * 60_000) / 180_000))
+  })
+})
+
+describe('порядок строк в снимке', () => {
+  /**
+   * Роллаут Codex с заданным хвостом и заданной свежестью. Codex, а не Claude,
+   * потому что живость там — свежесть файла: четыре состояния в одном снимке
+   * иначе не собрать, реестр процессов знает ровно один живой pid — свой.
+   */
+  function rollout(dir: string, id: string, kind: string, at: number): string {
+    const path = join(dir, `rollout-2026-08-11T00-00-00-${id}.jsonl`)
+    writeFileSync(
+      path,
+      `${JSON.stringify({
+        type: 'event_msg',
+        timestamp: new Date(at).toISOString(),
+        payload: { type: kind },
+      })}\n`,
+    )
+    utimesSync(path, at / 1000, at / 1000)
+    return path
+  }
+
+  /**
+   * Ловит порядок по времени старта — тот, что был здесь до 5.6.
+   *
+   * Список открывают вопросом «что происходит сейчас», а по старту наверх
+   * всплывает сессия, начатая утром и с тех пор молчащая: работающий агент
+   * уезжает под неё, а при десяти чатах — и под скролл. Порядок проверяется на
+   * настоящем снимке, а не на компараторе: сортировка, которую забыли позвать,
+   * зеленела бы на любом тесте самой функции.
+   */
+  it('работающие сверху, ждущие под ними, молчащие и завершившиеся ниже', () => {
+    const at = Date.now()
+    const day = new Date(at)
+    const home = join(tmp, 'codex')
+    const dir = join(
+      home,
+      'sessions',
+      String(day.getFullYear()),
+      String(day.getMonth() + 1).padStart(2, '0'),
+      String(day.getDate()).padStart(2, '0'),
+    )
+    mkdirSync(dir, { recursive: true })
+
+    // Ход у агента и движение в логе — «работает»; двое, чтобы проверить и
+    // порядок внутри группы.
+    rollout(dir, '00000000-0000-4000-8000-000000000001', 'task_started', at - 30_000)
+    rollout(dir, '00000000-0000-4000-8000-000000000002', 'task_started', at - 5_000)
+    // Ход у человека — «ждёт ответа», и тишина тут ничего не меняет.
+    rollout(dir, '00000000-0000-4000-8000-000000000003', 'task_complete', at - 20_000)
+    // Ход у агента, но в логе тишина дольше порога — «молчит».
+    rollout(dir, '00000000-0000-4000-8000-000000000004', 'task_started', at - 600_000)
+    // Пятый пропадёт между опросами и станет «завершился».
+    const doomed = rollout(dir, '00000000-0000-4000-8000-000000000005', 'task_started', at - 5_000)
+
+    const live = createLiveLayer(db, {
+      claudeHome: join(tmp, 'нет'),
+      codexHome: home,
+      idleMs: 60_000,
+      codexSilenceMs: 30 * 60_000,
+      doneGraceMs: 5 * 60_000,
+    })
+    live.snapshot(at)
+    rmSync(doomed)
+    const agents = live.snapshot(at + 1_000).agents
+
+    expect(agents.map((agent) => agent.state)).toEqual([
+      'working',
+      'working',
+      'waiting',
+      'idle',
+      'done',
+    ])
+    // Внутри группы порядок прежний — по старту, старший выше: иначе строки
+    // прыгали бы местами на каждом опросе.
+    expect(agents[0]!.startedAt).toBeLessThan(agents[1]!.startedAt)
   })
 })
 

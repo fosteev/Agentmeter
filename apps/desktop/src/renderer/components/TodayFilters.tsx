@@ -5,6 +5,14 @@ import { t } from '../format.ts'
 export interface TodayFiltersProps {
   filter: TodayFilter
   onChange: (filter: TodayFilter) => void
+  /**
+   * В ленте есть закреплённые сверху живые строки (6.1).
+   *
+   * Подпись о сортировке обязана это сказать: закрепление переопределяет
+   * выбранный порядок, и «по расходу ↓» над лентой, где сверху стоит сессия на
+   * 40 тысяч токенов, — это молчаливое враньё о том, чем список отсортирован.
+   */
+  pinned?: boolean
 }
 
 /**
@@ -29,7 +37,7 @@ function withProvider(filter: TodayFilter, provider: Provider | undefined): Toda
   return next
 }
 
-export function TodayFilters({ filter, onChange }: TodayFiltersProps) {
+export function TodayFilters({ filter, onChange, pinned = false }: TodayFiltersProps) {
   return (
     <div style={{ padding: '0 24px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
       <div
@@ -70,6 +78,7 @@ export function TodayFilters({ filter, onChange }: TodayFiltersProps) {
         }}
       >
         {t('today.sortPrefix')}{' '}
+        {pinned ? <span data-today-pinned>{t('today.livePinned')} · </span> : null}
         <select
           aria-label={t('today.sort')}
           value={filter.sort ?? 'tokens'}

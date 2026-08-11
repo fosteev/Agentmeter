@@ -290,6 +290,21 @@ describe('переплата за паузу (4.4)', () => {
 
 describe('BreakdownTab', () => {
   /**
+   * Ловит экран, оставшийся в первой колонке окна.
+   *
+   * `<main>` окна — сетка `1fr 300px` под ленту с боковой колонкой. Своей
+   * боковушки у развёртки нет, и без захвата обеих колонок справа остаются
+   * пустые 300 точек, а полоса, делящая итог пополам, меряет чужую ширину.
+   * Пустой экран — тем же правилом: сообщение съезжает влево ровно так же.
+   */
+  it('развёртка занимает обе колонки окна, и пустая тоже', () => {
+    expect(render(buildSpendScreen(db, ALL))).toMatch(
+      /<div data-breakdown="true" style="grid-column:1 \/ -1/,
+    )
+    expect(render(null)).toMatch(/<div data-breakdown-empty="true" style="grid-column:1 \/ -1/)
+  })
+
+  /**
    * Ловит полосу, посчитанную окном заново от токенов: доля приезжает готовой,
    * потому что её видно числом рядом.
    */
@@ -302,6 +317,43 @@ describe('BreakdownTab', () => {
       `grid-template-columns:${recurring!.share * 100}fr ${marginal!.share * 100}fr`,
     )
     expect(html).toContain(`${formatTokens(recurring!.tokens.value)} · ${Math.round(recurring!.share * 100)}%`)
+  })
+
+  /**
+   * Ловит полосу, растянутую собственной подписью.
+   *
+   * Колонка `Nfr` не может стать уже своего содержимого, поэтому у короткой
+   * половины (4% — обычный день без MCP) подпись и число держат её шире доли:
+   * полоса врёт длиной, а подпись при этом ещё и ломается в столбик. Длина —
+   * единственное, что здесь обязано быть честным, поэтому у полосы `minmax(0,
+   * …fr)` и ни одного текстового узла внутри, а подписи живут своей сеткой.
+   */
+  it('короткая половина полосы остаётся короткой', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const [recurring, marginal] = screen.split!.slices
+    const narrow: SpendScreen = {
+      ...screen,
+      split: {
+        ...screen.split!,
+        slices: [
+          { ...recurring!, share: 0.04 },
+          { ...marginal!, share: 0.96 },
+        ],
+      },
+    }
+    const html = render(narrow)
+
+    expect(html).toContain(
+      `grid-template-columns:minmax(0, ${0.04 * 100}fr) minmax(0, ${0.96 * 100}fr)`,
+    )
+    // Полосы — пустые div-ы: появись внутри подпись, минимум колонки снова
+    // перестал бы быть нулём, и `minmax` перестал бы что-либо значить.
+    expect(html).toMatch(/<div data-breakdown-bar="recurring"[^>]*><\/div>/)
+    expect(html).toMatch(/<div data-breakdown-bar="marginal"[^>]*><\/div>/)
+    // Подпись оси ужимается многоточием, число — нет: сокращённый расход
+    // это уже другое число.
+    expect(html).toContain('text-overflow:ellipsis')
+    expect(html).toContain(`${formatTokens(marginal!.tokens.value)} · 96%`)
   })
 
   /**

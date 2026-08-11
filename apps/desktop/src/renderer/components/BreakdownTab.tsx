@@ -29,6 +29,7 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
       <div
         data-breakdown-empty
         style={{
+          gridColumn: '1 / -1',
           padding: '22px 24px',
           display: 'flex',
           flexDirection: 'column',
@@ -46,7 +47,19 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
   const perSession = screen.scope === 'session'
 
   return (
-    <div data-breakdown style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div
+      data-breakdown
+      style={{
+        // Сетка окна — `1fr 300px` под ленту с боковой колонкой (`Window`).
+        // У развёртки своей боковушки нет, и без явного захвата обеих колонок
+        // экран рисуется в первой, оставляя справа 300 пустых точек: доли,
+        // посчитанные под всю ширину, оказываются в колонке уже своей.
+        gridColumn: '1 / -1',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+      }}
+    >
       <div
         style={{
           padding: '22px 24px',
@@ -91,24 +104,50 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `${recurring!.share * 100}fr ${marginal!.share * 100}fr`,
-            gap: 3,
-          }}
-        >
-          {[recurring!, marginal!].map((slice) => {
-            const own = slice.kind === 'recurring'
-            return (
-              <div key={slice.kind} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        {/*
+          Подписи и полоса — две сетки, а не одна на две строки.
+
+          У одной сетки минимум колонки равен минимуму её содержимого, и когда
+          доля мала (5% постоянного — обычный день без MCP), подпись не даёт
+          колонке сжаться: полоса рисуется шире своей доли, а подпись всё равно
+          ломается в столбик. То есть единственное число, которое здесь обязано
+          быть честным — длина, — врёт из-за текста над ним.
+
+          Поэтому у полосы `minmax(0, …fr)`: доля и только доля. Подписи живут
+          своей сеткой, где узкой колонке разрешено занять место под своё
+          число (оно не сокращается — это расход), а подпись оси ужимается
+          многоточием: она называет колонку, которую и так называет цвет.
+        */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `${recurring!.share * 100}fr ${marginal!.share * 100}fr`,
+              gap: 3,
+            }}
+          >
+            {[recurring!, marginal!].map((slice) => {
+              const own = slice.kind === 'recurring'
+              return (
+                <div
+                  key={slice.kind}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                  }}
+                >
                   <span
                     style={{
                       ...mono(10),
                       letterSpacing: '.12em',
                       textTransform: 'uppercase',
                       color: own ? 'var(--warn)' : 'var(--codex)',
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                      textOverflow: 'ellipsis',
                     }}
                   >
                     {own
@@ -121,6 +160,8 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
                       ...mono(13, 'right'),
                       fontWeight: 600,
                       color: own ? 'var(--warn)' : 'var(--codex)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     {t('split.value', {
@@ -129,16 +170,31 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
                     })}
                   </span>
                 </div>
+              )
+            })}
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, ${recurring!.share * 100}fr) minmax(0, ${marginal!.share * 100}fr)`,
+              gap: 3,
+            }}
+          >
+            {[recurring!, marginal!].map((slice) => {
+              const own = slice.kind === 'recurring'
+              return (
                 <div
+                  key={slice.kind}
+                  data-breakdown-bar={slice.kind}
                   style={{
                     height: 34,
                     borderRadius: own ? '6px 0 0 6px' : '0 6px 6px 0',
                     background: own ? hatch('var(--warn)') : 'var(--codex)',
                   }}
                 />
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 

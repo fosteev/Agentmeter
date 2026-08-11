@@ -41,7 +41,12 @@ export function WindowTabs({ active, onChange }: WindowTabsProps) {
               padding: '6px 12px',
               border: 0,
               borderRadius: 6,
-              background: selected ? 'var(--s2)' : undefined,
+              // `transparent`, а не пропуск свойства: у `button` без фона
+              // Chromium рисует свой `buttonface` — светло-серый, и в тёмной
+              // теме невыбранные вкладки выглядят подсвеченными сильнее
+              // выбранной. Ровно поэтому все остальные кнопки окна тоже пишут
+              // фон явно.
+              background: selected ? 'var(--s2)' : 'transparent',
               color: selected ? 'var(--tx)' : 'var(--tx2)',
               font: 'inherit',
               fontSize: 12.5,

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { IPC_CALLS, IPC_EVENTS } from '@agentmeter/ipc'
 import { registerIpc, type IpcHandlers } from '../src/main/ipc.ts'
-import { toContext, toProblems } from '../src/main/snapshot.ts'
+import { toContext, toCurrentTurn, toProblems } from '../src/main/snapshot.ts'
 import { createClient } from '../src/preload/client.ts'
 
 // Проводка контракта 0.4. Проверки названы по поломке, которую ловят.
@@ -130,5 +130,51 @@ describe('недоступный источник доезжает до окна
   /** Ловит пустой список, ставший «проблемой»: всё прочитано — это норма. */
   it('без проблем список пуст', () => {
     expect(toProblems([])).toEqual([])
+  })
+})
+
+describe('текущий ход через границу main и renderer', () => {
+  const turn = { prompt: 'почини тесты', startedAt: 1_000, spend: { tokens: 400, requests: 3, reconstructed: 0 } }
+
+  /**
+   * Ловит вопрос человека, уехавший в окно при включённой приватности (3.6).
+   * Тумблер «скрыть тексты промптов» обязан снимать текст **везде**, где текст
+   * есть, а не только в ленте, где его написали первым.
+   */
+  it('приватность снимает вопрос и оставляет расход', () => {
+    const hidden = toCurrentTurn(turn, { hidePrompts: true, hidePaths: false })
+    expect(hidden?.prompt).toBe(undefined)
+    expect(hidden?.spend?.tokens.value).toBe(400)
+    expect(hidden?.startedAt).toBe(1_000)
+
+    expect(toCurrentTurn(turn, { hidePrompts: false, hidePaths: false })?.prompt).toBe(
+      'почини тесты',
+    )
+  })
+
+  /**
+   * Ловит потерю знака «≈» на расходе хода: восстановленный запрос (1.3) внутри
+   * хода делает его сумму такой же приблизительной, как сумма за день.
+   */
+  it('восстановленный запрос внутри хода помечает его сумму', () => {
+    const restored = toCurrentTurn(
+      { ...turn, spend: { tokens: 400, requests: 3, reconstructed: 1 } },
+      { hidePrompts: false, hidePaths: false },
+    )
+    expect(restored?.spend?.tokens.confidence).not.toBe('exact')
+    expect(restored?.spend?.tokens.caveat).toBeTruthy()
+  })
+
+  /**
+   * Ловит пустой ход, доехавший до окна: строка «сейчас» без единого известного
+   * поля — это утверждение о работе, за которым ничего не прочитано.
+   */
+  it('ход без обеих половин наружу не уезжает', () => {
+    expect(toCurrentTurn({}, { hidePrompts: false, hidePaths: false })).toBe(undefined)
+    expect(toCurrentTurn(undefined, { hidePrompts: false, hidePaths: false })).toBe(undefined)
+    // Скрытый вопрос без метки — тоже пусто: показывать нечего.
+    expect(toCurrentTurn({ prompt: 'секрет' }, { hidePrompts: true, hidePaths: false })).toBe(
+      undefined,
+    )
   })
 })

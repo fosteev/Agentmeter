@@ -1,10 +1,19 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import {
+  Children,
+  isValidElement,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { formatTokens as coreFormat } from '@agentmeter/core/format'
 import type { TraySnapshot } from '@agentmeter/ipc'
+import { AgentRow } from '../src/renderer/components/AgentRow.tsx'
 import { Popup } from '../src/renderer/components/Popup.tsx'
+import { PopupLimit } from '../src/renderer/components/PopupLimit.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
 
 /**
@@ -234,6 +243,55 @@ describe('числа в CLI и в попапе', () => {
     expect(code).not.toMatch(/['"]en-US['"]/)
   })
 })
+
+describe('длинный список агентов', () => {
+  /**
+   * Ловит список, вытолкнувший лимиты и подвал за нижний край: высота попапа
+   * 600 и не тянется, а открытых чатов бывает и десять.
+   *
+   * Проверяется вложенностью, а не пикселями — браузера здесь нет и высоту
+   * никто не считает. Но вопрос решается целиком: строки агентов обязаны
+   * лежать внутри прокручиваемого блока, а полосы лимита — снаружи него.
+   * Скролл вокруг всего разом (и лимитов заодно) — та же болезнь: до полос
+   * снова придётся докручивать.
+   */
+  it('строки уходят под скролл, лимиты остаются на месте', () => {
+    const many: TraySnapshot = {
+      ...snapshot,
+      agents: Array.from({ length: 12 }, (_, i) => ({
+        ...snapshot.agents[0]!,
+        sessionId: `session-${i}`,
+      })),
+    }
+    const tree = Popup({ snapshot: many, now: many.at + 2000 })
+
+    const scrollers = elements(tree).filter((node) => node.props.style?.overflowY === 'auto')
+    expect(scrollers.length).toBe(1)
+    const inside = elements(scrollers[0]!)
+    expect(inside.filter((node) => node.type === AgentRow).length).toBe(12)
+    expect(inside.filter((node) => node.type === PopupLimit)).toEqual([])
+
+    // Ни одна строка не потеряна по дороге: скролл, а не обрезание.
+    const all = elements(tree)
+    expect(all.filter((node) => node.type === AgentRow).length).toBe(12)
+    expect(all.filter((node) => node.type === PopupLimit).length).toBe(many.limits.length)
+  })
+})
+
+interface NodeProps {
+  children?: ReactNode
+  style?: CSSProperties
+}
+
+/** Элемент и всё, что под ним, одним списком. */
+function elements(node: ReactNode): Array<ReactElement<NodeProps>> {
+  if (!isValidElement(node)) return []
+  const element = node as ReactElement<NodeProps>
+  return [
+    element,
+    ...Children.toArray(element.props.children).flatMap((child) => elements(child)),
+  ]
+}
 
 describe('в сеть за вёрсткой не ходим', () => {
   /**

@@ -2,6 +2,7 @@ import type { Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { PopupFooter } from './PopupFooter.tsx'
+import { PopupShell } from './PopupShell.tsx'
 
 // Ошибка чтения — строки 1226–1235 макета. Обычный список намеренно не
 // остаётся под предупреждением: частичные цифры выглядят полноценными раньше,
@@ -27,18 +28,7 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
   const broken = problems.map((problem) => PROVIDER[problem.provider]).join(t('popup.and'))
 
   return (
-    <div
-      style={{
-        width: 400,
-        height: 600,
-        background: 'var(--bg)',
-        border: '1px solid var(--line)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PopupShell>
       <div
         style={{
           padding: '11px 14px',
@@ -60,12 +50,16 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
 
       <div
         style={{
-          flex: 1,
+          flex: '1 1 auto',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           gap: 12,
           padding: 24,
+          // Путей может быть два, и каждый в несколько строк: этот экран —
+          // единственный, который упирается в потолок не списком агентов.
+          overflowY: 'auto',
+          minHeight: 0,
         }}
       >
         <div style={{ fontSize: 13, color: 'var(--alarm)' }}>
@@ -136,6 +130,6 @@ export function PopupProblem({ snapshot, onOpenWindow }: PopupProblemProps) {
         summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
-    </div>
+    </PopupShell>
   )
 }

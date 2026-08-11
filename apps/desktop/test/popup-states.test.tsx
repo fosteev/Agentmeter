@@ -178,6 +178,36 @@ describe('выбор состояния попапа', () => {
   })
 })
 
+describe('рама попапа одна на все состояния', () => {
+  const STATES = ['Popup', 'PopupEmpty', 'PopupIdle', 'PopupIndexing', 'PopupProblem']
+
+  /**
+   * Ловит вернувшуюся зашитую высоту. Окно подгоняется под содержимое
+   * (`useFitWindow` в `main.tsx`), и `height: 600` в любом из пяти состояний
+   * означает не «попап на 600 точек», а «под коротким содержимым пустое поле,
+   * а под длинным — прокрутка у самого окна, поверх интерфейса».
+   *
+   * Заодно ловит шестое состояние, свёрстанное своей рамой: пять копий
+   * двенадцати строк стиля тут уже лежали, и правка в одной означала, что
+   * четыре попапа теперь другого размера.
+   */
+  it('ни одно состояние не рисует свою раму и не зашивает высоту', () => {
+    const drifted: string[] = []
+    for (const name of STATES) {
+      const src = readFileSync(
+        fileURLToPath(new URL(`../src/renderer/components/${name}.tsx`, import.meta.url)),
+        'utf8',
+      )
+      if (!src.includes('<PopupShell>')) drifted.push(`${name}: рама своя, а не PopupShell`)
+      // Три цифры и больше: полоски и кружки внутри состояний законно меряются
+      // числом (`height: 22`), а на всю раму столько не бывает.
+      const pinned = src.replace(/\/\/.*$/gm, '').match(/\bheight:\s*\d{3,}/)
+      if (pinned !== null) drifted.push(`${name}: ${pinned[0]}`)
+    }
+    expect(drifted).toEqual([])
+  })
+})
+
 interface ButtonProps {
   children?: ReactNode
   onClick?: () => void

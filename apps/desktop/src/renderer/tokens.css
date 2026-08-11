@@ -106,6 +106,27 @@
   }
 }
 
+/* Раскрытие карточки задачи. Высота анимируется через grid-template-rows:
+   у карточки её нет заранее — она приезжает из IPC и зависит от содержимого,
+   а 0fr → 1fr не требует знать число. Порог 180 мс: карточка должна
+   появиться, а не проехать. */
+@keyframes am-reveal {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-task-card-reveal] {
+    animation: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -20,8 +20,14 @@ import { appendLifetimes, loadLifetimes } from './lifetimes.ts'
 import type { LiveAgent, LiveSnapshot, SessionLifetime } from './types.ts'
 
 export type { LiveOptions } from './agents.ts'
-export { DEFAULT_LIVE_OPTIONS } from './agents.ts'
-export type { LiveAgent, LiveSnapshot, LiveState, SessionLifetime } from './types.ts'
+export { DEFAULT_LIVE_OPTIONS, LIVE_URGENCY } from './agents.ts'
+export type {
+  CurrentTurn,
+  LiveAgent,
+  LiveSnapshot,
+  LiveState,
+  SessionLifetime,
+} from './types.ts'
 export { loadLifetimes, appendLifetimes } from './lifetimes.ts'
 export {
   CLAUDE_WINDOWS,
@@ -33,13 +39,17 @@ export type { ContextFill } from './context.ts'
 export { processState, processStartTimes } from './process.ts'
 export { claudeTurn, codexTurn, deriveState, readTurn } from './state.ts'
 export type { StateInput, TurnKind, TurnRead } from './state.ts'
+export { PROMPT_CHARS, claudePrompt, codexPrompt, readPrompt } from './prompt.ts'
+export type { PromptRead } from './prompt.ts'
 export {
   DEFAULT_RATE_WINDOW_MS,
   RATE_FLOOR_MS,
   observedSpan,
   perMinute,
+  turnTokens,
   windowTokens,
 } from './rate.ts'
+export type { TurnSpend } from './rate.ts'
 
 export interface LiveLayerOptions extends LiveOptions {
   /** Куда пишется журнал замера. Пустая строка — не писать (тесты, `--json`). */

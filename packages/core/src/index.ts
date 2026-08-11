@@ -40,9 +40,16 @@ export {
 export type { LimitWindowStats } from './index/limits.ts'
 export { createLiveLayer } from './live/index.ts'
 export type { LiveLayer, LiveLayerOptions, LiveOptions } from './live/index.ts'
-export { DEFAULT_LIVE_OPTIONS, appendLifetimes, loadLifetimes, processState } from './live/index.ts'
+export {
+  DEFAULT_LIVE_OPTIONS,
+  LIVE_URGENCY,
+  appendLifetimes,
+  loadLifetimes,
+  processState,
+} from './live/index.ts'
 export type {
   ContextFill,
+  CurrentTurn,
   LiveAgent,
   LiveSnapshot,
   LiveState,
@@ -51,13 +58,17 @@ export type {
 export { CLAUDE_WINDOWS, OBSERVED_WINDOW_DAYS, windowFromObserved } from './live/index.ts'
 export { claudeTurn, codexTurn, deriveState, readTurn } from './live/index.ts'
 export type { StateInput, TurnKind, TurnRead } from './live/index.ts'
+export { PROMPT_CHARS, claudePrompt, codexPrompt, readPrompt } from './live/index.ts'
+export type { PromptRead } from './live/index.ts'
 export {
   DEFAULT_RATE_WINDOW_MS,
   RATE_FLOOR_MS,
   observedSpan,
   perMinute,
+  turnTokens,
   windowTokens,
 } from './live/index.ts'
+export type { TurnSpend } from './live/index.ts'
 export { CSV_BOM, EXPORT_COLUMNS, exportRows, toCsv } from './export/index.ts'
 export type { ExportGrain, ExportRow } from './export/index.ts'
 export { watchSources } from './index/watch.ts'

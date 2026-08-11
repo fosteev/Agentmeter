@@ -224,6 +224,26 @@ describe('buildHistoryScreen', () => {
 
 describe('HistoryTab', () => {
   /**
+   * Ловит экран, оставшийся в первой колонке окна.
+   *
+   * Правая колонка у истории своя (`HistorySide`, 320 точек), но живёт она
+   * внутри её собственной сетки. Не захвати вкладка обе колонки `<main>` —
+   * весь экран уедет в `1fr` окна: справа пустые 300 точек, а бары с хитмапом
+   * сожмутся под остаток. Пустой экран — тем же правилом.
+   */
+  it('история занимает обе колонки окна, и пустая тоже', () => {
+    seed(MONDAY, 'claude', 10, 1000)
+    expect(render(buildHistoryScreen(db, { span: 'week' }, config, NOW))).toMatch(
+      /<div data-history="true" style="grid-column:1 \/ -1/,
+    )
+    expect(
+      renderToStaticMarkup(
+        <HistoryTab screen={null} onSpanChange={() => {}} onSelectDay={() => {}} />,
+      ),
+    ).toMatch(/<div data-history-empty="true" style="grid-column:1 \/ -1/)
+  })
+
+  /**
    * Ловит три пустоты, нарисованные одинаково. У дня с нулём — «0» и полоска, у
    * дня без данных — тире и пустая рамка; различить их на экране можно только
    * так, и разметка обязана это показывать.

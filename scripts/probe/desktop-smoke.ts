@@ -8,7 +8,7 @@
  * в нём работает. Зелёный `npm run check` про приложение не говорит ничего: там
  * ни одного запуска Electron нет.
  *
- * Девять проверок, каждая названа по поломке, которую обязана поймать.
+ * Десять проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -249,6 +249,37 @@ report(
     ? `приложение не отчиталось о настройках; exit=${settingsRun.status}`
     : `тема с диска ${settings.theme}, окно ${settings.bounds?.width}×${settings.bounds?.height} против ${settings.wanted?.width}×${settings.wanted?.height}, источников ${settings.sources?.length}`,
   settingsOk,
+)
+
+// 10. Ловит: попап, который живёт не в размер содержимого. Числа считает само
+//     приложение (только настоящий браузер их и знает), здесь они попадают на
+//     глаза: окно ростом с содержимое, содержимое без прокрутки поверх
+//     интерфейса и окно, сжавшееся вслед за насильно укороченной рамой.
+const popup = payload.popup as
+  | {
+      inner?: number
+      content?: number
+      scrollHeight?: number
+      scrollWidth?: number
+      innerWidth?: number
+      measured?: number
+      shrunk?: number
+    }
+  | undefined
+const popupOk =
+  popup !== undefined &&
+  popup.measured !== undefined &&
+  popup.content === popup.inner &&
+  (popup.scrollHeight ?? 0) <= (popup.inner ?? 0) &&
+  (popup.scrollWidth ?? 0) <= (popup.innerWidth ?? 0) &&
+  popup.shrunk === 300
+report(
+  10,
+  'попап ростом с содержимое и сам не прокручивается',
+  popup === undefined
+    ? 'приложение не отчиталось о попапе'
+    : `окно ${popup.innerWidth}×${popup.inner} при содержимом ${popup.content}, прокрутка ${popup.scrollWidth}×${popup.scrollHeight}, после сжатия ${popup.shrunk}`,
+  popupOk,
 )
 
 process.exit(failed ? 1 : 0)

@@ -2,7 +2,7 @@ import type { Entrypoint, LimitReportRow } from '@agentmeter/core'
 import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { ago, span } from '../time.ts'
-import { AgentRow, type AgentStatus } from './AgentRow.tsx'
+import { AGENT_STATUS, AgentRow } from './AgentRow.tsx'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
 import { PopupEmpty } from './PopupEmpty.tsx'
@@ -10,6 +10,7 @@ import { PopupIdle } from './PopupIdle.tsx'
 import { PopupIndexing } from './PopupIndexing.tsx'
 import { PopupLimit } from './PopupLimit.tsx'
 import { PopupProblem } from './PopupProblem.tsx'
+import { PopupShell } from './PopupShell.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
 
 // Попап целиком — строки 332–452 макета (тёмный) и 459–554 (светлый). Сборка:
@@ -29,13 +30,6 @@ export interface PopupProps {
    */
   now?: number | undefined
   onOpenWindow?: (() => void) | undefined
-}
-
-const STATUS: Record<LiveAgent['state'], AgentStatus> = {
-  working: 'thinking',
-  waiting: 'waiting',
-  idle: 'idle',
-  done: 'done',
 }
 
 /** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
@@ -58,6 +52,11 @@ const ENTRYPOINT: Record<Entrypoint, string> = {
   exec: 'exec',
   unknown: '',
 }
+
+/** Высота строки агента вместе с отбивкой: 40 из макета плюс gap списка. */
+const ROW = 42
+/** Сколько строк списка видно даже в самом тесном случае. */
+const MIN_ROWS = 2
 
 export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) {
   if (snapshot.problems.length > 0) {
@@ -83,86 +82,105 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
   const { at, agents, limits, today } = snapshot
 
   return (
-    <div
-      style={{
-        width: 400,
-        height: 600,
-        background: 'var(--bg)',
-        border: '1px solid var(--line)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PopupShell>
       <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
 
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <SectionTitle
-          title={t('popup.working')}
-          padding="14px 14px 4px"
-          aside={
-            <span
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                fontSize: 11,
-                color: 'var(--tx2)',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {agents.filter((agent) => agent.state !== 'done').length}
-            </span>
-          }
-        />
-
-        <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {agents.map((agent) => (
-            <AgentRow
-              key={agent.sessionId}
-              density="popup"
-              provider={agent.provider}
-              project={agent.project}
-              status={STATUS[agent.state]}
-              tokens={agent.tokens}
-              rate={agent.rate}
-              approximate={agent.approximate}
-              branch={agent.branch}
-              duration={span(at - agent.startedAt)}
-              endedAgo={agent.endedAt === undefined ? undefined : ago(at - agent.endedAt)}
-              model={agent.model}
-              entrypoint={ENTRYPOINT[agent.entrypoint] || undefined}
-              context={context(agent)}
+      <div style={{ flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/*
+          Единственное, что здесь растёт без предела, — список агентов: открытых
+          чатов бывает и десять. Поэтому сжимается тоже только он, а лимиты и
+          подвал стоят на месте. Раньше список выдавливал полосы лимитов за
+          нижний край, и попап переставал отвечать на вопрос, ради которого его
+          открывают. Высота не зашита числом: сколько строк поместилось —
+          столько и видно, остальные под скроллом, и с двумя окнами лимита их
+          помещается больше, чем с четырьмя.
+        */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: '0 1 auto', minHeight: 0 }}>
+          <div style={{ flex: 'none' }}>
+            <SectionTitle
+              title={t('popup.working')}
+              padding="14px 14px 4px"
+              aside={
+                <span
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: 11,
+                    color: 'var(--tx2)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {agents.filter((agent) => agent.state !== 'done').length}
+                </span>
+              }
             />
-          ))}
+          </div>
+
+          <div
+            style={{
+              padding: '6px 10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              // Две строки — пол, ниже которого список не сжимается: раздел,
+              // ужатый до нуля, выглядит как «никто не работает», хотя счётчик
+              // в заголовке говорит обратное. Но пол не выше самого списка:
+              // окно теперь ровно по содержимому, и зашитые две строки при
+              // одном агенте стали бы пустой полосой под ним.
+              minHeight: Math.min(agents.length, MIN_ROWS) * ROW,
+              overflowY: 'auto',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {agents.map((agent) => (
+              <AgentRow
+                key={agent.sessionId}
+                density="popup"
+                provider={agent.provider}
+                project={agent.project}
+                status={AGENT_STATUS[agent.state]}
+                tokens={agent.tokens}
+                rate={agent.rate}
+                approximate={agent.approximate}
+                branch={agent.branch}
+                duration={span(at - agent.startedAt)}
+                endedAgo={agent.endedAt === undefined ? undefined : ago(at - agent.endedAt)}
+                model={agent.model}
+                entrypoint={ENTRYPOINT[agent.entrypoint] || undefined}
+                context={context(agent)}
+              />
+            ))}
+          </div>
         </div>
 
-        <SectionTitle
-          title={t('popup.limits')}
-          padding="16px 14px 4px"
-          aside={
-            <span
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace",
-                fontSize: 10,
-                color: 'var(--tx3)',
-              }}
-            >
-              {t('popup.estimate')}
-            </span>
-          }
-        />
+        <div style={{ flex: 'none' }}>
+          <SectionTitle
+            title={t('popup.limits')}
+            padding="16px 14px 4px"
+            aside={
+              <span
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 10,
+                  color: 'var(--tx3)',
+                }}
+              >
+                {t('popup.estimate')}
+              </span>
+            }
+          />
 
-        <div style={{ padding: '6px 14px', display: 'flex', flexDirection: 'column', gap: 13 }}>
-          {limits.map((window) => (
-            <PopupLimit
-              key={`${window.provider}-${window.kind}-${window.startsAt}`}
-              provider={window.provider}
-              title={t(KIND_KEY[window.kind])}
-              percent={window.usedPercent}
-              approximate={!window.exact}
-              caption={caption(window, at)}
-            />
-          ))}
+          <div style={{ padding: '6px 14px', display: 'flex', flexDirection: 'column', gap: 13 }}>
+            {limits.map((window) => (
+              <PopupLimit
+                key={`${window.provider}-${window.kind}-${window.startsAt}`}
+                provider={window.provider}
+                title={t(KIND_KEY[window.kind])}
+                percent={window.usedPercent}
+                approximate={!window.exact}
+                caption={caption(window, at)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -171,7 +189,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
         summary={`${t('today.sessions', { count: today.sessions })} · ${t('today.projectsPlain', { count: today.projects })}`}
         onOpenWindow={onOpenWindow}
       />
-    </div>
+    </PopupShell>
   )
 }
 

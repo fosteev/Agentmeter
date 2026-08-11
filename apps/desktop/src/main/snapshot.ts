@@ -14,6 +14,7 @@ import {
   todayReport,
   type Config,
   type ContextFill as CoreContextFill,
+  type CurrentTurn as CoreCurrentTurn,
   type SourceIssue,
   type Db,
   type LiveAgent as CoreLiveAgent,
@@ -21,9 +22,11 @@ import {
   type Totals,
   t,
 } from '@agentmeter/core'
+import type { Privacy } from './day.ts'
 import { measured } from './measured.ts'
 import type {
   ContextUsage,
+  CurrentTurn,
   DayTotals,
   LastAgent,
   LiveAgent,
@@ -51,7 +54,7 @@ export function buildSnapshot(
 
   const snapshot: TraySnapshot = {
     at,
-    agents: liveSnapshot.agents.map(toAgent),
+    agents: liveSnapshot.agents.map((agent) => toAgent(agent, config.privacy)),
     limits,
     today: toDayTotals(today.totals, today.approximate, today.sessions, today.projects.length),
     // Пустой список — это утверждение «источники прочитаны», а не молчание.
@@ -143,7 +146,7 @@ function lastAgent(db: Db): LastAgent | undefined {
   }
 }
 
-function toAgent(agent: CoreLiveAgent): LiveAgent {
+function toAgent(agent: CoreLiveAgent, privacy: Privacy): LiveAgent {
   const result: LiveAgent = {
     sessionId: agent.sessionId,
     provider: agent.provider,
@@ -153,14 +156,44 @@ function toAgent(agent: CoreLiveAgent): LiveAgent {
     startedAt: agent.startedAt,
     state: agent.state,
     tokens: agent.tokens,
+    requests: agent.requests,
     approximate: agent.approximate,
     rate: agent.rate,
   }
   if (agent.branch !== undefined) result.branch = agent.branch
   if (agent.model !== undefined) result.model = agent.model
   if (agent.endedAt !== undefined) result.endedAt = agent.endedAt
+  if (agent.pendingTool !== undefined) result.pendingTool = agent.pendingTool
   if (agent.context !== undefined) result.context = toContext(agent.context)
+  const turn = toCurrentTurn(agent.currentTurn, privacy)
+  if (turn !== undefined) result.currentTurn = turn
   return result
+}
+
+/**
+ * Текущий ход наружу (6.1).
+ *
+ * «Скрыть тексты промптов» (3.6) снимает **текст**, а не ход целиком: расход с
+ * начала хода — это цифра о расходе, а не о содержании работы, и прятать её
+ * вместе с вопросом значило бы наказывать за приватность потерей измерения.
+ * Тем же правилом живёт первый промпт в ленте: поля просто нет, пустой строки
+ * вместо него не бывает.
+ */
+export function toCurrentTurn(
+  turn: CoreCurrentTurn | undefined,
+  privacy: Privacy,
+): CurrentTurn | undefined {
+  if (turn === undefined) return undefined
+  const out: CurrentTurn = {}
+  if (turn.prompt !== undefined && privacy.hidePrompts !== true) out.prompt = turn.prompt
+  if (turn.startedAt !== undefined) out.startedAt = turn.startedAt
+  if (turn.spend !== undefined) {
+    out.spend = {
+      tokens: measured(turn.spend.tokens, turn.spend.reconstructed > 0),
+      requests: turn.spend.requests,
+    }
+  }
+  return out.prompt === undefined && out.startedAt === undefined ? undefined : out
 }
 
 /**

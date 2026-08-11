@@ -64,7 +64,12 @@ const MIN_FOLDED = 2
 /** Сколько проектов показываем поимённо; остальные — строкой «+ N проектов». */
 const KEEP_PROJECTS = 4
 
-export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): DayReport {
+export function buildDayReport(
+  db: Db,
+  filter: TodayFilter,
+  privacy?: Privacy,
+  live?: LiveOrder,
+): DayReport {
   const range = { from: filter.from, to: filter.to }
   const scope: RequestScope = {}
   if (filter.provider !== undefined) scope.provider = filter.provider
@@ -74,8 +79,9 @@ export function buildDayReport(db: Db, filter: TodayFilter, privacy?: Privacy): 
   const splits = daySplits(db, range, scope)
   const sort = filter.sort ?? 'tokens'
   const options = filter.foldSubagents === false ? { foldSubagents: false } : {}
-  const tasks = sortTasks(taskRows(db, range, scope, options), sort).map((row) =>
-    toTaskRow(row, privacy),
+  const tasks = pinLive(
+    sortTasks(taskRows(db, range, scope, options), sort).map((row) => toTaskRow(row, privacy, live)),
+    live,
   )
 
   return {
@@ -155,12 +161,44 @@ function sortTasks(rows: readonly CoreTaskRow[], sort: NonNullable<TodayFilter['
 }
 
 /**
+ * Живые сессии на момент сборки: идентификатор → срочность (`LIVE_URGENCY`).
+ *
+ * Не просто список: закреплённые строки упорядочены **той же** таблицей, что
+ * список в попапе, — работающие, ждущие ответа, молчащие. Один и тот же список
+ * на двух экранах обязан быть упорядочен одинаково.
+ */
+export type LiveOrder = ReadonlyMap<string, number>
+
+/**
+ * Живые задачи — в начало ленты (6.1).
+ *
+ * Закрепление нужно не ради важности, а ради видимости: при сортировке по
+ * расходу работающая минуту назад сессия стоит внизу списка, а то и в
+ * свёрнутом хвосте, и «что происходит сейчас» ответа на экране не имеет.
+ *
+ * Внутри закреплённых порядок — по срочности, дальше по выбранной сортировке:
+ * `sort` устойчив, и равные по срочности остаются там, где их поставил
+ * выбранный ключ. Незакреплённые не двигаются вовсе.
+ *
+ * Выбранную сортировку это переопределяет, и молчать об этом нельзя: подпись
+ * над лентой говорит «сначала активные», пока закреплённые строки есть.
+ */
+export function pinLive(tasks: readonly TaskRow[], live?: LiveOrder): TaskRow[] {
+  const pinned = tasks.filter((task) => task.live === true)
+  const rank = (task: TaskRow): number => live?.get(task.sessionId) ?? 0
+  return [
+    ...pinned.sort((left, right) => rank(left) - rank(right)),
+    ...tasks.filter((task) => task.live !== true),
+  ]
+}
+
+/**
  * Строка ленты из строки ядра. Экспортируется потому, что карточка задачи
  * (`task.ts`) обязана показывать в шапке **ту же** строку, что свёрнутая лента
  * над ней: собери её вторым похожим кодом — и однажды они разойдутся полем,
  * которое видно на экране дважды.
  */
-export function toTaskRow(row: CoreTaskRow, privacy?: Privacy): TaskRow {
+export function toTaskRow(row: CoreTaskRow, privacy?: Privacy, live?: LiveOrder): TaskRow {
   const task: TaskRow = {
     sessionId: row.sessionId,
     title: row.title,
@@ -180,9 +218,14 @@ export function toTaskRow(row: CoreTaskRow, privacy?: Privacy): TaskRow {
   if (row.ticket !== null) task.ticket = row.ticket
   if (row.model.length > 0) task.model = row.model
   if (row.agentType !== null) task.agentType = row.agentType
+  if (live?.has(row.sessionId) === true) task.live = true
   // Тем же переводом, что и родитель: строка ребёнка показывается в карточке
   // рядом с его расходом, и собери её вторым похожим кодом — однажды они
   // разойдутся полем, которое видно на экране дважды.
+  //
+  // Живость детям не передаётся и не ищется: своего процесса у сабагента нет,
+  // а его расход уже свёрнут в родителя — вторая пульсирующая точка внутри
+  // карточки означала бы второго работающего агента, которого не существует.
   if (row.children.length > 0) task.children = row.children.map((child) => toTaskRow(child, privacy))
   return task
 }
@@ -197,6 +240,10 @@ export function toTaskRow(row: CoreTaskRow, privacy?: Privacy): TaskRow {
  * Сортировка — не отдельная проверка снаружи, а вход правила: «ниже 4M» на
  * ленте, упорядоченной по времени, означало бы дыры посреди списка, и это часть
  * того же решения, а не соседнее условие в вызывающем коде.
+ *
+ * Живые строки хвост не забирает никогда (6.1): сессия, начатая минуту назад,
+ * дешевле порога по построению — расходу просто неоткуда взяться, — и общее
+ * правило свернуло бы ровно то, ради чего в ленту сейчас и смотрят.
  */
 export function foldTail(
   tasks: readonly TaskRow[],
@@ -208,7 +255,8 @@ export function foldTail(
   const belowTokens = Math.round(total * FOLD_SHARE)
   const first = tasks.findIndex((task) => task.tokens.value < belowTokens)
   if (first === -1) return null
-  const from = Math.max(first, KEEP_ROWS)
+  const live = tasks.filter((task) => task.live === true).length
+  const from = Math.max(first, KEEP_ROWS, live)
   if (tasks.length - from < MIN_FOLDED) return null
   return { from, belowTokens }
 }

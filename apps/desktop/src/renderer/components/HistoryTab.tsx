@@ -34,7 +34,12 @@ export function HistoryTab({ screen, onSpanChange, onSelectDay }: HistoryTabProp
     return (
       <div
         data-history-empty
-        style={{ padding: '22px 24px', color: 'var(--tx2)', fontSize: 12.5 }}
+        style={{
+          gridColumn: '1 / -1',
+          padding: '22px 24px',
+          color: 'var(--tx2)',
+          fontSize: 12.5,
+        }}
       >
         {screen?.emptyIndex === false ? t('history.emptyRange') : t('history.emptyIndex')}
       </div>
@@ -42,7 +47,19 @@ export function HistoryTab({ screen, onSpanChange, onSelectDay }: HistoryTabProp
   }
 
   return (
-    <div data-history style={{ display: 'grid', gridTemplateColumns: '1fr 320px', minHeight: 0 }}>
+    <div
+      data-history
+      style={{
+        // Обе колонки окна, а не первая: своя правая колонка у истории есть
+        // (`HistorySide`, 320 точек), но живёт она **внутри** этой сетки. Без
+        // захвата экран съезжает в `1fr` окна, и справа остаются пустые 300
+        // точек, а хитмап с барами сжимаются вдвое.
+        gridColumn: '1 / -1',
+        display: 'grid',
+        gridTemplateColumns: '1fr 320px',
+        minHeight: 0,
+      }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--line)' }}>
         <div
           style={{

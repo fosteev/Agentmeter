@@ -13,9 +13,16 @@ import { defaultClaudeHome, defaultCodexHome } from '../index/paths.ts'
 import { readLiveSessions, type ProcessStartCache } from '../sources/claude/live.ts'
 import type { Entrypoint, LiveSession, Provider } from '../sources/types.ts'
 import { collectContext, type ContextFill } from './context.ts'
-import { DEFAULT_RATE_WINDOW_MS, observedSpan, perMinute, windowTokens } from './rate.ts'
+import { readPrompt, type PromptRead } from './prompt.ts'
+import {
+  DEFAULT_RATE_WINDOW_MS,
+  observedSpan,
+  perMinute,
+  turnTokens,
+  windowTokens,
+} from './rate.ts'
 import { deriveState, readTurn, type TurnRead } from './state.ts'
-import type { LiveAgent, LiveSnapshot } from './types.ts'
+import type { CurrentTurn, LiveAgent, LiveSnapshot } from './types.ts'
 
 export interface LiveOptions {
   claudeHome?: string
@@ -33,6 +40,16 @@ export interface LiveOptions {
   /** Сколько байт хвоста читать. Не парсинг — поиск последней значимой записи. */
   tailBytes?: number
   /**
+   * Сколько байт читать в разовом глубоком дочите текущего запроса (6.1).
+   *
+   * Обычного хвоста для него мало у Codex: реплика человека попадает в
+   * последние 64 КБ только у 41 роллаута из 120 при медианном размере файла в
+   * 486 КБ, а на мегабайте находится у 117. Читается он **один раз на сессию**,
+   * дальше хватает обычного хвоста: новая реплика приезжает в конец файла, и
+   * опрос раз в секунду её там застаёт.
+   */
+  deepTailBytes?: number
+  /**
    * Сколько держать в снимке агента, чей процесс уже исчез. Макет показывает
    * такую строку гашеной, с подписью «завершился 2 мин назад» (строки 164–169),
    * поэтому смерть — не повод немедленно убрать строку из попапа.
@@ -46,6 +63,7 @@ export const DEFAULT_LIVE_OPTIONS = {
   idleMs: 90_000,
   codexSilenceMs: 5 * 60_000,
   tailBytes: 64 * 1024,
+  deepTailBytes: 1024 * 1024,
   doneGraceMs: 5 * 60_000,
   rateWindowMs: DEFAULT_RATE_WINDOW_MS,
 } as const
@@ -55,6 +73,20 @@ interface TailState {
   at: number
   kind?: string
   turn?: TurnRead
+  prompt?: PromptRead
+}
+
+/**
+ * Что мы знаем о текущем ходе сессии, накопленное между опросами.
+ *
+ * Накопленное, а не прочитанное заново: реплика человека уезжает из хвоста, как
+ * только агент напишет ещё 64 КБ, — а ход при этом продолжается, и «сейчас
+ * ничего не знаем» посреди работы было бы миганием на ровном месте. Опрос идёт
+ * раз в секунду, поэтому саму реплику мы застаём в конце файла почти всегда.
+ */
+interface PromptState extends PromptRead {
+  /** Глубокий дочит уже делали — второй раз мегабайт не перечитываем. */
+  deep: boolean
 }
 
 /** Агент, которого уже нет: помним, пока не истечёт `doneGraceMs`. */
@@ -70,6 +102,8 @@ export interface LiveCache {
   tails: Map<string, TailState>
   processStarts: ProcessStartCache
   recent: Map<string, Remembered>
+  /** Текущий ход по сессиям — накапливается между опросами (6.1). */
+  prompts: Map<string, PromptState>
 }
 
 export function createLiveCache(): LiveCache {
@@ -78,6 +112,7 @@ export function createLiveCache(): LiveCache {
     tails: new Map(),
     processStarts: new Map(),
     recent: new Map(),
+    prompts: new Map(),
   }
 }
 
@@ -172,6 +207,8 @@ export function collectAgents(
     )
   }
 
+  fillTurnSpend(db, agents, at)
+
   for (const agent of agents) cache.recent.set(agent.sessionId, { agent, endedAt: null })
 
   // Завершившиеся собираются после живых: их расход берётся из индекса заново
@@ -190,9 +227,44 @@ export function collectAgents(
 
   return {
     at,
-    agents: agents.sort((a, b) => a.startedAt - b.startedAt),
+    agents: agents.sort(byUrgency),
     warnings: claude.warnings,
   }
+}
+
+/**
+ * Порядок строк в снимке: сначала те, кто занят, потом ждущие человека, потом
+ * молчащие и последними завершившиеся.
+ *
+ * Порядок — это данные, а не вёрстка: список одинаково показывают попап, окно и
+ * CLI, и сортировка в компоненте означала бы три порядка, расходящихся на
+ * первой же правке. Начало времени тут не годится: список открывают вопросом
+ * «что происходит **сейчас**», а по `startedAt` наверху оказывается сессия,
+ * начатая утром и с тех пор молчащая, — работающий агент уезжает под неё, а
+ * при десяти чатах и под скролл. Внутри группы порядок прежний, по времени
+ * старта: он устойчив, и строки не прыгают между опросами.
+ *
+ * Тот же порядок нарисован в макете (строки 351–404) и лежит в эталоне
+ * `fixtures/popup/snapshot.json`: там «ждёт ответа» стоит вторым, хотя начат
+ * раньше всех, — то есть по старту список не сортировался и в замысле.
+ */
+function byUrgency(a: LiveAgent, b: LiveAgent): number {
+  return LIVE_URGENCY[a.state] - LIVE_URGENCY[b.state] || a.startedAt - b.startedAt
+}
+
+/**
+ * Насколько строка срочная: работающие, ждущие, молчащие, завершившиеся.
+ *
+ * Экспортируется, потому что тем же порядком закрепляются живые строки в ленте
+ * (6.1). Один и тот же список на двух экранах обязан быть упорядочен одинаково,
+ * а вторая такая таблица разошлась бы с этой на первой же правке — как разошлись
+ * бы две копии правила состояний.
+ */
+export const LIVE_URGENCY: Record<LiveAgent['state'], number> = {
+  working: 0,
+  waiting: 1,
+  idle: 2,
+  done: 3,
 }
 
 /**
@@ -222,6 +294,28 @@ function harvestGone(
   return out
 }
 
+/**
+ * Расход текущего хода — одним запросом на всех живых, а не по запросу на
+ * агента: опрос идёт раз в секунду, и десять чатов дали бы десять запросов к
+ * базе на каждый тик ни за чем.
+ */
+function fillTurnSpend(db: Db, agents: readonly LiveAgent[], at: number): void {
+  const starts = new Map<string, number>()
+  for (const agent of agents) {
+    const startedAt = agent.currentTurn?.startedAt
+    if (startedAt !== undefined) starts.set(agent.sessionId, startedAt)
+  }
+  if (starts.size === 0) return
+  const spend = turnTokens(db, starts, at)
+  for (const agent of agents) {
+    const turn = agent.currentTurn
+    if (turn?.startedAt === undefined) continue
+    // Ноль здесь измерен, а не выдуман: человек нажал ввод секунду назад, и
+    // ответа ещё не было. Это ровно то, что показывает «0 за ход».
+    turn.spend = spend.get(agent.sessionId) ?? { tokens: 0, requests: 0, reconstructed: 0 }
+  }
+}
+
 function doneAgent(
   entry: { agent: LiveAgent; endedAt: number },
   usage: Usage | undefined,
@@ -235,6 +329,9 @@ function doneAgent(
     // под строкой «завершился» читается как «всё ещё жжёт».
     rate: 0,
   }
+  // Текущего хода у завершившегося нет: строка говорит «завершился 2 мин
+  // назад», и вопрос человека под ней читался бы как «над этим и работает».
+  delete agent.currentTurn
   if (usage !== undefined) {
     agent.tokens = usage.tokens
     agent.requests = usage.requests
@@ -329,7 +426,79 @@ function buildAgent(input: BuildInput): LiveAgent {
     agent.turn = tail.turn.kind
     if (tail.turn.tool !== undefined) agent.pendingTool = tail.turn.tool
   }
+  const turn = currentTurn(input, tail?.prompt)
+  if (turn !== undefined) agent.currentTurn = turn
   return agent
+}
+
+/**
+ * Текущий ход сессии: накопленное о нём знание плюс разовый глубокий дочит.
+ *
+ * Половины хода читаются из разных записей и приезжают по отдельности
+ * (`prompt.ts`), поэтому наружу уходит только то, что действительно прочитано:
+ * ход без метки времени — без расхода, ход без текста — без вопроса.
+ */
+function currentTurn(input: BuildInput, read: PromptRead | undefined): CurrentTurn | undefined {
+  const state = trackPrompt(input, read)
+  if (state === undefined) return undefined
+  const turn: CurrentTurn = {}
+  if (state.text !== undefined) turn.prompt = state.text
+  if (state.at !== undefined) turn.startedAt = state.at
+  return turn.prompt === undefined && turn.startedAt === undefined ? undefined : turn
+}
+
+function trackPrompt(input: BuildInput, read: PromptRead | undefined): PromptState | undefined {
+  const known = rememberPrompt(input.cache, input.sessionId, read)
+  if (known?.deep === true) return known
+  if (known?.text !== undefined && known.at !== undefined) return known
+  if (input.transcript === null) return known
+
+  // Разовый глубокий дочит. Без него у Codex две живые строки из трёх остались
+  // бы без ответа на вопрос «чем занят»: реплика человека попадает в обычный
+  // хвост только у 41 роллаута из 120. Флаг ставится независимо от находки —
+  // сессия, у которой реплики нет и в мегабайте, не должна перечитываться на
+  // каждом опросе.
+  const bytes = input.opts.deepTailBytes ?? DEFAULT_LIVE_OPTIONS.deepTailBytes
+  const chunk = readLines(input.transcript, bytes)
+  const deep = chunk === undefined ? undefined : readPrompt(input.provider, chunk.lines)
+  const state = rememberPrompt(input.cache, input.sessionId, deep) ?? { deep: false }
+  state.deep = true
+  input.cache.prompts.set(input.sessionId, state)
+  return state
+}
+
+/**
+ * Слияние прочитанного с накопленным.
+ *
+ * Правило одно: текст и метка обязаны принадлежать **одному** ходу. Поэтому
+ * новая метка забирает с собой и текст (в том числе его отсутствие), а
+ * приехавший без метки новый текст обнуляет старую метку — иначе расход
+ * прошлого хода оказался бы подписан новым вопросом, и ошибку эту на экране
+ * ничем не отличить от правды.
+ */
+function rememberPrompt(
+  cache: LiveCache,
+  sessionId: string,
+  read: PromptRead | undefined,
+): PromptState | undefined {
+  const known = cache.prompts.get(sessionId)
+  if (read === undefined) return known
+
+  const next: PromptState = { deep: known?.deep ?? false }
+  if (known?.at !== undefined) next.at = known.at
+  if (known?.text !== undefined) next.text = known.text
+
+  if (read.at !== undefined && (known?.at === undefined || read.at > known.at)) {
+    next.at = read.at
+    if (read.text === undefined) delete next.text
+    else next.text = read.text
+  } else if (read.text !== undefined && read.text !== known?.text) {
+    next.text = read.text
+    delete next.at
+  }
+
+  cache.prompts.set(sessionId, next)
+  return next
 }
 
 interface SessionMeta {
@@ -551,12 +720,9 @@ function readTail(
   bytes: number,
   cache: LiveCache,
 ): TailState | undefined {
-  let size: number
   let mtime: number
   try {
-    const stat = statSync(path)
-    size = stat.size
-    mtime = stat.mtimeMs
+    mtime = statSync(path).mtimeMs
   } catch {
     return undefined
   }
@@ -564,23 +730,9 @@ function readTail(
   const cached = cache.tails.get(path)
   if (cached && cached.mtime === mtime) return cached
 
-  const length = Math.min(bytes, size)
-  if (length === 0) return undefined
-  const buffer = Buffer.allocUnsafe(length)
-  let fd: number | undefined
-  try {
-    fd = openSync(path, 'r')
-    readSync(fd, buffer, 0, length, size - length)
-  } catch {
-    return undefined
-  } finally {
-    if (fd !== undefined) closeSync(fd)
-  }
-
-  const all = buffer.toString('utf8').split('\n')
-  // Первая строка куска почти всегда обрезана посередине — её выбрасываем,
-  // если читали не с начала файла.
-  const lines = length < size ? all.slice(1) : all
+  const chunk = readLines(path, bytes)
+  if (chunk === undefined) return undefined
+  const lines = chunk.lines
 
   const state: TailState = { mtime, at: mtime }
   for (let i = lines.length - 1; i >= 0; i -= 1) {
@@ -598,8 +750,47 @@ function readTail(
   const turn = readTurn(provider, lines)
   if (turn !== undefined) state.turn = turn
 
+  // Текущий запрос — по тому же куску: второе чтение того же файла ради
+  // соседней записи было бы вторым обходом диска на каждый опрос (6.1).
+  const prompt = readPrompt(provider, lines)
+  if (prompt !== undefined) state.prompt = prompt
+
   cache.tails.set(path, state)
   return state
+}
+
+/**
+ * Кусок с конца файла, разобранный на строки.
+ *
+ * Общая половина хвоста и глубокого дочита: отличаются они только числом байт,
+ * и разъехаться им нельзя — обрезанная первая строка отбрасывается по одному
+ * правилу, иначе один из двух разборов давал бы мусор.
+ */
+function readLines(path: string, bytes: number): { lines: string[] } | undefined {
+  let size: number
+  try {
+    size = statSync(path).size
+  } catch {
+    return undefined
+  }
+
+  const length = Math.min(bytes, size)
+  if (length === 0) return undefined
+  const buffer = Buffer.allocUnsafe(length)
+  let fd: number | undefined
+  try {
+    fd = openSync(path, 'r')
+    readSync(fd, buffer, 0, length, size - length)
+  } catch {
+    return undefined
+  } finally {
+    if (fd !== undefined) closeSync(fd)
+  }
+
+  const all = buffer.toString('utf8').split('\n')
+  // Первая строка куска почти всегда обрезана посередине — её выбрасываем,
+  // если читали не с начала файла.
+  return { lines: length < size ? all.slice(1) : all }
 }
 
 function parseRecord(line: string): { at?: number; kind?: string } | undefined {
@@ -635,6 +826,12 @@ function forgetGone(cache: LiveCache, alive: readonly string[]): void {
   const set = new Set(alive)
   for (const id of [...cache.transcripts.keys()]) {
     if (!set.has(id)) cache.transcripts.delete(id)
+  }
+  // Текущий ход забывается вместе с сессией — вместе с флагом глубокого
+  // дочита: вернувшийся `--continue` заводит новый ход, и разбирать его надо
+  // заново, а не показывать вопрос недельной давности.
+  for (const id of [...cache.prompts.keys()]) {
+    if (!set.has(id)) cache.prompts.delete(id)
   }
 }
 
