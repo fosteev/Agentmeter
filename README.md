@@ -10,7 +10,7 @@ not using it**. An MCP server you never called still loads into every session
 and is re-read on every request; on real logs 19 servers out of 22 turned out
 to be never called, and they cost 11.4M tokens.
 
-![Tray popup](docs/screenshots/popup.png)
+![The day, task by task](docs/screenshots/today.png)
 
 ## What it shows
 
@@ -27,14 +27,16 @@ to be never called, and they cost 11.4M tokens.
   never called across 34 sessions; turning it off returns 194.7k”.
 - **History** — a calendar week, 30 days or all time, with a day × hour heatmap.
 
+The popup is shown at its real size — 400 × 600, right under the tray icon:
+
+<img src="docs/screenshots/popup.png" alt="Tray popup" width="380">
+
 ![Spend breakdown](docs/screenshots/breakdown.png)
 
 The screens above are rendered from the project's design reference with the
 app's English wording — the same strings the interface itself uses. The app
 ships with **both English and Russian** and follows your system language by
 default.
-
-![Today](docs/screenshots/today.png)
 
 ## Install
 
