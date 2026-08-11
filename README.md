@@ -10,7 +10,7 @@ not using it**. An MCP server you never called still loads into every session
 and is re-read on every request; on real logs 19 servers out of 22 turned out
 to be never called, and they cost 11.4M tokens.
 
-![The day, task by task](docs/screenshots/today.png)
+![The day, task by task](docs/screenshots/en/today.png)
 
 ## What it shows
 
@@ -21,7 +21,9 @@ to be never called, and they cost 11.4M tokens.
   from the server; Claude's are marked with `≈` (see “What it does not know”).
 - **The whole day** — a feed of tasks with an expandable card: request
   timeline, token kinds, tools, files touched, subagents. Plus breakdowns by
-  hour, project and ticket.
+  hour, project and ticket. Sessions that are running right now are pinned to
+  the top of the feed with what they are working on: the request itself, what
+  the turn has cost so far, and the pace.
 - **Where the spend went** — what sits in the prompt before your first word
   versus what the agent actually called, with advice like “the jira server was
   never called across 34 sessions; turning it off returns 194.7k”.
@@ -29,14 +31,15 @@ to be never called, and they cost 11.4M tokens.
 
 The popup is shown at its real size — 400 × 600, right under the tray icon:
 
-<img src="docs/screenshots/popup.png" alt="Tray popup" width="380">
+<img src="docs/screenshots/en/popup.png" alt="Tray popup" width="380">
 
-![Spend breakdown](docs/screenshots/breakdown.png)
+![Spend breakdown](docs/screenshots/en/breakdown.png)
 
 The screens above are rendered from the project's design reference with the
 app's English wording — the same strings the interface itself uses. The app
 ships with **both English and Russian** and follows your system language by
-default.
+default; the same six screens in Russian are in
+[`docs/screenshots/ru/`](docs/screenshots/ru/).
 
 ## Install
 
@@ -91,7 +94,7 @@ smoothed over. Everything that is an estimate carries an `≈`.
 - **Claude does not log its context window size.** It is inferred from
   observations and marked as an estimate; Codex reports it on every request.
 
-![History](docs/screenshots/history.png)
+![History](docs/screenshots/en/history.png)
 
 ## Command line
 

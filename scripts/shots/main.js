@@ -38,6 +38,16 @@ import { join } from 'node:path'
 const root = fileURLToPath(new URL('../../', import.meta.url))
 const design = join(root, 'design/Agentmeter.dc.html')
 const outDir = join(root, 'docs/screenshots')
+
+/**
+ * Два языка, две папки. Русский снимается **первым и с нетронутого макета**:
+ * словарь не только заменяет подписи, но и снимает блоки, которых в продукте
+ * нет, — то есть меняет вёрстку, и обратно её не собрать.
+ */
+const LOCALES = [
+  { dir: 'ru', translate: false },
+  { dir: 'en', translate: true },
+]
 const fontsDir = join(root, 'apps/desktop/src/renderer/fonts')
 
 /**
@@ -84,25 +94,46 @@ async function capture() {
   await window.webContents.executeJavaScript(fontPatch())
 
   const failures = []
-  const applied = await window.webContents.executeJavaScript(translate())
-  console.log(
-    `словарь: заменено ${applied.replaced} из ${DICTIONARY.length}, убрано ${applied.dropped}`,
-  )
-  // Правило, которое перестало срабатывать, выглядит как «всё в порядке»:
-  // словарь, промахнувшийся мимо макета целиком, дал бы русские снимки и ни
-  // одной жалобы.
-  if (applied.replaced === 0) failures.push('словарь не заменил ни одной подписи')
-  if (applied.dropped === 0) failures.push('словарь не убрал ни одного лишнего блока')
+
+  for (const locale of LOCALES) {
+    if (locale.translate) {
+      const applied = await window.webContents.executeJavaScript(translate())
+      console.log(
+        `словарь: заменено ${applied.replaced} из ${DICTIONARY.length}, убрано ${applied.dropped}`,
+      )
+      // Правило, которое перестало срабатывать, выглядит как «всё в порядке»:
+      // словарь, промахнувшийся мимо макета целиком, дал бы русские снимки и ни
+      // одной жалобы.
+      if (applied.replaced === 0) failures.push('словарь не заменил ни одной подписи')
+      if (applied.dropped === 0) failures.push('словарь не убрал ни одного лишнего блока')
+    }
+    failures.push(...(await shoot(window, locale)))
+  }
+
+  for (const line of failures) console.error(`✗ ${line}`)
+  app.exit(failures.length === 0 ? 0 : 1)
+}
+
+/** Шесть экранов одного языка в свою папку. */
+async function shoot(window, locale) {
+  const failures = []
+  const dir = join(outDir, locale.dir)
+  mkdirSync(dir, { recursive: true })
 
   for (const shot of SHOTS) {
     const box = await window.webContents.executeJavaScript(measure(shot.label))
     if (box === null) {
-      failures.push(`${shot.file}: в макете нет раздела «${shot.label}»`)
+      failures.push(`${locale.dir}/${shot.file}: в макете нет раздела «${shot.label}»`)
       continue
     }
-    const left = await window.webContents.executeJavaScript(cyrillic(shot.label))
-    if (left.length > 0) {
-      failures.push(`${shot.file}: осталось по-русски — ${left.slice(0, 3).join(' · ')}`)
+    // Кириллица внутри кадра — жалоба только для английского набора: снимок с
+    // половиной подписей на русском читается как недоделка, а заметить это на
+    // шести картинках глазами — вопрос везения.
+    if (locale.translate) {
+      const left = await window.webContents.executeJavaScript(cyrillic(shot.label))
+      if (left.length > 0) {
+        failures.push(`${locale.dir}/${shot.file}: осталось по-русски — ${left.slice(0, 3).join(' · ')}`)
+      }
     }
     // Ещё одна пауза уже в main: страница о своей перерисовке не сообщает, а
     // безоконный рендер догоняет её не мгновенно.
@@ -110,20 +141,19 @@ async function capture() {
     const image = await window.webContents.capturePage(box)
     const png = image.toPNG()
     const size = image.getSize()
-    writeFileSync(join(outDir, shot.file), png)
+    writeFileSync(join(dir, shot.file), png)
     console.log(
-      `${shot.file}: ${size.width}×${size.height} (×${(size.width / box.width).toFixed(1)}), ` +
+      `${locale.dir}/${shot.file}: ${size.width}×${size.height} (×${(size.width / box.width).toFixed(1)}), ` +
         `${(png.length / 1024).toFixed(0)} КБ`,
     )
     // Пустой снимок — не теория: страница могла не докрутиться, а `capturePage`
     // вернул бы ровный прямоугольник фона. Восемь килобайт на экран в 1180
     // точек не бывает ни у одного из них.
-    if (size.width < box.width) failures.push(`${shot.file}: снимок мельче макета`)
-    if (png.length < 8_000) failures.push(`${shot.file}: снимок подозрительно пустой`)
+    if (size.width < box.width) failures.push(`${locale.dir}/${shot.file}: снимок мельче макета`)
+    if (png.length < 8_000) failures.push(`${locale.dir}/${shot.file}: снимок подозрительно пустой`)
   }
 
-  for (const line of failures) console.error(`✗ ${line}`)
-  app.exit(failures.length === 0 ? 0 : 1)
+  return failures
 }
 
 /**

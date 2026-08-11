@@ -52,7 +52,17 @@ export const DICTIONARY = [
   ["22 сессии · 8 проектов · 1 289 запросов", "22 sessions · 8 projects · 1,289 requests"],
   ["токенов", "tokens"],
   ["все", "all"],
-  ["сортировка: по расходу ↓", "sort: by spend ↓"],
+  ["сортировка: сначала активные · по расходу ↓", "sort: active first · by spend ↓"],
+  // Живая подпись строки ленты (6.1): вопрос, расход хода и темп. Числа в
+  // английской версии те же — меняются только слова вокруг них.
+  ["сейчас: «добавь живую строку в ленту»", "now: “add the live line to the feed”"],
+  ["сейчас: «почему пересборка кэша дороже паузы»", "now: “why a cache rebuild costs more than the pause”"],
+  ["· +1.2M за ход · 12.4k/мин", "· +1.2M this turn · 12.4k/min"],
+  ["· +5.7M за ход · 8.1k/мин", "· +5.7M this turn · 8.1k/min"],
+  ["ждёт ответа · +2.3M за ход", "waiting for you · +2.3M this turn"],
+  ["молчит · +840k за ход", "silent · +840k this turn"],
+  ["· +1.2M за ход в 4 запросах · 12.4k/мин", "· +1.2M this turn over 4 requests · 12.4k/min"],
+  ["· +1.2M за ход", "· +1.2M this turn"],
   ["Задача", "Task"],
   ["Проект · ветка", "Project · branch"],
   ["Начало", "Started"],
