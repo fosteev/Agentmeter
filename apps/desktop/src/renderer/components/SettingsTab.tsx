@@ -49,6 +49,8 @@ export interface SettingsTabProps {
    * поводу: он пишет в файл настроек Claude Code, а не в наш.
    */
   onStatusline: (enabled: boolean) => void
+  /** Пересчитать вес по журналу строки состояния прямо сейчас (1.9). */
+  onRefreshUsage: () => void
   /** Проверить обновления руками и поставить скачанное (5.4). */
   onCheckUpdate: () => void
   onInstallUpdate: () => void
@@ -61,6 +63,7 @@ export function SettingsTab({
   onChange,
   onStartup,
   onStatusline,
+  onRefreshUsage,
   onCheckUpdate,
   onInstallUpdate,
   section = 'sources',
@@ -126,7 +129,7 @@ export function SettingsTab({
           <SettingsSources sources={report.sources} problems={report.problems} />
         ) : null}
         {active === 'limits' ? <SettingsLimits config={config} onChange={onChange} /> : null}
-        {active === 'limits' ? <SettingsUsage usage={report.usage} onToggle={onStatusline} /> : null}
+        {active === 'limits' ? <SettingsUsage usage={report.usage} onToggle={onStatusline} onRefresh={onRefreshUsage} /> : null}
         {active === 'alerts' ? <SettingsAlerts config={config} onChange={onChange} /> : null}
         {active === 'appearance' ? (
           <SettingsAppearance config={config} onChange={onChange} />

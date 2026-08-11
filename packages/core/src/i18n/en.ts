@@ -414,6 +414,7 @@ export const en = {
     usagePoints_other: '{{count}} snapshots',
     usageWindows_one: '{{count}} window',
     usageWindows_other: '{{count}} windows',
+    usageRefresh: 'Recalculate',
     usageWeight: 'cache read weight {{weight}} — measured',
     usageFew: 'not enough data yet, limits stay estimated',
     usageNoClaude: 'Claude Code directory not found: {{path}}',

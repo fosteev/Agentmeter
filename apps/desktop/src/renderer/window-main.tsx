@@ -251,6 +251,14 @@ export function WindowApp() {
   }
 
   /**
+   * Пересчёт веса по журналу (1.9). Хук отсюда не зовётся и позваться не может:
+   * строку состояния рисует Claude Code, и проценты приходят в его ответе API.
+   */
+  const refreshUsage = (): void => {
+    void window.agentmeter['usage:refresh']().then(setConfigReport)
+  }
+
+  /**
    * Обновления (5.4). Ответ на «Проверить» — тот же отчёт, а ход дела приезжает
    * событием `update:state`: процентов скачивания приходят десятки, и слать с
    * каждым весь отчёт о настройках значило бы перерисовывать экран целиком ради
@@ -373,6 +381,7 @@ export function WindowApp() {
           onChange={changeConfig}
           onStartup={changeStartup}
           onStatusline={changeStatusline}
+          onRefreshUsage={refreshUsage}
           onCheckUpdate={checkUpdate}
           onInstallUpdate={installUpdate}
         />

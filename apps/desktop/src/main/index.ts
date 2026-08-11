@@ -414,6 +414,7 @@ async function runSmoke(): Promise<void> {
         // И чужой файл настроек тоже: хук строки состояния ставится согласием
         // человека, а не прогоном проверки.
         () => configReport(runtime),
+        () => configReport(runtime),
         // И в сеть не ходит: проверка обновлений — единственный сетевой вызов
         // продукта, и смоук обязан оставаться проверкой того, что на диске.
         () => configReport(runtime),
@@ -641,6 +642,7 @@ function createHandlers(
   changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
   changeStartup: (enabled: boolean) => ConfigReport,
   changeStatusline: (enabled: boolean) => ConfigReport,
+  refreshUsage: () => ConfigReport,
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
   resizePopup: (height: number) => void,
@@ -671,6 +673,7 @@ function createHandlers(
     // Хук строки состояния пишется в чужой файл настроек, поэтому канал зовётся
     // только кнопкой в окне — и никогда стартом приложения.
     'statusline:set': ({ enabled }) => changeStatusline(enabled),
+    'usage:refresh': () => refreshUsage(),
     'update:check': () => checkUpdate(),
     'update:install': () => installUpdate(),
     'index:rebuild': () => undefined,
@@ -1337,6 +1340,28 @@ function main(): void {
   }
 
   /**
+   * Пересчитать вес по журналу руками (1.9).
+   *
+   * Кнопка нужна ровно затем, зачем «Проверить» у обновлений: автоматический
+   * пересчёт идёт раз в пять минут, и это верно для фона и мучительно сразу
+   * после установки хука, когда хочется увидеть, сошлось ли. Дочитывание снимка
+   * тут же рядом — не ради скорости (опрос трея и так раз в секунду), а чтобы
+   * кнопка означала «посмотри на всё, что есть на диске», а не «пересчитай то,
+   * что успел заметить».
+   *
+   * Позвать сам хук отсюда нельзя, и это не недоделка: строку состояния рисует
+   * Claude Code, проценты приезжают в его ответе API, и наш скрипт, запущенный
+   * руками, получил бы пустой stdin и переписал бы снимок пустотой.
+   */
+  const refreshUsage = (): ConfigReport => {
+    drainSnapshot(runtime!.statusline, runtime!.usage)
+    applyCalibration(recalibrate(runtime!.db, runtime!.usage))
+    const report = configReport(runtime!)
+    emit('config:changed', report)
+    return report
+  }
+
+  /**
    * Автообновление (5.4) — вся механика в одном месте.
    *
    * `electron-updater` подключается лениво, первым обращением: в неустановленном
@@ -1415,6 +1440,7 @@ function main(): void {
         changeConfig,
         changeStartup,
         changeStatusline,
+        refreshUsage,
         () => checkUpdate(),
         installUpdate,
         resizePopup,

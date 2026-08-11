@@ -524,6 +524,7 @@ export const ru = {
     usageWindows_one: '{{count}} окно',
     usageWindows_few: '{{count}} окна',
     usageWindows_many: '{{count}} окон',
+    usageRefresh: 'Пересчитать',
     usageWeight: 'вес чтения кэша {{weight}} — измерено',
     usageFew: 'данных мало, лимиты остаются оценкой',
     usageNoClaude: 'каталог Claude Code не найден: {{path}}',

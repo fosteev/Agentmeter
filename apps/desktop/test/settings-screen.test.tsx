@@ -52,6 +52,7 @@ interface Props {
   'data-theme-choice'?: string
   'data-locale-choice'?: string
   'data-settings-section'?: string
+  'data-usage-action'?: string
 }
 
 /**
@@ -85,7 +86,7 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 describe('экран настроек', () => {
   /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
   it('рисует шесть разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
@@ -98,7 +99,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -112,7 +113,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')
@@ -153,7 +154,7 @@ describe('экран настроек', () => {
   it('тумблер хука зовёт свой канал, а не правку конфига', () => {
     const onToggle = vi.fn()
     const onChange = vi.fn()
-    const tree = SettingsUsage({ usage: report().usage, onToggle })
+    const tree = SettingsUsage({ usage: report().usage, onToggle, onRefresh: () => undefined })
 
     find(tree, 'data-setting', 'statusline').props.onChange!({
       currentTarget: { value: '', checked: true },
@@ -170,7 +171,7 @@ describe('экран настроек', () => {
    * измерение нельзя.
    */
   it('без калибровки вместо веса стоит «данных мало»', () => {
-    const empty = renderToStaticMarkup(SettingsUsage({ usage: report().usage, onToggle: () => undefined }))
+    const empty = renderToStaticMarkup(SettingsUsage({ usage: report().usage, onToggle: () => undefined, onRefresh: () => undefined }))
     expect(empty).toContain('данных мало')
     expect(empty).toContain('0 снимков')
     expect(empty).toContain('хук не установлен')
@@ -179,6 +180,7 @@ describe('экран настроек', () => {
       SettingsUsage({
         usage: { ...report().usage, installed: true, points: 42, windows: 4, weight: 0.18 },
         onToggle: () => undefined,
+        onRefresh: () => undefined,
       }),
     )
     expect(measured).toContain('0.18')
@@ -196,9 +198,26 @@ describe('экран настроек', () => {
       SettingsUsage({
         usage: { ...report().usage, installed: true, chained: 'my-status.sh --short' },
         onToggle: () => undefined,
+        onRefresh: () => undefined,
       }),
     )
     expect(html).toContain('my-status.sh --short')
+  })
+
+  /**
+   * Ловит кнопку пересчёта, повешенную на тумблер или на правку конфига.
+   * Автоматический пересчёт идёт раз в пять минут — кнопка существует ровно
+   * затем, чтобы не ждать их сразу после установки хука.
+   */
+  it('кнопка пересчёта зовёт свой канал, а не тумблер', () => {
+    const onRefresh = vi.fn()
+    const onToggle = vi.fn()
+    const tree = SettingsUsage({ usage: report().usage, onToggle, onRefresh })
+
+    find(tree, 'data-usage-action', 'refresh').props.onClick!()
+
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+    expect(onToggle).not.toHaveBeenCalled()
   })
 
   /** Ловит тумблер приватности, отправляющий чужое поле. */
