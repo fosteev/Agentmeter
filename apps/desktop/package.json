@@ -5,6 +5,11 @@
   "type": "module",
   "main": "dist/main/index.js",
   "description": "Electron: main (окно, трей, IPC) и рендерер (попап, витрина компонентов)",
+  "homepage": "https://github.com/fosteev/Agentmeter",
+  "author": {
+    "name": "Андрей Фостеев",
+    "email": "fosteev3@gmail.com"
+  },
   "scripts": {
     "build": "tsc --build && npm run build:preload && npm run build:web && npm run build:menubar",
     "build:menubar": "node scripts/build-menubar.js",

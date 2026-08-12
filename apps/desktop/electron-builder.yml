@@ -98,6 +98,12 @@ linux:
   executableName: agentmeter
   category: Development
   synopsis: Локальный счётчик токенов для кодинг-агентов
+  # Сопровождающий пакета — из `author` в package.json, там же `homepage`.
+  # Без этих двух полей падает не AppImage, а именно `.deb`: fpm требует
+  # maintainer и homepage, и падает он **после** того, как AppImage уже уехал
+  # в релиз. Черновик от этого выглядит собранным — три платформы, ассеты на
+  # месте, — и отсутствие одной цели замечает только тот, кто её искал.
+  maintainer: 'Андрей Фостеев <fosteev3@gmail.com>'
   target:
     - target: AppImage
       arch: [x64]
