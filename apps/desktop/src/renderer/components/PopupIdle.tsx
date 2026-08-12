@@ -8,7 +8,7 @@ import { PopupLimit } from './PopupLimit.tsx'
 import { PopupShell } from './PopupShell.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
 
-// «Никого нет» — строки 1237–1252 макета. История берётся только из
+// «Никого нет» — строки 1288–1303 макета. История берётся только из
 // `lastAgent`: хранить её ещё и в окне значило бы получить два разных
 // «последних» после перезапуска рендерера.
 

@@ -7,7 +7,7 @@ import { t } from '../format.ts'
 
 export interface TodaySideProps {
   report: DayReport | null
-  /** Переход на «Развёртку» из подписи под полосой (строка 777 макета). */
+  /** Переход на «Развёртку» из подписи под полосой (строка 816 макета). */
   onOpenBreakdown?: () => void
 }
 

@@ -31,7 +31,7 @@ CSV/JSON и состав статей префикса по наведению. 
 | [`docs/roadmap.md`](docs/roadmap.md)                                             | вехи и этапы, **единственное место со статусами**    |
 | [`docs/roadmap/`](docs/roadmap/)                                                 | модели расчётов и брифы этапов в работе              |
 | [`docs/roadmap/design-implementation.md`](docs/roadmap/design-implementation.md) | карта макета по строкам, порядок вёрстки             |
-| [`design/Agentmeter.dc.html`](design/Agentmeter.dc.html)                         | макет, 9 разделов, все экраны                        |
+| [`design/Agentmeter.dc.html`](design/Agentmeter.dc.html)                         | макет, 14 разделов, все экраны                       |
 
 **Статусы этапов не пересказывать здесь** — они живут в
 [`docs/roadmap.md`](docs/roadmap.md), и второе место со статусами разъезжается с
