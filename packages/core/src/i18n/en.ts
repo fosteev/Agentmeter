@@ -56,6 +56,10 @@ export const en = {
     working: 'Working now',
     limits: 'Limits',
     estimate: '≈ estimate',
+    limitsAsked: 'Anthropic · {{ago}}',
+    limitsNever: 'Anthropic · not asked',
+    limitsWaiting: 'Anthropic · waiting {{in}}',
+    limitsAsk: 'Ask Anthropic for limits',
     updatedAgo: 'updated {{ago}}',
     readError: 'Read error',
     brokenLogs: 'Cannot read {{names}} logs',
@@ -431,6 +435,30 @@ export const en = {
     usageFew: 'not enough data yet, limits stay estimated',
     usageNoClaude: 'Claude Code directory not found: {{path}}',
     usageBadSettings: 'the Claude Code settings file does not parse, leaving it alone: {{path}}',
+
+    // Second source for the same percentages (6.3): asking Anthropic directly.
+    oauthOn: 'Ask',
+    oauthOff: 'Do not ask',
+    oauthNote:
+      '— a request to Anthropic with your Claude Code token, every fifteen minutes. Works where there is no status line at all, VS Code for one. This is the second and last network call the app makes',
+    oauthCredsFile: 'token read from .credentials.json',
+    oauthCredsKeychain: 'token read from the keychain',
+    oauthCredsMissing: 'no Claude Code token found — sign in to Claude Code itself',
+    oauthNever: 'not asked yet',
+    oauthFetched: 'asked {{ago}}: 5h — {{fiveHour}}%, 7d — {{weekly}}%',
+    oauthFetchedFew: 'asked {{ago}}, no windows in the reply',
+    oauthRefresh: 'Ask now',
+    oauthRetry: 'Anthropic asked us to wait — next try {{at}}',
+  },
+
+  /** Failures of the second source (6.3). Our wording, never the server's body. */
+  oauth: {
+    noCredentials: 'no Claude Code token found',
+    offline: 'could not reach Anthropic — showing the previous reply',
+    needsLogin: 'Anthropic rejected the token: sign in to Claude Code again',
+    throttled: 'Anthropic asked us to slow down',
+    httpError: 'Anthropic replied {{status}}',
+    badBody: 'the reply from Anthropic does not parse',
   },
 
   cli: {

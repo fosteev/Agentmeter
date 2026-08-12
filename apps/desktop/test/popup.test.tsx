@@ -136,6 +136,57 @@ describe('попап на фикстуре', () => {
  * Заполнение контекстного окна (2.6). В макете его нет, поэтому проверяется не
  * совпадение с эталоном, а два свойства, ради которых этап делался.
  */
+/**
+ * Подпись и кнопка над блоком лимитов (6.3).
+ *
+ * Проверяется здесь то, что легко потерять при правке вёрстки: слово «оценка»
+ * обязано исчезать ровно тогда, когда исчезает оценка, а кнопка, уходящая в
+ * сеть, — появляться только с разрешения человека. Попап открывается одним
+ * движением мыши, в том числе на общем экране, и «спросить Anthropic» без
+ * включённой настройки было бы согласием по умолчанию.
+ */
+describe('подпись над лимитами', () => {
+  const withSource = (source: TraySnapshot['limitsSource'], exact = false): string => {
+    const next: TraySnapshot = {
+      ...snapshot,
+      limitsSource: source,
+      limits: snapshot.limits.map((window) =>
+        window.provider === 'claude' ? { ...window, exact, usedPercent: exact ? 37 : null } : window,
+      ),
+    }
+    return renderToStaticMarkup(<Popup snapshot={next} now={next.at + 2000} />)
+  }
+
+  it('источник выключен — всё как до этапа: «оценка» и никакой кнопки', () => {
+    const html = withSource({ enabled: false })
+    expect(html).toContain('оценка')
+    expect(html).not.toContain('data-limits-action="ask"')
+  })
+
+  it('источник включён — есть кнопка и возраст ответа', () => {
+    const html = withSource({ enabled: true, askedAt: snapshot.at - 120_000 })
+    expect(html).toContain('data-limits-action="ask"')
+    expect(html).toContain('Anthropic · 2 мин назад')
+  })
+
+  it('включён, но не спрашивали — так и написано, а не «0 с назад»', () => {
+    expect(withSource({ enabled: true })).toContain('не спрашивали')
+  })
+
+  it('все проценты от провайдера — слова «оценка» нет', () => {
+    // Окна Codex в фикстуре точны сами по себе, окна Claude здесь помечены
+    // точными: оценке взяться неоткуда, и подпись обязана замолчать.
+    const html = withSource({ enabled: true, askedAt: snapshot.at }, true)
+    expect(html).not.toContain('оценка')
+  })
+
+  it('внутри окна ограничения кнопка мертва и причина названа', () => {
+    const html = withSource({ enabled: true, retryAt: snapshot.at + 300_000 })
+    expect(html).toContain('disabled')
+    expect(html).toContain('ждём')
+  })
+})
+
 describe('указатель контекста в строке агента', () => {
   // background:linear-gradient(to top, var(--claude) 0 89%, var(--s2) 89% 100%)
   const GAUGE = /linear-gradient\(to top, var\(--[a-z0-9]+\) 0 (\d+)%, var\(--s2\) (\d+)% 100%\)/g

@@ -23,6 +23,7 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  net,
   screen,
   type NativeImage,
   type Rectangle,
@@ -49,6 +50,7 @@ import {
   type Calibration,
   type Config,
   type Db,
+  type UsageSnapshot,
   type IngestProgress as CoreIngestProgress,
   type LiveLayerOptions,
   type WindowBounds,
@@ -65,7 +67,7 @@ import type {
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
-import { configReport, setConfig, setStartup, setStatusline } from './config.ts'
+import { configReport, setConfig, setOauth, setStartup, setStatusline } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
@@ -84,6 +86,7 @@ import {
   type StatuslineHost,
   type UsageJournal,
 } from './statusline.ts'
+import { openOauth, pollOauth, type OauthHost, type OauthState } from './oauth.ts'
 import type { AppUpdater } from 'electron-updater'
 import {
   applyAuto,
@@ -199,6 +202,10 @@ interface Runtime {
   usage: UsageJournal
   /** Что не приняла последняя попытка поставить или снять хук. */
   usageProblem?: string
+  /** Чем спрашивать Anthropic про лимиты (6.3). */
+  oauthHost: OauthHost
+  /** Последний ответ Anthropic и окно ограничения. Живёт в памяти: перезапуск спросит заново. */
+  oauth: OauthState
   /**
    * Кто был живым на последнем снимке и насколько срочен — вход закрепления
    * строк в ленте (6.1).
@@ -323,6 +330,19 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     update: initialUpdateState(app.getVersion(), app.isPackaged, config.updates.auto),
     statusline,
     usage: openJournal(statusline),
+    // `net.fetch` из Electron, а не `globalThis.fetch` из Node, и это не вкус:
+    // на `/api/oauth/usage` стоит Cloudflare, который отсекает Node по
+    // отпечатку TLS. Замерено 11 августа одним и тем же токеном и одними и
+    // теми же заголовками: `curl` и Chromium получают 200, `fetch` из Node,
+    // `node:https` и `node:http2` — 403 все трое. Подставь сюда Node — и
+    // источник молча не заработал бы ни у кого, а выглядело бы это как
+    // «Anthropic не принял токен».
+    oauthHost: {
+      claudeHome: sources.claudeHome,
+      platform: process.platform,
+      fetch: net.fetch.bind(net),
+    },
+    oauth: openOauth(),
     issues: ingested?.issues ?? [],
   }
   // Тело хука меняется вместе с приложением, а лежит он в каталоге настроек и
@@ -416,8 +436,14 @@ async function runSmoke(): Promise<void> {
         // человека, а не прогоном проверки.
         () => configReport(runtime),
         () => configReport(runtime),
+        // Второй источник лимитов смоук не включает и не спрашивает: включение
+        // — это согласие человека на сетевой вызов его креденшелами, и прогон
+        // проверки таким согласием не является.
+        () => configReport(runtime),
+        () => Promise.resolve(configReport(runtime)),
         // И в сеть не ходит: проверка обновлений — единственный сетевой вызов
-        // продукта, и смоук обязан оставаться проверкой того, что на диске.
+        // продукта, который смоук мог бы задеть, и он обязан оставаться
+        // проверкой того, что на диске.
         () => configReport(runtime),
         () => undefined,
         // Подгонка высоты — тем же кодом, что в приложении: смоук проверяет её
@@ -652,6 +678,8 @@ function createHandlers(
   changeStartup: (enabled: boolean) => ConfigReport,
   changeStatusline: (enabled: boolean) => ConfigReport,
   refreshUsage: () => ConfigReport,
+  changeOauth: (enabled: boolean) => ConfigReport,
+  refreshOauth: () => Promise<ConfigReport>,
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
   resizePopup: (height: number) => void,
@@ -664,11 +692,18 @@ function createHandlers(
           runtime(),
           buildSnapshot(runtime().db, runtime().live, runtime().config, {
             issues: runtime().issues,
+            oauth: oauthInput(runtime()),
           }),
         ),
       ),
     'limits:get': () =>
-      limitsReport(runtime().db, Date.now(), runtime().config.limits.claude).windows,
+      limitsReport(
+        runtime().db,
+        Date.now(),
+        runtime().config.limits.claude,
+        undefined,
+        runtime().oauth.snapshot,
+      ).windows,
     'config:get': () => configReport(runtime()),
     'today:get': (filter) =>
       buildDayReport(runtime().db, filter, runtime().config.privacy, runtime().liveSessions),
@@ -683,6 +718,10 @@ function createHandlers(
     // только кнопкой в окне — и никогда стартом приложения.
     'statusline:set': ({ enabled }) => changeStatusline(enabled),
     'usage:refresh': () => refreshUsage(),
+    // Второй источник лимитов — тоже только кнопкой: канал включает согласие на
+    // сетевой вызов, и звать его чем-то, кроме явного действия, нельзя.
+    'oauth:set': ({ enabled }) => changeOauth(enabled),
+    'oauth:refresh': () => refreshOauth(),
     'update:check': () => checkUpdate(),
     'update:install': () => installUpdate(),
     'index:rebuild': () => undefined,
@@ -721,6 +760,25 @@ function createHandlers(
 function differs(current: number | null, next: number | null, epsilon: number): boolean {
   if (next === null) return false
   return current === null || Math.abs(current - next) > epsilon
+}
+
+/**
+ * Что снимок трея должен знать про второй источник лимитов (6.3).
+ *
+ * Собирается здесь, а не читается в `buildSnapshot`: тот берёт всё параметрами
+ * и про `Runtime` не знает — иначе его нельзя было бы проверить без запуска
+ * приложения. Сети тут нет и в помине, только уже полученное.
+ */
+function oauthInput(runtime: Runtime): {
+  enabled: boolean
+  snapshot?: UsageSnapshot
+  retryAt?: number
+} {
+  return {
+    enabled: runtime.config.limits.claude.api.enabled,
+    ...(runtime.oauth.snapshot === undefined ? {} : { snapshot: runtime.oauth.snapshot }),
+    ...(runtime.oauth.throttle === undefined ? {} : { retryAt: runtime.oauth.throttle.retryAt }),
+  }
 }
 
 function rememberLive(runtime: Runtime, snapshot: TraySnapshot): TraySnapshot {
@@ -1156,7 +1214,10 @@ function main(): void {
       runtime!,
       withIndexing(
         runtime!,
-        buildSnapshot(runtime!.db, runtime!.live, runtime!.config, { issues: runtime!.issues }),
+        buildSnapshot(runtime!.db, runtime!.live, runtime!.config, {
+          issues: runtime!.issues,
+          oauth: oauthInput(runtime!),
+        }),
       ),
     )
 
@@ -1242,6 +1303,30 @@ function main(): void {
   }
 
   /**
+   * Спросить лимиты у Anthropic, если пора (6.3).
+   *
+   * Стоит на том же опросе трея, что и дочитывание снимка, — и это безопасно
+   * ровно потому, что решение «пора ли» принимает `pollOauth`: выключенная
+   * настройка, свежий кэш, окно ограничения и 401 отсекаются там, до всякой
+   * сети. Опрос идёт раз в секунду, запрос — раз в четверть часа.
+   *
+   * Ошибка сюда не поднимается: не дозвонились — прежний снимок остаётся на
+   * экране со своим возрастом, и падать из-за этого трею незачем.
+   */
+  const collectOauth = (): void => {
+    if (runtime === undefined) return
+    if (!runtime.config.limits.claude.api.enabled) return
+    void pollOauth(runtime.oauthHost, runtime.oauth, runtime.usage, { enabled: true }).then(
+      (fresh) => {
+        if (fresh === null || runtime === undefined) return
+        applyCalibration(recalibrate(runtime.db, runtime.usage))
+        emit('config:changed', configReport(runtime))
+      },
+      () => undefined,
+    )
+  }
+
+  /**
    * Записать измеренное в настройки — но только измеренное.
    *
    * Вес чтения кэша уезжает в конфиг всегда, когда калибровка сошлась: в логах
@@ -1275,6 +1360,10 @@ function main(): void {
     // невосстановимое, как журнал времён жизни рядом. Процент окна, не
     // записанный сегодня, задним числом не узнает никто — ни мы, ни провайдер.
     collectUsage()
+    // Рядом и по той же причине: процент, не спрошенный сегодня, задним числом
+    // не узнает никто. Сеть при этом трогается раз в четверть часа и только при
+    // включённой настройке — решает это `pollOauth`, а не частота опроса.
+    collectOauth()
     const shown = listeners().length > 0
     if (!shown && tick % HIDDEN_POLL_FACTOR !== 0) return
     // При закрытом попапе снимок всё равно снимается, только вшестеро реже.
@@ -1485,6 +1574,41 @@ function main(): void {
   }
 
   /**
+   * Разрешить или запретить запрос лимитов у Anthropic (6.3).
+   *
+   * Запроса отсюда не уходит: тумблер — это согласие, а не команда. Первый
+   * запрос сделает таймер или кнопка «Спросить сейчас».
+   */
+  const changeOauth = (enabled: boolean): ConfigReport => {
+    const report = setOauth(runtime!, enabled)
+    emit('config:changed', report)
+    return report
+  }
+
+  /**
+   * Спросить проценты прямо сейчас (6.3).
+   *
+   * Единственная кнопка продукта, кроме проверки обновлений, которая ходит в
+   * сеть. `force` снимает кэш — но не окно ограничения и не 401: кнопка не
+   * должна уметь ломать чужой запрет, иначе человек, нажимающий её от
+   * нетерпения, продлевает себе тот самый запрет.
+   *
+   * Калибровка пересчитывается только на новом снимке: ответ, совпавший с уже
+   * записанным, ничего к журналу не добавил, а полный проход по запросам Claude
+   * стоит секунд.
+   */
+  const refreshOauth = async (): Promise<ConfigReport> => {
+    const fresh = await pollOauth(runtime!.oauthHost, runtime!.oauth, runtime!.usage, {
+      enabled: runtime!.config.limits.claude.api.enabled,
+      force: true,
+    })
+    if (fresh !== null) applyCalibration(recalibrate(runtime!.db, runtime!.usage))
+    const report = configReport(runtime!)
+    emit('config:changed', report)
+    return report
+  }
+
+  /**
    * Автообновление (5.4) — вся механика в одном месте.
    *
    * `electron-updater` подключается лениво, первым обращением: в неустановленном
@@ -1564,6 +1688,8 @@ function main(): void {
         changeStartup,
         changeStatusline,
         refreshUsage,
+        changeOauth,
+        refreshOauth,
         () => checkUpdate(),
         installUpdate,
         resizePopup,

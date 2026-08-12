@@ -259,6 +259,22 @@ export function WindowApp() {
   }
 
   /**
+   * Второй источник лимитов (6.3): разрешить и спросить.
+   *
+   * Два канала, а не один, и разница между ними существенна для человека:
+   * первый только записывает согласие, второй **уходит в сеть**. Свести их в
+   * «включить и сразу спросить» значило бы отправить токен наружу тем же
+   * щелчком, которым его разрешили отправлять.
+   */
+  const changeOauth = (enabled: boolean): void => {
+    void window.agentmeter['oauth:set']({ enabled }).then(setConfigReport)
+  }
+
+  const refreshOauth = (): void => {
+    void window.agentmeter['oauth:refresh']().then(setConfigReport)
+  }
+
+  /**
    * Обновления (5.4). Ответ на «Проверить» — тот же отчёт, а ход дела приезжает
    * событием `update:state`: процентов скачивания приходят десятки, и слать с
    * каждым весь отчёт о настройках значило бы перерисовывать экран целиком ради
@@ -382,6 +398,8 @@ export function WindowApp() {
           onStartup={changeStartup}
           onStatusline={changeStatusline}
           onRefreshUsage={refreshUsage}
+          onOauth={changeOauth}
+          onRefreshOauth={refreshOauth}
           onCheckUpdate={checkUpdate}
           onInstallUpdate={installUpdate}
         />

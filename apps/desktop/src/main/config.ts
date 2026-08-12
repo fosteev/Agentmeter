@@ -44,6 +44,7 @@ import {
   type StatuslineHost,
   type UsageJournal,
 } from './statusline.ts'
+import { oauthStatus, type OauthHost, type OauthState } from './oauth.ts'
 import type { UpdateState } from './update.ts'
 
 /** Что настройкам нужно от приложения, чтобы примениться без перезапуска. */
@@ -80,6 +81,10 @@ export interface ConfigTarget {
    * «не стоит», не сказав почему, — то есть тумблер щёлкнет и промолчит.
    */
   usageProblem?: string
+  /** Чем спрашивать Anthropic про лимиты (6.3) — пути и `fetch`, не `app`. */
+  oauthHost: OauthHost
+  /** Последний ответ Anthropic, окно ограничения и 401 — всё, что живёт в памяти. */
+  oauth: OauthState
 }
 
 /**
@@ -113,7 +118,34 @@ export function configReport(target: ConfigTarget): ConfigReport {
     startup: readStartup(target.startup),
     update: target.update,
     usage: usageStatus(target.statusline, target.usage, target.usageProblem),
+    usageApi: oauthStatus(target.oauthHost, target.oauth, target.config.limits.claude.api.enabled),
   }
+}
+
+/**
+ * Включить или выключить запрос лимитов у Anthropic (6.3).
+ *
+ * В отличие от хука строки состояния, эта настройка живёт в **нашем** файле —
+ * согласие на сетевой вызов хранить больше негде. И в отличие от остальных
+ * полей конфига, у неё отдельный канал: включение попутно, вместе с темой
+ * оформления, не должно быть возможно.
+ *
+ * Запроса отсюда не делается. Тумблер означает «разрешаю спрашивать», а не
+ * «спроси сейчас»: первый запрос уйдёт по таймеру или по кнопке, когда человек
+ * дочитает, что он включил.
+ */
+export function setOauth(target: ConfigTarget, enabled: boolean): ConfigReport {
+  // Выключение стирает и накопленное в памяти: оставь мы прежний ответ, экран
+  // показывал бы проценты под выключенным тумблером, и выглядело бы это так,
+  // будто приложение продолжает ходить в сеть.
+  if (!enabled) {
+    delete target.oauth.snapshot
+    delete target.oauth.fetchedAt
+    delete target.oauth.problem
+    delete target.oauth.throttle
+    target.oauth.needsLogin = false
+  }
+  return setConfig(target, { limits: { claude: { api: { enabled } } } })
 }
 
 /**

@@ -13,6 +13,7 @@ import {
 } from '@agentmeter/core'
 import { configReport, setConfig, type ConfigTarget } from '../src/main/config.ts'
 import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
+import { openOauth } from '../src/main/oauth.ts'
 
 /**
  * Настройки в main (3.6): запись на диск и применение без перезапуска.
@@ -48,6 +49,17 @@ beforeEach(() => {
     // тест, а происшествие.
     statusline: statuslineHost(),
     usage: openJournal(statuslineHost()),
+    // Второй источник лимитов (6.3) — с `fetch`, который падает при вызове:
+    // отчёт о настройках в сеть не ходит и ходить не должен.
+    oauthHost: {
+      claudeHome: join(dir, 'claude'),
+      platform: 'darwin',
+      fetch: () => {
+        throw new Error('отчёт о настройках в сеть не ходит')
+      },
+      keychain: () => undefined,
+    },
+    oauth: openOauth(),
   }
 })
 

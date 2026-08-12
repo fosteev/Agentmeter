@@ -36,7 +36,7 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
    */
   it('поля снимка ровно те, что в TraySnapshot', () => {
     expect(Object.keys(snapshot).sort()).toEqual(
-      ['agents', 'at', 'limits', 'nearestLimitPercent', 'problems', 'today'].sort(),
+      ['agents', 'at', 'limits', 'limitsSource', 'nearestLimitPercent', 'problems', 'today'].sort(),
     )
     expect(Object.keys(snapshot.today).sort()).toEqual(
       [
@@ -150,6 +150,9 @@ describe('fixtures/popup/snapshot.json — контракт 0.4', () => {
       'at',
       'agents',
       'limits',
+      // Чем подтверждены проценты Claude и можно ли спросить заново (6.3).
+      // Обязательное поле: «источник выключен» — утверждение, а не молчание.
+      'limitsSource',
       'today',
       'nearestLimitPercent',
       'indexing',

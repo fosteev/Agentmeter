@@ -20,6 +20,7 @@ import {
   type LiveAgent as CoreLiveAgent,
   type LiveLayer,
   type Totals,
+  type UsageSnapshot,
   t,
 } from '@agentmeter/core'
 import type { Privacy } from './day.ts'
@@ -39,6 +40,14 @@ export interface SnapshotInput {
   /** Источники, до которых не добрались на последнем обходе. */
   issues?: readonly SourceIssue[]
   at?: number
+  /**
+   * Ответ Anthropic про лимиты и состояние источника (6.3).
+   *
+   * Приезжает сюда, а не читается отсюда: снимок собирается на каждый опрос
+   * трея, а ходить в сеть решает `pollOauth` — раз в четверть часа и только
+   * при включённой настройке.
+   */
+  oauth?: { enabled: boolean; snapshot?: UsageSnapshot; retryAt?: number }
 }
 
 export function buildSnapshot(
@@ -49,7 +58,16 @@ export function buildSnapshot(
 ): TraySnapshot {
   const at = input.at ?? Date.now()
   const liveSnapshot = live.snapshot(at)
-  const limits = limitsReport(db, at, config.limits.claude).windows
+  // Ответ провайдера сильнее нашего расчёта — и по проценту, и по границам
+  // окна: лимит считается по аккаунту, и окно могло начаться с запроса,
+  // которого у нас нет. Подробности — в шапке `replaceClaude`.
+  const limits = limitsReport(
+    db,
+    at,
+    config.limits.claude,
+    undefined,
+    input.oauth?.snapshot,
+  ).windows
   const today = todayReport(db, dayRange(at, config.ui.dayStartsAtHour))
 
   const snapshot: TraySnapshot = {
@@ -59,6 +77,15 @@ export function buildSnapshot(
     today: toDayTotals(today.totals, today.approximate, today.sessions, today.projects.length),
     // Пустой список — это утверждение «источники прочитаны», а не молчание.
     problems: toProblems(input.issues ?? []),
+    // Откуда взялись проценты Claude и можно ли спросить заново (6.3). Поле
+    // есть всегда: «источник выключен» — такое же утверждение, как «спрошено
+    // две минуты назад», и попапу нужно различать их, а не догадываться по
+    // отсутствию.
+    limitsSource: {
+      enabled: input.oauth?.enabled ?? false,
+      ...(input.oauth?.snapshot === undefined ? {} : { askedAt: input.oauth.snapshot.ts }),
+      ...(input.oauth?.retryAt === undefined ? {} : { retryAt: input.oauth.retryAt }),
+    },
   }
 
   // Кого видели последним — только когда сейчас никого нет: попапу это нужно

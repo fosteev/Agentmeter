@@ -115,6 +115,11 @@ function App() {
       onOpenWindow={() => {
         void window.agentmeter['window:open']({ tab: 'today' })
       }}
+      // Ответ приезжает не сюда: канал обновляет состояние в main, а попап
+      // перерисуется следующим снимком — тем же путём, что и всё остальное.
+      onAskLimits={() => {
+        void window.agentmeter['oauth:refresh']()
+      }}
     />
   )
 }

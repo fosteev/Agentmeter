@@ -16,6 +16,7 @@ const CODEX = join(ROOT, 'fixtures/codex')
 const PREFIX = join(ROOT, 'fixtures/prefix')
 const LIMITS = join(ROOT, 'fixtures/limits')
 const USAGE = join(ROOT, 'fixtures/usage')
+const OAUTH = join(ROOT, 'fixtures/oauth')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -413,6 +414,77 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     'usage / есть чужой расход, который обязан быть отброшен',
     foreign > 0 && expected.dropped.length === 2,
     `снимков с чужим расходом ${foreign}, окон в ожидании ${expected.dropped.length}`,
+  )
+}
+
+// ─── oauth: ответ провайдера и целочисленный журнал (6.3) ────────────────────
+//
+// Живой ответ здесь проверяется на то, ради чего он и снят: что проценты в нём
+// **целые**. Придёт день, когда источник начнёт отдавать дробные, — и порог
+// `minIntegerPct` из необходимости станет вредом. Пусть об этом скажет
+// проверка, а не расхождение потолков через месяц.
+{
+  const live = JSON.parse(readFileSync(join(OAUTH, 'usage-live.json'), 'utf8'))
+  const entries: Array<{ kind?: string; percent?: number }> = live.limits ?? []
+  const named = ['session', 'weekly_all'].map((kind) => entries.find((e) => e.kind === kind))
+  check(
+    'oauth / в живом ответе есть оба окна',
+    named.every((entry) => entry !== undefined),
+    named.map((entry) => `${entry?.kind}=${entry?.percent}%`).join(', '),
+  )
+  check(
+    'oauth / проценты целые — на этом стоит minIntegerPct',
+    named.every((entry) => Number.isInteger(entry?.percent)),
+    `${named.map((entry) => entry?.percent).join(' / ')}`,
+  )
+  check(
+    'oauth / в ответе есть окно без границы, которое обязано пропускаться',
+    entries.some((entry) => (entry as { resets_at?: unknown }).resets_at === null),
+    'weekly_scoped без resets_at',
+  )
+
+  const models = JSON.parse(readFileSync(join(OAUTH, 'usage-models.json'), 'utf8'))
+  check(
+    'oauth / есть фикстура с модельными окнами',
+    models.seven_day_opus !== null && models.limits.some((e: { kind: string }) => e.kind === 'weekly_scoped'),
+    'seven_day_opus и активный weekly_scoped на месте',
+  )
+
+  const creds = readFileSync(join(OAUTH, 'credentials-keychain.json'), 'utf8')
+  check(
+    'oauth / токены в фикстуре — заглушки',
+    creds.includes('FIXTURE-NOT-A-REAL-TOKEN'),
+    'настоящих токенов в репозитории нет',
+  )
+
+  // Целочисленный журнал: те же обратные проценты, что в основном эталоне, и
+  // ровно одна точка, которая обязана отсеяться порогом.
+  const journal = readJsonl(join(USAGE, 'journal-oauth.jsonl'))
+  const requests = JSON.parse(readFileSync(join(USAGE, 'requests-oauth.json'), 'utf8')).requests
+  const expectedOauth = JSON.parse(readFileSync(join(USAGE, 'expected-oauth.json'), 'utf8'))
+  const { cacheReadWeight: w, fiveHourCap } = expectedOauth.truth
+  const below: number[] = []
+  const off: string[] = []
+  for (const row of journal) {
+    const sample = row['fiveHour']
+    if (!sample) continue
+    const from = sample.resetsAt - 300 * 60_000
+    const inside = requests.filter((r: any) => r.ts >= from && r.ts <= row.ts)
+    const plain = inside.reduce((s: number, r: any) => s + r.input + r.output + r.cacheWrite, 0)
+    const read = inside.reduce((s: number, r: any) => s + r.cacheRead, 0)
+    const pct = ((plain + w * read) * 100) / fiveHourCap
+    if (sample.pct < 10) below.push(sample.pct)
+    else if (Math.abs(pct - sample.pct) > 1e-9) off.push(`${sample.pct} против ${pct.toFixed(4)}`)
+  }
+  check(
+    'oauth / точки выше порога сходятся с зашитым ответом',
+    off.length === 0 && journal.every((row: any) => row.source === 'oauth'),
+    off.length === 0 ? `w=${w}, потолок ${fiveHourCap}` : off.join('; '),
+  )
+  check(
+    'oauth / есть точка ниже порога — ради неё фикстура и написана',
+    below.length === 1,
+    `точек ниже ${10}%: ${below.join(', ')}`,
   )
 }
 

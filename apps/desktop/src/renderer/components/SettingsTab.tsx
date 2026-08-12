@@ -51,6 +51,14 @@ export interface SettingsTabProps {
   onStatusline: (enabled: boolean) => void
   /** Пересчитать вес по журналу строки состояния прямо сейчас (1.9). */
   onRefreshUsage: () => void
+  /**
+   * Разрешить запрос лимитов у Anthropic (6.3). Четвёртый отдельный канал, и
+   * повод у него самый весомый из четырёх: это согласие на сетевой вызов
+   * креденшелами Claude Code.
+   */
+  onOauth: (enabled: boolean) => void
+  /** Спросить проценты прямо сейчас — единственная кнопка настроек, идущая в сеть. */
+  onRefreshOauth: () => void
   /** Проверить обновления руками и поставить скачанное (5.4). */
   onCheckUpdate: () => void
   onInstallUpdate: () => void
@@ -64,6 +72,8 @@ export function SettingsTab({
   onStartup,
   onStatusline,
   onRefreshUsage,
+  onOauth,
+  onRefreshOauth,
   onCheckUpdate,
   onInstallUpdate,
   section = 'sources',
@@ -129,7 +139,16 @@ export function SettingsTab({
           <SettingsSources sources={report.sources} problems={report.problems} />
         ) : null}
         {active === 'limits' ? <SettingsLimits config={config} onChange={onChange} /> : null}
-        {active === 'limits' ? <SettingsUsage usage={report.usage} onToggle={onStatusline} onRefresh={onRefreshUsage} /> : null}
+        {active === 'limits' ? (
+          <SettingsUsage
+            usage={report.usage}
+            api={report.usageApi}
+            onToggle={onStatusline}
+            onRefresh={onRefreshUsage}
+            onApiToggle={onOauth}
+            onApiRefresh={onRefreshOauth}
+          />
+        ) : null}
         {active === 'alerts' ? <SettingsAlerts config={config} onChange={onChange} /> : null}
         {active === 'appearance' ? (
           <SettingsAppearance config={config} onChange={onChange} />

@@ -63,6 +63,9 @@
       "forecast": null
     }
   ],
+  "limitsSource": {
+    "enabled": false
+  },
   "today": {
     "input": {
       "value": 12324014,

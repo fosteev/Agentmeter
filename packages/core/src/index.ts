@@ -25,13 +25,23 @@ export { buildClaudeWindows, buildCodexWindows, currentWindows } from './limits/
 export type { LimitRequest } from './limits/index.ts'
 export {
   CALIBRATION,
+  DEFAULT_RETRY_MS,
+  OAUTH_BETA_HEADER,
+  OAUTH_USAGE_URL,
+  SNAPSHOT_TTL_MS,
   appendUsageJournal,
   calibrate,
+  parseCredentials,
+  parseOauthUsage,
+  parseRetryAfter,
   parseStatusLine,
   readUsageJournal,
+  throttleFrom,
+  throttled,
   usageKeys,
 } from './limits/index.ts'
 export type {
+  Throttle,
   Calibration,
   CalibrationBlocker,
   DroppedWindow,

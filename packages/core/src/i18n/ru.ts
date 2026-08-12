@@ -64,6 +64,10 @@ export const ru = {
     working: 'Сейчас работают',
     limits: 'Лимиты',
     estimate: '≈ оценка',
+    limitsAsked: 'Anthropic · {{ago}}',
+    limitsNever: 'Anthropic · не спрашивали',
+    limitsWaiting: 'Anthropic · ждём {{in}}',
+    limitsAsk: 'Спросить лимиты у Anthropic',
     updatedAgo: 'обновлено {{ago}}',
     readError: 'Ошибка чтения',
     brokenLogs: 'Не читаются логи {{names}}',
@@ -544,6 +548,38 @@ export const ru = {
     usageFew: 'данных мало, лимиты остаются оценкой',
     usageNoClaude: 'каталог Claude Code не найден: {{path}}',
     usageBadSettings: 'файл настроек Claude Code не разбирается, трогать его не будем: {{path}}',
+
+    // Второй источник тех же процентов (6.3): запрос к Anthropic. Слово «сеть»
+    // стоит в первой же строке намеренно — это единственное место продукта,
+    // откуда наружу уходят креденшелы, и узнать об этом человек должен до
+    // того, как щёлкнет тумблером, а не из README.
+    oauthOn: 'Спрашивать',
+    oauthOff: 'Не спрашивать',
+    oauthNote:
+      '— запрос к Anthropic токеном Claude Code, раз в четверть часа. Работает там, где строки состояния нет вовсе, — например в VS Code. Это второй и последний сетевой вызов приложения',
+    oauthCredsFile: 'токен взят из .credentials.json',
+    oauthCredsKeychain: 'токен взят из связки ключей',
+    oauthCredsMissing: 'токен Claude Code не найден — авторизуйтесь в самом Claude Code',
+    oauthNever: 'ещё не спрашивали',
+    oauthFetched: 'спрошено {{ago}}: 5 ч — {{fiveHour}}%, 7 дней — {{weekly}}%',
+    oauthFetchedFew: 'спрошено {{ago}}, окон в ответе нет',
+    oauthRefresh: 'Спросить сейчас',
+    oauthRetry: 'Anthropic просит подождать — следующая попытка {{at}}',
+  },
+
+  /**
+   * Отказы второго источника (6.3).
+   *
+   * Все до одного — **наш пересказ**, а не то, что прислал сервер: тело ответа
+   * человеку не показывается никогда, в него попадает и эхо запроса.
+   */
+  oauth: {
+    noCredentials: 'токен Claude Code не найден',
+    offline: 'не дозвонились до Anthropic — показан прежний ответ',
+    needsLogin: 'Anthropic не принял токен: авторизуйтесь в Claude Code заново',
+    throttled: 'Anthropic просит спрашивать реже',
+    httpError: 'Anthropic ответил {{status}}',
+    badBody: 'ответ Anthropic не разбирается',
   },
 
   /** CLI: заголовки колонок и сообщения команд. */

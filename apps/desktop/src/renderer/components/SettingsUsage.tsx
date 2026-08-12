@@ -1,5 +1,6 @@
-import type { UsageHookStatus } from '@agentmeter/ipc'
+import type { UsageApiStatus, UsageHookStatus } from '@agentmeter/ipc'
 import { t } from '../format.ts'
+import { ago, span } from '../time.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 import { Switch } from './Switch.tsx'
 
@@ -21,6 +22,15 @@ import { Switch } from './Switch.tsx'
  */
 export interface SettingsUsageProps {
   usage: UsageHookStatus
+  /**
+   * Второй источник тех же процентов (6.3) — запрос к Anthropic.
+   *
+   * Стоит второй карточкой в том же блоке, а не в отдельном разделе, потому что
+   * отвечает на тот же вопрос («откуда берётся настоящий процент») и заменяет
+   * первый источник там, где его нет: в VS Code строки состояния не рисуется
+   * вовсе, и карточка выше в таком окружении бесполезна.
+   */
+  api: UsageApiStatus
   onToggle: (enabled: boolean) => void
   /**
    * Пересчитать вес по журналу прямо сейчас.
@@ -30,9 +40,29 @@ export interface SettingsUsageProps {
    * уже собранное — потому и называется «Пересчитать», а не «Обновить».
    */
   onRefresh: () => void
+  /** Разрешить или запретить запрос к Anthropic (6.3). */
+  onApiToggle: (enabled: boolean) => void
+  /**
+   * Спросить проценты прямо сейчас.
+   *
+   * В отличие от «Пересчитать» выше, эта кнопка **ходит в сеть** — потому и
+   * называется «Спросить сейчас». Разница в словах здесь не стилистическая:
+   * человек вправе понимать, какая из двух кнопок отправит его токен наружу.
+   */
+  onApiRefresh: () => void
+  /** «Сейчас» для возраста снимка. Параметром — иначе витрину не проверить. */
+  now?: number
 }
 
-export function SettingsUsage({ usage, onToggle, onRefresh }: SettingsUsageProps) {
+export function SettingsUsage({
+  usage,
+  api,
+  onToggle,
+  onRefresh,
+  onApiToggle,
+  onApiRefresh,
+  now = Date.now(),
+}: SettingsUsageProps) {
   const collected = t('settings.usageCollected', {
     points: t('settings.usagePoints', { count: usage.points }),
     windows: t('settings.usageWindows', { count: usage.windows }),
@@ -76,8 +106,81 @@ export function SettingsUsage({ usage, onToggle, onRefresh }: SettingsUsageProps
           </button>
         </div>
       </div>
+
+      <div style={CARD}>
+        <Switch
+          name="oauth"
+          label={api.enabled ? t('settings.oauthOn') : t('settings.oauthOff')}
+          note={t('settings.oauthNote')}
+          checked={api.enabled}
+          onChange={onApiToggle}
+        />
+
+        {api.enabled ? (
+          <>
+            <span style={NOTE} data-oauth-credentials={api.credentials}>
+              {t(CREDENTIALS[api.credentials])}
+            </span>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <span style={NOTE} data-oauth-state="">
+                {fetched(api, now)}
+              </span>
+              <button type="button" data-usage-action="ask" onClick={onApiRefresh} style={CHIP}>
+                {t('settings.oauthRefresh')}
+              </button>
+            </div>
+
+            {api.problem === undefined ? null : (
+              <span style={{ ...NOTE, color: 'var(--alarm)' }} data-oauth-problem="">
+                {api.problem}
+              </span>
+            )}
+          </>
+        ) : null}
+      </div>
     </div>
   )
+}
+
+/** Ключи, а не подписи: `t()` на верхнем уровне застыл бы на языке загрузки. */
+const CREDENTIALS = {
+  file: 'settings.oauthCredsFile',
+  keychain: 'settings.oauthCredsKeychain',
+  missing: 'settings.oauthCredsMissing',
+} as const satisfies Record<UsageApiStatus['credentials'], string>
+
+/**
+ * Что показать про последний ответ.
+ *
+ * Возраст обязателен, и это не украшение: снимок минутной давности и снимок
+ * часовой выглядят одинаково, пока не написано, который из них какой, — а
+ * запрос идёт раз в четверть часа, и при отказе на экране остаётся прежний.
+ *
+ * Действующее окно ограничения важнее возраста: пока оно не истекло, кнопка
+ * ничего не даст, и человек должен видеть причину, а не думать, что она сломана.
+ */
+function fetched(api: UsageApiStatus, now: number): string {
+  if (api.retryAt !== undefined && api.retryAt > now) {
+    return t('settings.oauthRetry', { at: span(api.retryAt - now) })
+  }
+  if (api.fetchedAt === undefined) return t('settings.oauthNever')
+  const when = ago(Math.max(0, now - api.fetchedAt))
+  if (api.fiveHourPct === undefined && api.weeklyPct === undefined) {
+    return t('settings.oauthFetchedFew', { ago: when })
+  }
+  return t('settings.oauthFetched', {
+    ago: when,
+    fiveHour: api.fiveHourPct ?? 0,
+    weekly: api.weeklyPct ?? 0,
+  })
 }
 
 const CARD = {

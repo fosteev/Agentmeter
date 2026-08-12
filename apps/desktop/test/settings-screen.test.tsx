@@ -41,6 +41,29 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
       weight: null,
       hookVersion: 1,
     },
+    // Второй источник лимитов (6.3): по умолчанию выключен, и экран обязан
+    // выглядеть так же, как до этапа, — карточка есть, а спрашивать нечего.
+    usageApi: { enabled: false, credentials: 'missing', needsLogin: false },
+  }
+}
+
+/**
+ * Заготовка свойств карточки лимитов.
+ *
+ * Второй источник (6.3) здесь всегда выключен: проверки ниже про хук строки
+ * состояния, и включённый запрос дорисовал бы им вторую карточку с процентами.
+ */
+function usageProps(
+  over: Partial<Parameters<typeof SettingsUsage>[0]>,
+): Parameters<typeof SettingsUsage>[0] {
+  return {
+    usage: report().usage,
+    api: report().usageApi,
+    onToggle: () => undefined,
+    onRefresh: () => undefined,
+    onApiToggle: () => undefined,
+    onApiRefresh: () => undefined,
+    ...over,
   }
 }
 
@@ -86,7 +109,7 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 describe('экран настроек', () => {
   /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
   it('рисует шесть разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
@@ -99,7 +122,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -113,7 +136,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')
@@ -154,7 +177,7 @@ describe('экран настроек', () => {
   it('тумблер хука зовёт свой канал, а не правку конфига', () => {
     const onToggle = vi.fn()
     const onChange = vi.fn()
-    const tree = SettingsUsage({ usage: report().usage, onToggle, onRefresh: () => undefined })
+    const tree = SettingsUsage(usageProps({ onToggle }))
 
     find(tree, 'data-setting', 'statusline').props.onChange!({
       currentTarget: { value: '', checked: true },
@@ -171,13 +194,14 @@ describe('экран настроек', () => {
    * измерение нельзя.
    */
   it('без калибровки вместо веса стоит «данных мало»', () => {
-    const empty = renderToStaticMarkup(SettingsUsage({ usage: report().usage, onToggle: () => undefined, onRefresh: () => undefined }))
+    const empty = renderToStaticMarkup(SettingsUsage(usageProps({})))
     expect(empty).toContain('данных мало')
     expect(empty).toContain('0 снимков')
     expect(empty).toContain('хук не установлен')
 
     const measured = renderToStaticMarkup(
       SettingsUsage({
+        ...usageProps({}),
         usage: { ...report().usage, installed: true, points: 42, windows: 4, weight: 0.18 },
         onToggle: () => undefined,
         onRefresh: () => undefined,
@@ -196,6 +220,7 @@ describe('экран настроек', () => {
   it('чужая команда строки состояния названа вслух', () => {
     const html = renderToStaticMarkup(
       SettingsUsage({
+        ...usageProps({}),
         usage: { ...report().usage, installed: true, chained: 'my-status.sh --short' },
         onToggle: () => undefined,
         onRefresh: () => undefined,
@@ -212,7 +237,7 @@ describe('экран настроек', () => {
   it('кнопка пересчёта зовёт свой канал, а не тумблер', () => {
     const onRefresh = vi.fn()
     const onToggle = vi.fn()
-    const tree = SettingsUsage({ usage: report().usage, onToggle, onRefresh })
+    const tree = SettingsUsage(usageProps({ onToggle, onRefresh }))
 
     find(tree, 'data-usage-action', 'refresh').props.onClick!()
 

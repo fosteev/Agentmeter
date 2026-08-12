@@ -163,12 +163,27 @@ export interface ClaudeLimits {
   cacheReadWeight: number | null
   /** Название плана — только для подписи в интерфейсе. */
   plan: string | null
+  /**
+   * Спрашивать проценты у Anthropic напрямую (6.3).
+   *
+   * **Второй и последний сетевой вызов продукта**, и единственный, который
+   * идёт креденшелами Claude Code. Поэтому `false` по умолчанию: включение —
+   * это согласие, а согласие по умолчанию не бывает. Выключенная настройка
+   * снимает вызов целиком, а не «спрашивает пореже».
+   */
+  api: { enabled: boolean }
 }
 
 export const DEFAULT_CONFIG: Config = {
   sources: { claudeHome: null, codexHome: null, extra: [] },
   limits: {
-    claude: { fiveHourCap: null, weeklyCap: null, cacheReadWeight: null, plan: null },
+    claude: {
+      fiveHourCap: null,
+      weeklyCap: null,
+      cacheReadWeight: null,
+      plan: null,
+      api: { enabled: false },
+    },
     codex: { enabled: true },
   },
   alerts: {

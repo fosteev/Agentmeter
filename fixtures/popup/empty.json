@@ -2,6 +2,9 @@
   "at": 1786439520000,
   "agents": [],
   "limits": [],
+  "limitsSource": {
+    "enabled": false
+  },
   "today": {
     "input": {
       "value": 0,

@@ -3,6 +3,7 @@ import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { AGENT_STATUS, AgentRow } from './AgentRow.tsx'
+import { LimitsAside } from './LimitsAside.tsx'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
 import { PopupEmpty } from './PopupEmpty.tsx'
@@ -30,6 +31,12 @@ export interface PopupProps {
    */
   now?: number | undefined
   onOpenWindow?: (() => void) | undefined
+  /**
+   * Спросить лимиты у Anthropic (6.3). Кнопка рисуется только при включённом
+   * источнике, поэтому проп необязателен: в попапе без него блок лимитов
+   * выглядит ровно так, как до этапа.
+   */
+  onAskLimits?: (() => void) | undefined
 }
 
 /** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
@@ -58,7 +65,7 @@ const ROW = 42
 /** Сколько строк списка видно даже в самом тесном случае. */
 const MIN_ROWS = 2
 
-export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) {
+export function Popup({ snapshot, now = Date.now(), onOpenWindow, onAskLimits }: PopupProps) {
   if (snapshot.problems.length > 0) {
     return <PopupProblem snapshot={snapshot} onOpenWindow={onOpenWindow} />
   }
@@ -79,7 +86,7 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
     return <PopupIdle snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} />
   }
 
-  const { at, agents, limits, today } = snapshot
+  const { at, agents, limits, limitsSource, today } = snapshot
 
   return (
     <PopupShell>
@@ -157,15 +164,12 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow }: PopupProps) 
             title={t('popup.limits')}
             padding="16px 14px 4px"
             aside={
-              <span
-                style={{
-                  fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: 10,
-                  color: 'var(--tx3)',
-                }}
-              >
-                {t('popup.estimate')}
-              </span>
+              <LimitsAside
+                limits={limits}
+                source={limitsSource}
+                now={now}
+                onAsk={onAskLimits}
+              />
             }
           />
 

@@ -58,11 +58,27 @@ certificates yet. In practice:
 
 ## What it does with your data
 
-Nothing leaves your machine. Logs are read from disk, parsed locally and kept
-in a SQLite index inside the app's config directory.
+Nothing leaves your machine unless you ask it to. Logs are read from disk,
+parsed locally and kept in a SQLite index inside the app's config directory.
 
-**The only network call is the update check** (every six hours, against this
-repository's releases). It can be turned off in Settings → Application.
+**There are exactly two network calls, and both are switches you control.**
+
+1. **The update check** — every six hours, against this repository's releases.
+   On by default, turned off in Settings → Application.
+2. **Asking Anthropic for your limit percentages** — **off by default**, turned
+   on in Settings → Limits. When on, the app reads your existing Claude Code
+   token (from `~/.claude/.credentials.json` or the macOS keychain) and asks
+   `api.anthropic.com` how much of your 5-hour and weekly windows you have used,
+   at most once every fifteen minutes. Nothing else is sent, nothing is written
+   back: the app never refreshes or rewrites your credentials, and your token is
+   never logged or shown on screen.
+
+Why the second one exists: Claude does not write the limit percentage into its
+logs at all. The status line hook (Settings → Limits) gets it without any
+network — but the status line only exists in the terminal, so in VS Code and
+other editors there is nothing to hook. Asking directly is the only way to know
+the real number there, which is why it is offered — and why you have to say yes
+first.
 
 Two privacy switches are there as well: “hide prompt texts” and “hide file
 paths”. Both remove data **from the app's response**, not from the markup — a

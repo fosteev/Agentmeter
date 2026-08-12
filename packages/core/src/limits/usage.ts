@@ -45,6 +45,16 @@ export interface UsageSnapshot {
   /** Когда снимок записан приложением, мс. */
   ts: number
   sessionId: string
+  /**
+   * Откуда снимок (6.3). Отсутствие поля читается как `statusline`: журнал
+   * старше второго источника, и переписывать накопленное ради нового поля
+   * значит потерять точки, которых больше неоткуда взять.
+   *
+   * Различать источники приходится не из любви к учёту: у строки состояния
+   * проценты дробные, у `/api/oauth/usage` — целые, и одна точка с
+   * квантованием способна заблокировать всю калибровку (`minIntegerPct`).
+   */
+  source?: 'statusline' | 'oauth'
   cliVersion?: string
   /**
    * Размер контекстного окна из того же JSON. Пишется сразу и не применяется
@@ -142,6 +152,7 @@ function parseJournalLine(line: string): UsageSnapshot | undefined {
     const ts = finite(raw['ts'])
     if (ts === undefined) return undefined
     const snapshot: UsageSnapshot = { ts, sessionId: text(raw['sessionId']) ?? '' }
+    if (raw['source'] === 'oauth' || raw['source'] === 'statusline') snapshot.source = raw['source']
     const version = text(raw['cliVersion'])
     if (version !== undefined) snapshot.cliVersion = version
     const context = finite(raw['contextWindowSize'])
@@ -217,6 +228,22 @@ export const CALIBRATION = {
    * доля от него ловила бы округление.
    */
   foreignFloorPp: 1,
+  /**
+   * Наименьший процент, при котором берётся снимок из `/api/oauth/usage` (6.3).
+   *
+   * Этот источник отдаёт **целые** проценты — `19`, а не `19.0000001`, — то
+   * есть каждая его точка несёт квантование до ±0.5 п.п. При `p = 50` это 1%
+   * относительной ошибки, при `p = 5` — уже 10%, и такая точка не столько
+   * добавляет знание, сколько тянет решение на себя.
+   *
+   * Десятка здесь не круглое число из головы, а замер: в
+   * `fixtures/usage/expected-oauth.json` одна точка с истинными 5.4%,
+   * приехавшая пятёркой, разводит потолки соседних окон на **7.66%** при
+   * пороге 5% — то есть калибровка не теряет точность, а не состоится вовсе.
+   *
+   * Дробных снимков (`statusline`) порог не касается: у них квантования нет.
+   */
+  minIntegerPct: 10,
 } as const
 
 /** Точка выборки: наблюдённый процент против нашей суммы внутри того же окна. */
@@ -386,6 +413,10 @@ function buildPoints(
   for (const snapshot of [...snapshots].sort((left, right) => left.ts - right.ts)) {
     const sample = snapshot[kind]
     if (!sample || sample.pct <= 0) continue
+    // Целочисленный источник на малом проценте: см. `minIntegerPct`. Точка не
+    // отбрасывается как чужая и не попадает в `dropped` — она просто не
+    // наблюдение, а округление, и объяснять её человеку нечем.
+    if (snapshot.source === 'oauth' && sample.pct < CALIBRATION.minIntegerPct) continue
     const startsAt = sample.resetsAt - windowMs
     const spend = totals.between(startsAt, snapshot.ts)
     const point: UsagePoint = {

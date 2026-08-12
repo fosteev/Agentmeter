@@ -156,6 +156,7 @@ describe('конфиг', () => {
       weeklyCap: 480_000_000,
       cacheReadWeight: 0.1,
       plan: 'max20',
+      api: { enabled: false },
     }
     saveConfig(cfg, path())
     expect(loadConfig(path()).config).toEqual(cfg)

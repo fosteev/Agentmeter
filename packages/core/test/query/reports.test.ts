@@ -185,6 +185,75 @@ describe('query reports', () => {
   })
 
   /**
+   * Ловит главное свойство 6.3: слово провайдера сильнее нашего расчёта.
+   *
+   * И не только по проценту. Наши границы окна — догадка («первое обращение
+   * после истечения прошлого»), и на живой машине она промахнулась на три часа
+   * при том, что пятичасовой паузы в запросах не было вовсе: лимит считается по
+   * аккаунту, а окно могло начаться с запроса, которого у нас нет. Поэтому окно
+   * заменяется целиком — иначе процент относился бы к одному интервалу, а
+   * «сброс через» к другому.
+   */
+  it('ответ провайдера заменяет окно Claude целиком — и процент, и границы', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    const at = Date.parse('2026-07-28T13:00:00.000Z')
+    const resetsAt = Date.parse('2026-07-28T16:00:00.000Z')
+
+    const ours = limitsReport(db, at, config.limits.claude).windows.find(
+      (window) => window.provider === 'claude' && window.kind === 'fiveHour',
+    )
+    expect(ours?.resetsAt).not.toBe(resetsAt)
+
+    const report = limitsReport(db, at, config.limits.claude, undefined, {
+      ts: at,
+      sessionId: '',
+      source: 'oauth',
+      fiveHour: { pct: 37, resetsAt },
+    })
+    const claude = report.windows.filter(
+      (window) => window.provider === 'claude' && window.kind === 'fiveHour',
+    )
+
+    expect(claude).toHaveLength(1)
+    expect(claude[0]).toMatchObject({
+      usedPercent: 37,
+      exact: true,
+      resetsAt,
+      startsAt: resetsAt - 300 * 60_000,
+      unavailableReason: null,
+    })
+  })
+
+  it('окна, о которых провайдер молчит, остаются нашими', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    const at = Date.parse('2026-07-28T13:00:00.000Z')
+
+    const report = limitsReport(db, at, config.limits.claude, undefined, {
+      ts: at,
+      sessionId: '',
+      source: 'oauth',
+      fiveHour: { pct: 37, resetsAt: Date.parse('2026-07-28T16:00:00.000Z') },
+    })
+
+    // Недельного окна в ответе нет — наше остаётся на месте со своим «не
+    // откалибровано», а не исчезает и не притворяется точным.
+    const weekly = report.windows.filter(
+      (window) => window.provider === 'claude' && window.kind === 'weekly',
+    )
+    expect(weekly.every((window) => !window.exact && window.usedPercent === null)).toBe(true)
+    // И чужой провайдер не задет вовсе.
+    expect(report.windows.some((window) => window.provider === 'codex')).toBe(
+      limitsReport(db, at, config.limits.claude).windows.some(
+        (window) => window.provider === 'codex',
+      ),
+    )
+  })
+
+  /**
    * Ловит прогноз, посчитанный из воздуха: пока процент окна неизвестен,
    * продлевать в будущее нечего. У Claude это состояние сегодня штатное — вес
    * `cache_read` не откалиброван (1.9), — и «упрёшься через 40 минут» рядом с

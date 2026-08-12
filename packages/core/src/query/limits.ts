@@ -1,10 +1,14 @@
 import type { ClaudeLimits } from '../config/types.ts'
 import type { Db, SqlValue } from '../index/db.ts'
 import { readLimitWindows } from '../index/limits.ts'
+
 import { DEFAULT_RATE_WINDOW_MS, perMinute } from '../live/rate.ts'
+import type { UsageSnapshot } from '../limits/usage.ts'
 import type { LimitWindow } from '../sources/types.ts'
 import { sourceCount } from './today.ts'
 import type { LimitForecast, LimitReportRow, LimitsReport } from './types.ts'
+
+const MINUTE_MS = 60_000
 
 /**
  * Отчёт только читает. Пересборку окон делает тот, кто менял вход: `ingestAll`
@@ -19,8 +23,9 @@ export function limitsReport(
   at: number,
   limits: ClaudeLimits,
   rateWindowMs = DEFAULT_RATE_WINDOW_MS,
+  provider?: UsageSnapshot,
 ): LimitsReport {
-  const windows = readLimitWindows(db)
+  const windows = replaceClaude(readLimitWindows(db), provider)
   return {
     emptyIndex: sourceCount(db) === 0,
     at,
@@ -32,6 +37,59 @@ export function limitsReport(
         forecast: forecastFor(db, window, at, rateWindowMs),
       })),
   }
+}
+
+/**
+ * Ответ провайдера сильнее нашего расчёта — и по проценту, и по границам (6.3).
+ *
+ * Процент понятно почему: у Claude в логах его нет вовсе, наш выводится из
+ * потолка и веса `cache_read`, а до калибровки 1.9 он попросту `null`.
+ *
+ * Границы — менее очевидно и потому замерено. Наше окно якорится на первом
+ * запросе после истечения прошлого, и на живой машине 11 августа это дало
+ * 16:40–21:40 UTC против 19:40–00:40 у провайдера: ровно три часа мимо, при
+ * том что пятичасовой паузы в запросах не было вовсе (самая большая — 82
+ * минуты). Причина не в разборе, а в том, что **лимит считается по аккаунту**:
+ * окно могло начаться с запроса, которого у нас нет, — с другой машины, из
+ * веба, из Claude Desktop. Провайдер видит весь аккаунт, мы одну машину, и
+ * спорить с ним нашей догадкой значит показывать человеку время сброса, до
+ * которого он доработает и упрётся.
+ *
+ * Поэтому окна Claude **заменяются целиком**, а не дополняются процентом:
+ * половина от провайдера и половина от нас — это строка, у которой процент
+ * относится к одному интервалу, а «сброс через» к другому.
+ */
+function replaceClaude(
+  windows: readonly LimitWindow[],
+  provider: UsageSnapshot | undefined,
+): LimitWindow[] {
+  if (provider === undefined) return [...windows]
+  const fromProvider: LimitWindow[] = []
+  for (const [kind, minutes] of [
+    ['fiveHour', 300],
+    ['weekly', 10_080],
+  ] as const) {
+    const sample = provider[kind]
+    if (!sample) continue
+    fromProvider.push({
+      provider: 'claude',
+      kind,
+      windowMinutes: minutes,
+      startsAt: sample.resetsAt - minutes * MINUTE_MS,
+      resetsAt: sample.resetsAt,
+      usedPercent: sample.pct,
+      // Момент **наблюдения**, а не последнего запроса: процент снят тогда, и
+      // возраст снимка человек видит рядом с кнопкой «спросить».
+      observedAt: provider.ts,
+      exact: true,
+    })
+  }
+  if (fromProvider.length === 0) return [...windows]
+  const kinds = new Set(fromProvider.map((window) => window.kind))
+  const kept = windows.filter(
+    (window) => window.provider !== 'claude' || !kinds.has(window.kind as 'fiveHour' | 'weekly'),
+  )
+  return [...kept, ...fromProvider]
 }
 
 /**
