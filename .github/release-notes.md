@@ -2,10 +2,13 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## What it shows
 
-- **Who is working right now** — agent, project, state, pace in tokens per
-  minute, and how much of the context window is left.
-- **Limits** — the 5-hour and weekly windows. Codex reports exact percentages;
-  Claude's are marked `≈` until calibration has enough observations.
+- **Who is working right now** — agent, project, pace in tokens per minute, and
+  how much of the context window is left. Only agents actually working: chats
+  waiting for you sit in the day's feed, not in that list.
+- **Limits** — the 5-hour, weekly and monthly windows, split into provider tabs;
+  the popup opens on the most alarming one. Codex reports exact percentages;
+  Claude's are marked `≈` until calibration has enough observations, unless you
+  let the app ask Anthropic directly (off by default, see below).
 - **The whole day** — a feed of tasks with an expandable card: request
   timeline, token kinds, tools, files touched, subagents. Running sessions are
   pinned to the top with what they are working on right now.
@@ -18,9 +21,17 @@ English and Russian, following the system language.
 
 ## What it does with your data
 
-Everything is computed from the logs already on your disk. The only network
-call is the update check, every six hours against this repository's releases —
-it can be turned off in Settings → Application.
+Everything is computed from the logs already on your disk. The app makes three
+network calls in total, and every one of them has its own switch:
+
+- the update check, every six hours against this repository's releases;
+- asking Anthropic for the real limit percentages of the account you are
+  already signed into — **off by default**;
+- the same for OpenAI — **off by default**.
+
+Both limit sources reuse the token the CLI has already stored on your machine,
+read-only: nothing is sent anywhere else, and no token is ever refreshed or
+rewritten.
 
 ## Installing
 
