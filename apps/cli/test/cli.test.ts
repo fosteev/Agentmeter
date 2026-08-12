@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -188,6 +189,29 @@ describe('agentmeter CLI', () => {
 
     expect(execute('doctor', '--json')).toBe(1)
     expect((JSON.parse(stdout[0]!) as { parserErrors: number }).parserErrors).toBe(1)
+  })
+
+  /**
+   * Единственная проверка, которая запускает CLI как программу.
+   *
+   * Все остальные зовут `run()` напрямую и точку входа не трогают вовсе — а
+   * ломается именно она. Сравнение шло со строкой `file://${process.argv[1]}`,
+   * и на Windows оно ложно всегда: слева `file:///G:/…`, справа `file://G:\…`.
+   * `run()` не звался, команда печатала пустоту и выходила нулём — то есть CLI
+   * не работал целиком, при полностью зелёном наборе тестов.
+   *
+   * Проверяется `breakdown` из списка флагов, а не переведённая строка: `--help`
+   * печатается до чтения конфига, на языке системы, и ловить им локаль машины
+   * значит не проверять ничего.
+   */
+  it('запускается как программа, а не только через run()', () => {
+    const main = fileURLToPath(new URL('../src/main.ts', import.meta.url))
+    const result = spawnSync(process.execPath, ['--experimental-strip-types', main, '--help'], {
+      encoding: 'utf8',
+    })
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('breakdown')
   })
 
   it('неверные аргументы возвращают 2', () => {

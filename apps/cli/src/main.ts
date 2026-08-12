@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   breakdownReport,
   claudeHome,
@@ -428,6 +429,12 @@ function removeIndex(path: string): void {
 
 class CliArgumentError extends Error {}
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// URL собирается `pathToFileURL`, а не шаблоном. Шаблон совпадал только на
+// POSIX: на Windows `process.argv[1]` — это `G:\путь\main.ts`, и слева стоит
+// `file:///G:/путь/main.ts`, а справа получалось `file://G:\путь\main.ts`.
+// Равенства не бывало никогда, `run()` не звался, и любая команда печатала
+// пустоту с кодом 0 — CLI не работал на Windows целиком.
+const entry = process.argv[1]
+if (entry !== undefined && import.meta.url === pathToFileURL(entry).href) {
   process.exit(run(process.argv.slice(2)))
 }
