@@ -1,5 +1,14 @@
 A token meter for coding agents — Claude Code and Codex — living in the tray.
 
+## In this release
+
+- **Windows worked on paper only.** No Claude transcript ever reached the index,
+  and the CLI never started at all — its entry point could not match. Both are
+  fixed; a Windows install from 0.2.0 was showing an empty day, not a quiet one.
+- **The macOS downloads now carry their architecture** — `-arm64` for Apple
+  Silicon, `-x64` for Intel. Until now the Intel build was the unsuffixed one
+  and looked like the default download.
+
 ## What it shows
 
 - **Who is working right now** — agent, project, pace in tokens per minute, and
@@ -37,7 +46,9 @@ rewritten.
 
 The builds are **not signed** — the project has no certificates yet.
 
-- **macOS**: drag the app into Applications, then run once in a terminal:
+- **macOS**: take the `.dmg` for your chip — `-arm64` for Apple Silicon, `-x64`
+  for Intel; the wrong one runs under Rosetta at best and does not start at all
+  without it. Drag the app into Applications, then run once in a terminal:
   `xattr -dr com.apple.quarantine /Applications/Agentmeter.app`
 
   Without it macOS says it “could not verify Agentmeter is free of malware” —
