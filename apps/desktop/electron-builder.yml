@@ -110,6 +110,15 @@ linux:
     - target: deb
       arch: [x64]
 
+# Имя файла `.deb` — тоже руками, и это третий случай той же болезни, что
+# `executableName` и `maintainer` выше. По умолчанию deb зовётся в
+# debian-стиле — `${name}_${version}_${arch}.deb`, — а `name` у нас скоупный,
+# и fpm получает путь `release/@agentmeter/desktop_0.2.0_amd64.deb`, где
+# каталога `@agentmeter` нет и не будет. Падает он `fatal`-строкой внутри
+# лога fpm, уже после того, как AppImage уехал в релиз.
+deb:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
 publish:
   provider: github
   owner: fosteev
