@@ -37,10 +37,17 @@ rewritten.
 
 The builds are **not signed** — the project has no certificates yet.
 
-- **macOS**: right-click the app → “Open” → “Open”, or once in a terminal:
+- **macOS**: drag the app into Applications, then run once in a terminal:
   `xattr -dr com.apple.quarantine /Applications/Agentmeter.app`
+
+  Without it macOS says it “could not verify Agentmeter is free of malware” —
+  that is the missing signature talking, not a finding. The GUI route is System
+  Settings → Privacy & Security → “Open Anyway” at the bottom, after the first
+  refusal. Right-click → “Open” no longer works on macOS 26; Apple removed that
+  path for unsigned apps. If Finder refuses to replace an older copy, quit the
+  running one from the menu bar icon first.
 - **Windows**: SmartScreen → “More info” → “Run anyway”.
-- **Linux**: `chmod +x` for the `.AppImage`.
+- **Linux**: `chmod +x` for the `.AppImage`, or `sudo dpkg -i` the `.deb`.
 
 On macOS the menu bar icon is drawn by a small native helper: on macOS 26 the
 Electron tray item is parked off-screen by the system, and every Electron app on
