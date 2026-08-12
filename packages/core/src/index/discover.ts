@@ -107,8 +107,15 @@ export function discoverClaudeProjects(
     () => readdirSync(root, { withFileTypes: true }),
     [],
   )
+  // Имя каталога проекта не проверяется, и это не небрежность. Claude Code
+  // делает слаг из абсолютного пути, заменяя разделители дефисами, и форма у
+  // него платформенная: `/Users/foo/dev` даёт `-Users-foo-dev`, а `G:\Projects`
+  // — `G--Projects`, без ведущего дефиса. Отбор по дефису прятал на Windows
+  // **все** транскрипты Claude, до единого, причём `doctor` рапортовал об
+  // успешном обходе. Настоящий отбор делает `UUID_JSONL` ниже: имя файла
+  // сессии задано провайдером и от платформы не зависит.
   for (const entry of roots) {
-    if (!entry.isDirectory() || !entry.name.startsWith('-')) continue
+    if (!entry.isDirectory()) continue
     const projectDir = join(root, entry.name)
     const children = safely(
       'claude',
@@ -186,8 +193,16 @@ function walkJsonl(
     .sort((a, b) => a.localeCompare(b))
 }
 
+/**
+ * Второй экземпляр того же правила — для путей из `sources.extra`.
+ *
+ * Проверять имя родительского каталога нельзя по той же причине, по которой
+ * его не проверяет `discoverClaudeProjects`: на Windows слаг начинается с
+ * буквы диска. Пока здесь стоял дефис, настройка `extra` не спасала от
+ * поломки, а выглядела рабочей.
+ */
 function isClaudeSessionTranscript(path: string): boolean {
-  return basename(dirname(path)).startsWith('-') && UUID_JSONL.test(basename(path))
+  return UUID_JSONL.test(basename(path))
 }
 
 function isClaudeSubagentTranscript(path: string): boolean {

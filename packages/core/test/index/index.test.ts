@@ -92,6 +92,37 @@ describe('индекс логов', () => {
     )
   })
 
+  /**
+   * Ловит POSIX-допущение в имени каталога проекта.
+   *
+   * Claude Code делает слаг из абсолютного пути, заменяя разделители дефисами.
+   * На macOS `/Users/foo/dev` даёт `-Users-foo-dev`, и ведущий дефис там — от
+   * корневого `/`. На Windows путь начинается с буквы диска: `G:\Projects`
+   * даёт `G--Projects`, и дефиса впереди нет ни при каком расположении
+   * проекта. Отбор каталогов по нему прятал на Windows **все** транскрипты
+   * Claude, до единого, — а `doctor` при этом рапортовал об успешном обходе.
+   * Для измерительного продукта это худший вид отказа: не пустой экран с
+   * оговоркой, а уверенный ноль.
+   *
+   * На POSIX проверка не сработает никогда — слаг там всегда с дефиса, — и
+   * поэтому обе формы перечислены таблицей, а не заменены одной.
+   */
+  it.each([
+    ['-Users-foo-dev', 'POSIX'],
+    ['G--Projects', 'Windows, проект в корне диска'],
+    ['C--Users-foste-OneDrive-Desktop', 'Windows, вложенный путь'],
+  ])('находит сессию в каталоге %s (%s)', (slug) => {
+    const { claudeHome, codexHome } = makeHomes()
+    const project = join(claudeHome, 'projects', slug)
+    mkdirSync(project, { recursive: true })
+    copyFileSync(join(claudeFixtures, 'plain.jsonl'), join(project, sessionName))
+
+    const files = discoverSources({ claudeHome, codexHome })
+    expect(files.map((file) => [file.provider, file.kind, basename(file.path)])).toEqual([
+      ['claude', 'session', sessionName],
+    ])
+  })
+
   it('putSession повторным вызовом не плодит строки', () => {
     const sourcePath = join(claudeFixtures, 'plain.jsonl')
     const file: SourceFile = { path: sourcePath, provider: 'claude', kind: 'session' }
