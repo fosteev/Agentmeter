@@ -39,7 +39,7 @@
  */
 import { formatTokens, t, type Config } from '@agentmeter/core'
 import { locale } from '@agentmeter/core/i18n'
-import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
+import { isWorking, type TraySnapshot } from '@agentmeter/ipc'
 
 export type NoticeKind = 'warn' | 'danger' | 'session' | 'agent'
 
@@ -125,7 +125,7 @@ function limitNotices(snapshot: TraySnapshot, config: Config): Notice[] {
           hour: '2-digit',
           minute: '2-digit',
         }),
-        agents: t('popup.agents', { count: snapshot.agents.filter(working).length }),
+        agents: t('popup.agents', { count: snapshot.agents.filter(isWorking).length }),
       }),
     })
   }
@@ -168,10 +168,6 @@ function agentNotices(snapshot: TraySnapshot, config: Config): Notice[] {
         branch: agent.branch ?? t('notify.noBranch'),
       }),
     }))
-}
-
-function working(agent: LiveAgent): boolean {
-  return agent.state === 'working'
 }
 
 const PROVIDER = { claude: 'Claude Code', codex: 'Codex' } as const

@@ -1,5 +1,5 @@
 import type { Entrypoint, LimitReportRow, Provider } from '@agentmeter/core'
-import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
+import { isWorking, type LiveAgent, type TraySnapshot } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
 import type { RefreshState } from '../refresh.ts'
 import { ago, span } from '../time.ts'
@@ -18,6 +18,14 @@ import { SectionTitle } from './SectionTitle.tsx'
 
 // Попап целиком — строки 332–472 макета (тёмный) и 479–593 (светлый). Сборка:
 // шапка, «Сейчас работают» со списком, «Лимиты» с полосами, подвал за сутки.
+//
+// Список — только работающие (`isWorking`), а не все живые сессии снимка. В
+// макете под заголовком «Сейчас работают» стоят все четыре состояния, и на
+// живой машине это разъезжается с самим заголовком: открытых чатов в `waiting`
+// бывает и десяток, они висят сутками, и один действительно работающий агент
+// теряется среди них. Ждущие, молчащие и завершившиеся из снимка никуда не
+// делись — их показывает лента дня, по ним приходят уведомления, — просто
+// список «сейчас работают» больше не выдаёт их за работу.
 //
 // Единственное, что здесь считается, — длительности и проценты ширины. Токены
 // приезжают готовыми: `TraySnapshot` несёт и сумму за сутки, и признак
@@ -118,18 +126,22 @@ export function Popup({
       />
     )
   }
-  if (snapshot.agents.length === 0 && snapshot.lastAgent === undefined) {
+  // «Никого нет» — это отсутствие работающих, а не пустой снимок: с фильтром
+  // списка иначе получился бы третий, не нарисованный макетом экран — заголовок
+  // с нулём и пустая полоса под ним.
+  const agents = snapshot.agents.filter(isWorking)
+  if (agents.length === 0 && snapshot.lastAgent === undefined) {
     return (
       <PopupEmpty snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} refresh={refreshUi} />
     )
   }
-  if (snapshot.agents.length === 0) {
+  if (agents.length === 0) {
     return (
       <PopupIdle snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} refresh={refreshUi} />
     )
   }
 
-  const { at, agents, limits, limitsSource, today } = snapshot
+  const { at, limits, limitsSource, today } = snapshot
 
   // Табы и выбранный провайдер — из тех же окон, что рисуются ниже. Один
   // включённый провайдер даёт один таб, а ряд из одного таба ничего не разводит
@@ -172,7 +184,7 @@ export function Popup({
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
-                  {agents.filter((agent) => agent.state !== 'done').length}
+                  {agents.length}
                 </span>
               }
             />
@@ -206,7 +218,6 @@ export function Popup({
                 approximate={agent.approximate}
                 branch={agent.branch}
                 duration={span(at - agent.startedAt)}
-                endedAgo={agent.endedAt === undefined ? undefined : ago(at - agent.endedAt)}
                 model={agent.model}
                 entrypoint={ENTRYPOINT[agent.entrypoint] || undefined}
                 context={context(agent)}

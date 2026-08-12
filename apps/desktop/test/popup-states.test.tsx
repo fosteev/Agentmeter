@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import type { TraySnapshot } from '@agentmeter/ipc'
+import { isWorking, type TraySnapshot } from '@agentmeter/ipc'
 import { Popup } from '../src/renderer/components/Popup.tsx'
 import { PopupProblem } from '../src/renderer/components/PopupProblem.tsx'
 import { setLocale } from '../src/renderer/format.ts'
@@ -269,7 +269,9 @@ describe('выбор состояния попапа', () => {
   it('живые агенты без ошибки остаются обычным попапом', () => {
     const html = markup(snapshots.normal)
     expect(html).toContain('Сейчас работают')
-    for (const agent of snapshots.normal.agents) expect(html).toContain(agent.project)
+    for (const agent of snapshots.normal.agents.filter(isWorking)) {
+      expect(html).toContain(agent.project)
+    }
     expect(html).not.toContain('Первичное индексирование')
     expect(html).not.toContain('Агенты ещё не запускались')
   })

@@ -11,7 +11,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { formatTokens as coreFormat } from '@agentmeter/core/format'
 import type { Provider } from '@agentmeter/core'
-import type { TraySnapshot } from '@agentmeter/ipc'
+import { isWorking, type TraySnapshot } from '@agentmeter/ipc'
 import { AgentRow } from '../src/renderer/components/AgentRow.tsx'
 import { Popup } from '../src/renderer/components/Popup.tsx'
 import { PopupHeader } from '../src/renderer/components/PopupHeader.tsx'
@@ -36,6 +36,10 @@ const root = fileURLToPath(new URL('../../../', import.meta.url))
 const snapshot = JSON.parse(
   readFileSync(`${root}fixtures/popup/snapshot.json`, 'utf8'),
 ) as TraySnapshot
+/** Эталон паузы: живых нет, `lastAgent` есть. Нужен проверке «работающих нет». */
+const nobody = JSON.parse(
+  readFileSync(`${root}fixtures/popup/nobody.json`, 'utf8'),
+) as TraySnapshot
 
 setLocale('ru')
 const markup = renderToStaticMarkup(<Popup snapshot={snapshot} now={snapshot.at + 2000} />)
@@ -50,6 +54,22 @@ const markup = renderToStaticMarkup(<Popup snapshot={snapshot} now={snapshot.at 
 const bothTabs = `${markup}${renderToStaticMarkup(
   <Popup snapshot={snapshot} now={snapshot.at + 2000} limitTab="codex" />,
 )}`
+
+/**
+ * Тот же попап, где работают все четверо.
+ *
+ * С фильтра списка (только `isWorking`) в обычной разметке живёт один агент из
+ * четырёх, и проверки **вида строки** — знак `≈`, полоска контекста, бейдж
+ * провайдера — считали бы по одному входу вместо трёх нужных случаев, то есть
+ * почти по пустоте. Свойства эти относятся к строке, а не к состоянию, поэтому
+ * проверяются на снимке, где те же агенты фикстуры работают. Придуманных данных
+ * здесь по-прежнему нет: меняется одно поле, остальное — эталон.
+ */
+const everyone: TraySnapshot = {
+  ...snapshot,
+  agents: snapshot.agents.map((agent) => ({ ...agent, state: 'working' as const })),
+}
+const everyoneMarkup = renderToStaticMarkup(<Popup snapshot={everyone} now={everyone.at + 2000} />)
 
 describe('попап на фикстуре', () => {
   /**
@@ -111,13 +131,13 @@ describe('попап на фикстуре', () => {
    * числа противоречат друг другу молча.
    */
   it('восстановленный расход помечен знаком ≈', () => {
-    const approximate = snapshot.agents.filter((agent) => agent.approximate)
+    const approximate = everyone.agents.filter((agent) => agent.approximate)
     expect(approximate.length).toBeGreaterThan(0)
     for (const agent of approximate) {
-      expect(markup).toContain(`≈${formatTokens(agent.tokens)}`)
+      expect(everyoneMarkup).toContain(`≈${formatTokens(agent.tokens)}`)
     }
-    for (const agent of snapshot.agents.filter((a) => !a.approximate)) {
-      expect(markup).not.toContain(`≈${formatTokens(agent.tokens)}`)
+    for (const agent of everyone.agents.filter((a) => !a.approximate)) {
+      expect(everyoneMarkup).not.toContain(`≈${formatTokens(agent.tokens)}`)
     }
     // Сумма за сутки восстановлена (1.3) — та же пометка в подвале.
     expect(markup).toContain(`≈${formatTokens(snapshot.today.total.value)}`)
@@ -138,14 +158,52 @@ describe('попап на фикстуре', () => {
     expect(snapshot.today.total.value).toBe(sum)
   })
 
-  /** Ловит потерянные состояния: все четыре строки должны нарисоваться. */
-  it('рисует каждого агента снимка', () => {
-    for (const agent of snapshot.agents) {
-      expect(markup).toContain(agent.project)
-    }
-    expect(markup).toContain('ждёт ответа')
-    expect(markup).toContain('молчит')
-    expect(markup).toContain('завершился')
+  /**
+   * Ловит список, выдающий за работу всё живое. Под заголовком «Сейчас
+   * работают» стоят только агенты в `working`: ждущий человека, молчащий и
+   * завершившийся из снимка не исчезают — их показывают лента дня и
+   * уведомления, — но в этом списке их нет, иначе один работающий агент теряется
+   * среди десяти открытых сутками чатов.
+   */
+  it('в списке только работающие, остальные состояния не показаны', () => {
+    const working = snapshot.agents.filter(isWorking)
+    const rest = snapshot.agents.filter((agent) => !isWorking(agent))
+    expect(working.length).toBeGreaterThan(0)
+    expect(rest.length).toBeGreaterThan(0)
+
+    for (const agent of working) expect(markup).toContain(agent.project)
+    for (const agent of rest) expect(markup).not.toContain(agent.project)
+
+    // Подписи трёх нерабочих состояний в попапе не встречаются вовсе: строка,
+    // потерявшая проект, но оставшаяся строкой, — та же ошибка.
+    expect(markup).not.toContain('ждёт ответа')
+    expect(markup).not.toContain('молчит')
+    expect(markup).not.toContain('завершился')
+
+    // Счётчик в заголовке считает то же, что видно ниже. Разойдись они — и
+    // «2» над одной строкой читается как потерянная строка.
+    expect(markup).toContain(`>${working.length}</span>`)
+  })
+
+  /**
+   * Ловит третий, не нарисованный макетом экран: заголовок с нулём и пустая
+   * полоса под ним. Живые сессии в снимке есть, работающих нет — для попапа это
+   * то же «никого», что и пустой список, и говорить об этом он обязан словами
+   * макета, вместе с последним, кого видел.
+   */
+  it('живые есть, работающих нет — экран «никого нет»', () => {
+    // Эталон паузы плюс живые чаты, которые ждут человека: ровно та машина, где
+    // открыто десять вкладок и ни одна не работает.
+    const waiting = snapshot.agents.filter(
+      (agent) => agent.state === 'waiting' || agent.state === 'idle',
+    )
+    expect(waiting.length).toBeGreaterThan(0)
+    const idle: TraySnapshot = { ...nobody, agents: waiting }
+    const html = renderToStaticMarkup(<Popup snapshot={idle} now={idle.at + 2000} />)
+
+    expect(html).toContain('Никого. Последний —')
+    expect(html).toContain(nobody.lastAgent!.project)
+    for (const agent of waiting) expect(html).not.toContain(agent.project)
   })
 })
 
@@ -338,8 +396,9 @@ describe('табы провайдеров в лимитах', () => {
    * таб, а вторая метка в попапе шириной 400 точек стоит места, которого нет.
    */
   it('в строке лимита бейджа нет — он остался только у агентов', () => {
-    const badges = markup.split('>CL<').length - 1 + (markup.split('>CX<').length - 1)
-    expect(badges).toBe(snapshot.agents.length)
+    const badges =
+      everyoneMarkup.split('>CL<').length - 1 + (everyoneMarkup.split('>CX<').length - 1)
+    expect(badges).toBe(everyone.agents.length)
   })
 })
 
@@ -518,7 +577,10 @@ describe('кнопка обновления', () => {
 describe('указатель контекста в строке агента', () => {
   // background:linear-gradient(to top, var(--claude) 0 89%, var(--s2) 89% 100%)
   const GAUGE = /linear-gradient\(to top, var\(--[a-z0-9]+\) 0 (\d+)%, var\(--s2\) (\d+)% 100%\)/g
-  const gauges = [...markup.matchAll(GAUGE)].map(([, from, to]) => ({
+  // Разметка снимка, где работают все четверо: три случая заполнения (написано
+  // провайдером, выведено из наблюдений, выводить не из чего) лежат у агентов
+  // разных состояний, а список попапа с 7.x показывает только работающих.
+  const gauges = [...everyoneMarkup.matchAll(GAUGE)].map(([, from, to]) => ({
     from: Number(from),
     to: Number(to),
   }))
@@ -530,9 +592,9 @@ describe('указатель контекста в строке агента', (
    * посчитанная от числа, которого никто не знает.
    */
   it('полоска только там, где окно известно, и длиной ровно в остаток', () => {
-    const known = snapshot.agents.filter((agent) => agent.context !== undefined)
+    const known = everyone.agents.filter((agent) => agent.context !== undefined)
     expect(known.length).toBeGreaterThan(0)
-    expect(snapshot.agents.some((agent) => agent.context === undefined)).toBe(true)
+    expect(everyone.agents.some((agent) => agent.context === undefined)).toBe(true)
     expect(gauges.length).toBe(known.length)
 
     // Середина размытой границы — то же число, что резкая: размывается
@@ -550,8 +612,8 @@ describe('указатель контекста в строке агента', (
    * вывели из наблюдений, и на экране это обязано различаться.
    */
   it('у выведенного размера окна граница размыта, у написанного провайдером — резкая', () => {
-    const exact = snapshot.agents.filter((a) => a.context?.confidence === 'exact')
-    const estimate = snapshot.agents.filter((a) => a.context?.confidence === 'estimate')
+    const exact = everyone.agents.filter((a) => a.context?.confidence === 'exact')
+    const estimate = everyone.agents.filter((a) => a.context?.confidence === 'estimate')
     expect(exact.length).toBeGreaterThan(0)
     expect(estimate.length).toBeGreaterThan(0)
 
@@ -565,14 +627,14 @@ describe('указатель контекста в строке агента', (
    * попап, оценку от измерения отличить будет нечем вовсе.
    */
   it('подсказка называет долю, оба числа и природу знаменателя', () => {
-    for (const agent of snapshot.agents) {
+    for (const agent of everyone.agents) {
       const context = agent.context
       if (context === undefined) continue
       const sign = context.confidence === 'exact' ? '' : '≈'
-      expect(markup).toContain(
+      expect(everyoneMarkup).toContain(
         `контекст ${sign}${Math.round(context.fill * 100)}% · ${formatTokens(context.used)} из ${sign}${formatTokens(context.window)}`,
       )
-      if (context.caveat !== undefined) expect(markup).toContain(context.caveat)
+      if (context.caveat !== undefined) expect(everyoneMarkup).toContain(context.caveat)
     }
   })
 })

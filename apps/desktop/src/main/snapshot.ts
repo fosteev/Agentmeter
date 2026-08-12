@@ -26,16 +26,17 @@ import {
 } from '@agentmeter/core'
 import type { Privacy } from './day.ts'
 import { measured } from './measured.ts'
-import type {
-  ContextUsage,
-  CurrentTurn,
-  DayTotals,
-  LastAgent,
-  LimitsSource,
-  LiveAgent,
-  Measured,
-  SourceProblem,
-  TraySnapshot,
+import {
+  isWorking,
+  type ContextUsage,
+  type CurrentTurn,
+  type DayTotals,
+  type LastAgent,
+  type LimitsSource,
+  type LiveAgent,
+  type Measured,
+  type SourceProblem,
+  type TraySnapshot,
 } from '@agentmeter/ipc'
 
 export interface SnapshotInput {
@@ -98,10 +99,12 @@ export function buildSnapshot(
     limitsSource: limitsSource(input.oauth),
   }
 
-  // Кого видели последним — только когда сейчас никого нет: попапу это нужно
-  // ровно для одного экрана, а лишний запрос на каждый опрос трея не нужен
-  // никому.
-  if (snapshot.agents.length === 0) {
+  // Кого видели последним — только когда сейчас никто не работает: попапу это
+  // нужно ровно для одного экрана, а лишний запрос на каждый опрос трея не
+  // нужен никому. Условие — `isWorking`, а не пустой список: попап показывает
+  // только работающих, и без этого десять чатов в `waiting` оставили бы его
+  // экран «никого нет» без строки про последнего.
+  if (!snapshot.agents.some(isWorking)) {
     const last = lastAgent(db)
     if (last !== undefined) snapshot.lastAgent = last
   }
