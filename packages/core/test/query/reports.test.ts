@@ -207,10 +207,7 @@ describe('query reports', () => {
     expect(ours?.resetsAt).not.toBe(resetsAt)
 
     const report = limitsReport(db, at, config.limits.claude, undefined, {
-      ts: at,
-      sessionId: '',
-      source: 'oauth',
-      fiveHour: { pct: 37, resetsAt },
+      claude: { ts: at, sessionId: '', source: 'oauth', fiveHour: { pct: 37, resetsAt } },
     })
     const claude = report.windows.filter(
       (window) => window.provider === 'claude' && window.kind === 'fiveHour',
@@ -233,10 +230,12 @@ describe('query reports', () => {
     const at = Date.parse('2026-07-28T13:00:00.000Z')
 
     const report = limitsReport(db, at, config.limits.claude, undefined, {
-      ts: at,
-      sessionId: '',
-      source: 'oauth',
-      fiveHour: { pct: 37, resetsAt: Date.parse('2026-07-28T16:00:00.000Z') },
+      claude: {
+        ts: at,
+        sessionId: '',
+        source: 'oauth',
+        fiveHour: { pct: 37, resetsAt: Date.parse('2026-07-28T16:00:00.000Z') },
+      },
     })
 
     // Недельного окна в ответе нет — наше остаётся на месте со своим «не
@@ -249,6 +248,51 @@ describe('query reports', () => {
     expect(report.windows.some((window) => window.provider === 'codex')).toBe(
       limitsReport(db, at, config.limits.claude).windows.some(
         (window) => window.provider === 'codex',
+      ),
+    )
+  })
+
+  /**
+   * Ответ провайдера сильнее и у Codex (6.4), хотя процент в логах у него есть
+   * и он точный. Довод другой: в логе процент написан **в момент запроса**, и
+   * после дня без Codex он про позавчерашнее окно. Проверка ловит «у Codex и
+   * так всё точно, заменять нечего» — состояние, при котором источник включён,
+   * ответ получен, а на экране прежнее число.
+   */
+  it('ответ провайдера заменяет окно Codex того же вида', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    // Момент берётся у самого окна Codex: фикстура сделана под расход, а не
+    // под календарь, и зашитая дата разошлась бы с ней при первом обновлении.
+    const mine = readLimitWindows(db).find((window) => window.provider === 'codex')!
+    const at = mine.startsAt + 60_000
+
+    const kind = mine.kind
+    // Окно провайдера обязано быть текущим в момент `at`, иначе отчёт отсеет
+    // его по границам и проверка станет вакуумной.
+    const resetsAt = at + 3_600_000
+    const fresh = {
+      provider: 'codex' as const,
+      kind,
+      windowMinutes: mine.windowMinutes,
+      startsAt: resetsAt - mine.windowMinutes * 60_000,
+      resetsAt,
+      usedPercent: 71,
+      observedAt: at,
+      exact: true,
+    }
+
+    const report = limitsReport(db, at, config.limits.claude, undefined, { codex: [fresh] })
+    const codex = report.windows.filter(
+      (window) => window.provider === 'codex' && window.kind === kind,
+    )
+    expect(codex).toHaveLength(1)
+    expect(codex[0]).toMatchObject({ usedPercent: 71, resetsAt })
+    // Окна Claude при этом не задеты: провайдеры заменяются порознь.
+    expect(report.windows.some((window) => window.provider === 'claude')).toBe(
+      limitsReport(db, at, config.limits.claude).windows.some(
+        (window) => window.provider === 'claude',
       ),
     )
   })

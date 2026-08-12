@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { Config } from '@agentmeter/core'
+import type { Config, Provider } from '@agentmeter/core'
 import type {
   ConfigReport,
   DayReport,
@@ -259,15 +259,19 @@ export function WindowApp() {
   }
 
   /**
-   * Второй источник лимитов (6.3): разрешить и спросить.
+   * Вторые источники лимитов (6.3, 6.4): разрешить и спросить.
    *
    * Два канала, а не один, и разница между ними существенна для человека:
    * первый только записывает согласие, второй **уходит в сеть**. Свести их в
    * «включить и сразу спросить» значило бы отправить токен наружу тем же
    * щелчком, которым его разрешили отправлять.
+   *
+   * Провайдер в аргументе только у согласия: тумблера два, потому что и
+   * креденшелы, и адресат у них разные, а кнопка «спросить» одна на оба — она
+   * обновляет то, что человек уже разрешил.
    */
-  const changeOauth = (enabled: boolean): void => {
-    void window.agentmeter['oauth:set']({ enabled }).then(setConfigReport)
+  const changeOauth = (provider: Provider, enabled: boolean): void => {
+    void window.agentmeter['oauth:set']({ provider, enabled }).then(setConfigReport)
   }
 
   const refreshOauth = (): void => {

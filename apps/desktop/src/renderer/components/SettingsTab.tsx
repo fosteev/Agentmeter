@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Config } from '@agentmeter/core'
+import type { Config, Provider } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial } from '@agentmeter/ipc'
 import { t } from '../format.ts'
 import { SettingsAlerts } from './SettingsAlerts.tsx'
@@ -52,11 +52,11 @@ export interface SettingsTabProps {
   /** Пересчитать вес по журналу строки состояния прямо сейчас (1.9). */
   onRefreshUsage: () => void
   /**
-   * Разрешить запрос лимитов у Anthropic (6.3). Четвёртый отдельный канал, и
-   * повод у него самый весомый из четырёх: это согласие на сетевой вызов
-   * креденшелами Claude Code.
+   * Разрешить запрос лимитов у провайдера (6.3, 6.4). Четвёртый отдельный
+   * канал, и повод у него самый весомый из четырёх: это согласие на сетевой
+   * вызов креденшелами Claude Code или Codex.
    */
-  onOauth: (enabled: boolean) => void
+  onOauth: (provider: Provider, enabled: boolean) => void
   /** Спросить проценты прямо сейчас — единственная кнопка настроек, идущая в сеть. */
   onRefreshOauth: () => void
   /** Проверить обновления руками и поставить скачанное (5.4). */
@@ -143,6 +143,7 @@ export function SettingsTab({
           <SettingsUsage
             usage={report.usage}
             api={report.usageApi}
+            codexApi={report.codexApi}
             onToggle={onStatusline}
             onRefresh={onRefreshUsage}
             onApiToggle={onOauth}

@@ -290,7 +290,13 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
       return rl ? [rl.primary, rl.secondary].filter(Boolean) : []
     })
 
-  for (const name of ['codex-limits', 'codex-limits-new', 'codex-limits-odd', 'claude-limits']) {
+  for (const name of [
+    'codex-limits',
+    'codex-limits-new',
+    'codex-limits-odd',
+    'codex-limits-gone',
+    'claude-limits',
+  ]) {
     const jsonl = join(LIMITS, `${name}.jsonl`)
     if (!existsSync(jsonl)) {
       failures.push(`  ✗ limits / ${name} — нет ${name}.jsonl`)
@@ -340,6 +346,39 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     odd.includes(43200) && odd.some((m) => ![300, 10080, 43200].includes(m)),
     `длины окон: ${odd.join(', ')}`,
   )
+
+  // Окно, о котором провайдер перестал говорить (6.4). Проверяется не разбор —
+  // его проверяет тест, — а то, что в фикстуре остались три случая, ради
+  // которых она написана: длина пропала, длина вернулась, и запись, не
+  // назвавшая ни одного окна. Убери любой — и правило снова станет зелёным на
+  // данных, которые его не проверяют.
+  {
+    const rows = readJsonl(join(LIMITS, 'codex-limits-gone.jsonl')).filter(
+      (r) => r.payload?.rate_limits,
+    )
+    const named = rows.map((r) =>
+      [r.payload.rate_limits.primary, r.payload.rate_limits.secondary]
+        .filter(Boolean)
+        .map((s: { window_minutes: number }) => s.window_minutes),
+    )
+    const has = (length: number): boolean[] => named.map((set) => set.includes(length))
+    const weekly = has(10080)
+    check(
+      'limits / длина пропадает и возвращается новым окном',
+      weekly.indexOf(true) < weekly.indexOf(false) && weekly.lastIndexOf(true) > weekly.indexOf(false),
+      `недельное названо в записях [${weekly.map((v, i) => (v ? i + 1 : '')).filter(Boolean).join(', ')}] из ${weekly.length}`,
+    )
+    check(
+      'limits / есть запись без единого окна',
+      named.some((set) => set.length === 0),
+      'такая запись — «данных пока нет», и закрывать ею нельзя ничего',
+    )
+    check(
+      'limits / пропавшая длина не одна',
+      named.some((set) => set.includes(43200)) && named.some((set) => set.includes(300)),
+      'месячное и пятичасовое проверяют разные ветки правила',
+    )
+  }
 
   const turns = readJsonl(join(LIMITS, 'claude-limits.jsonl')).filter((r) => r.type === 'assistant')
   const stamps = turns.map((r) => Date.parse(r.timestamp))
@@ -485,6 +524,68 @@ for (const name of ['claude-prefix', 'claude-eager', 'codex-prefix']) {
     'oauth / есть точка ниже порога — ради неё фикстура и написана',
     below.length === 1,
     `точек ниже ${10}%: ${below.join(', ')}`,
+  )
+
+  codexOauth()
+}
+
+/**
+ * Эталон второго источника Codex (6.4).
+ *
+ * Проверяется не разбор — его проверяет тест, — а то, что в эталоне остались
+ * случаи, ради которых он написан. Ловушка тут одна и она тихая: подправь
+ * кто-нибудь `slots-swapped` так, чтобы недельное окно вернулось в `secondary`,
+ * — и разбор по имени слота снова пройдёт зелёным, а на живом Codex соврёт.
+ */
+function codexOauth(): void {
+  const fixture = JSON.parse(readFileSync(join(USAGE, 'codex-oauth.json'), 'utf8'))
+  const cases = new Map<string, any>(fixture.cases.map((entry: any) => [entry.name, entry]))
+
+  const swapped = cases.get('slots-swapped')
+  check(
+    'codex-oauth / имя слота противоречит длине окна',
+    swapped?.response.rate_limit.primary_window.limit_window_seconds === 604_800 &&
+      swapped?.response.rate_limit.secondary_window.limit_window_seconds === 18_000,
+    'недельное окно лежит в primary, пятичасовое в secondary',
+  );
+
+  {
+    const live = cases.get('live')
+    const window = live?.response.rate_limit.primary_window
+    check(
+      'codex-oauth / живой ответ снят с недельным окном в primary',
+      window?.limit_window_seconds === 604_800 && live?.response.rate_limit.secondary_window === null,
+      'так отвечает Codex CLI 0.145.0 и новее',
+    )
+    check(
+      'codex-oauth / при нулевом проценте граница — заглушка провайдера',
+      window?.used_percent === 0 && window.reset_at * 1000 - fixture.ts === window.limit_window_seconds * 1000,
+      'reset_at равен ts + длина окна до секунды',
+    )
+  }
+
+  check(
+    'codex-oauth / есть окно без длины и оно обязано выпасть',
+    cases.get('length-missing')?.windows.length === 1,
+    'из двух окон в разбор идёт одно',
+  )
+  check(
+    'codex-oauth / есть дробный процент',
+    cases.get('reset-after')?.windows[0].usedPercent === 33.5,
+    'округление до целого поймается',
+  )
+  check(
+    'codex-oauth / соседние пулы лежат в ответе, но не в окнах',
+    cases.get('other-pools')?.response.code_review_rate_limit !== null &&
+      cases.get('other-pools')?.windows.length === 1,
+    'code_review_rate_limit и additional_rate_limits на месте',
+  )
+
+  const tokens = fixture.credentials.map((entry: any) => JSON.stringify(entry.raw ?? ''))
+  check(
+    'codex-oauth / токены в эталоне — заглушки',
+    tokens.every((raw: string) => !raw.includes('eyJhbGciOi')),
+    'настоящих токенов в репозитории нет',
   )
 }
 

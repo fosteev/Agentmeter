@@ -66,7 +66,7 @@ interface ExpectedClaude {
 }
 
 describe('limits', () => {
-  for (const name of ['codex-limits', 'codex-limits-new', 'codex-limits-odd']) {
+  for (const name of ['codex-limits', 'codex-limits-new', 'codex-limits-odd', 'codex-limits-gone']) {
     it(`собирает окна Codex по ручному эталону ${name}`, () => {
       const expected = readExpected<ExpectedCodex>(name)
       const path = join(fixturesDir, `${name}.jsonl`)
@@ -81,6 +81,34 @@ describe('limits', () => {
       if (expected.currentAfterExpiry) assertCurrent(windows, expected.currentAfterExpiry)
     })
   }
+
+  /**
+   * Нулевая длина отсеивается **дважды**, и проверки на неё две, потому что
+   * пути два: разбор роллаута и сборка окон из индекса. Индексы, собранные до
+   * правила, такое наблюдение уже хранят — фильтр только в разборе их не
+   * вылечит, а фильтр только в сборке пустит его в базу. Одна проверка на обе
+   * ветки переживала бы мутацию любой из них: вторая подстраховывает первую.
+   */
+  it('разбор роллаута не считает окном нулевую длину', () => {
+    const observations = readLimits(join(fixturesDir, 'codex-limits-gone.jsonl'))
+    expect(observations.some((observation) => observation.windowMinutes === 0)).toBe(false)
+    // В самом файле такая запись есть — иначе проверка проверяет пустоту.
+    const raw = readFileSync(join(fixturesDir, 'codex-limits-gone.jsonl'), 'utf8')
+    expect(raw).toContain('"window_minutes":0')
+  })
+
+  it('сборка окон не считает окном нулевую длину из старого индекса', () => {
+    const ts = Date.parse('2026-05-01T09:45:00.000Z')
+    const windows = buildCodexWindows([
+      { ts: Date.parse('2026-05-01T08:00:00.000Z'), windowMinutes: 300, usedPercent: 20, resetsAt: Date.parse('2026-05-01T10:00:00.000Z') },
+      { ts, windowMinutes: 0, usedPercent: 2, resetsAt: ts },
+    ])
+
+    // Окна из нуля нет — и, что важнее, соседнее не закрыто записью, которая
+    // «не назвала» его: такой записи не существует, она вся состояла из мусора.
+    expect(windows).toHaveLength(1)
+    expect(windows[0]!.resetsAt).toBe(Date.parse('2026-05-01T10:00:00.000Z'))
+  })
 
   it('собирает окна Claude по всем запросам и сохраняет неизвестные значения как null', () => {
     const expected = readExpected<ExpectedClaude>('claude-limits')

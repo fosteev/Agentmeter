@@ -14,6 +14,7 @@ import {
 import { configReport, setConfig, type ConfigTarget } from '../src/main/config.ts'
 import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
 import { openOauth } from '../src/main/oauth.ts'
+import { openCodexOauth } from '../src/main/codex-oauth.ts'
 
 /**
  * Настройки в main (3.6): запись на диск и применение без перезапуска.
@@ -60,6 +61,15 @@ beforeEach(() => {
       keychain: () => undefined,
     },
     oauth: openOauth(),
+    // То же для Codex (6.4): падающий `fetch` — это проверка «в сеть не
+    // ходили», и она обязана падать, а не молчать.
+    codexOauthHost: {
+      codexHome: join(dir, 'codex'),
+      fetch: () => {
+        throw new Error('отчёт о настройках в сеть не ходит')
+      },
+    },
+    codexOauth: openCodexOauth(),
   }
 })
 

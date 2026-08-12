@@ -50,12 +50,13 @@ import {
   type Calibration,
   type Config,
   type Db,
-  type UsageSnapshot,
+  type FreshWindows,
   type IngestProgress as CoreIngestProgress,
   type LiveLayerOptions,
   type WindowBounds,
   type SourceIssue,
   type LiveLayer,
+  type Provider,
   type Watcher,
 } from '@agentmeter/core'
 import type {
@@ -74,7 +75,7 @@ import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
-import { buildSnapshot } from './snapshot.ts'
+import { buildSnapshot, type SnapshotInput } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 import { barBinaryPath, startNativeBar, type NativeBar } from './menubar.ts'
 import { readStartup, type StartupHost } from './startup.ts'
@@ -87,6 +88,12 @@ import {
   type UsageJournal,
 } from './statusline.ts'
 import { openOauth, pollOauth, type OauthHost, type OauthState } from './oauth.ts'
+import {
+  openCodexOauth,
+  pollCodexOauth,
+  type CodexOauthHost,
+  type CodexOauthState,
+} from './codex-oauth.ts'
 import type { AppUpdater } from 'electron-updater'
 import {
   applyAuto,
@@ -206,6 +213,10 @@ interface Runtime {
   oauthHost: OauthHost
   /** Последний ответ Anthropic и окно ограничения. Живёт в памяти: перезапуск спросит заново. */
   oauth: OauthState
+  /** Чем спрашивать OpenAI про лимиты Codex (6.4). */
+  codexOauthHost: CodexOauthHost
+  /** Последний ответ OpenAI и окно ограничения. Тоже только в памяти. */
+  codexOauth: CodexOauthState
   /**
    * Кто был живым на последнем снимке и насколько срочен — вход закрепления
    * строк в ленте (6.1).
@@ -343,6 +354,10 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
       fetch: net.fetch.bind(net),
     },
     oauth: openOauth(),
+    // Та же история с Cloudflare, только у OpenAI и замерена 12 августа:
+    // `curl` — 200, `fetch` из Node — 403 html-страницей блокировки (6.4).
+    codexOauthHost: { codexHome: sources.codexHome, fetch: net.fetch.bind(net) },
+    codexOauth: openCodexOauth(),
     issues: ingested?.issues ?? [],
   }
   // Тело хука меняется вместе с приложением, а лежит он в каталоге настроек и
@@ -678,7 +693,7 @@ function createHandlers(
   changeStartup: (enabled: boolean) => ConfigReport,
   changeStatusline: (enabled: boolean) => ConfigReport,
   refreshUsage: () => ConfigReport,
-  changeOauth: (enabled: boolean) => ConfigReport,
+  changeOauth: (provider: Provider, enabled: boolean) => ConfigReport,
   refreshOauth: () => Promise<ConfigReport>,
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
@@ -702,7 +717,7 @@ function createHandlers(
         Date.now(),
         runtime().config.limits.claude,
         undefined,
-        runtime().oauth.snapshot,
+        freshWindows(runtime()),
       ).windows,
     'config:get': () => configReport(runtime()),
     'today:get': (filter) =>
@@ -720,7 +735,7 @@ function createHandlers(
     'usage:refresh': () => refreshUsage(),
     // Второй источник лимитов — тоже только кнопкой: канал включает согласие на
     // сетевой вызов, и звать его чем-то, кроме явного действия, нельзя.
-    'oauth:set': ({ enabled }) => changeOauth(enabled),
+    'oauth:set': ({ provider, enabled }) => changeOauth(provider, enabled),
     'oauth:refresh': () => refreshOauth(),
     'update:check': () => checkUpdate(),
     'update:install': () => installUpdate(),
@@ -763,21 +778,42 @@ function differs(current: number | null, next: number | null, epsilon: number): 
 }
 
 /**
- * Что снимок трея должен знать про второй источник лимитов (6.3).
+ * Что снимок трея должен знать про вторые источники лимитов (6.3, 6.4).
  *
  * Собирается здесь, а не читается в `buildSnapshot`: тот берёт всё параметрами
  * и про `Runtime` не знает — иначе его нельзя было бы проверить без запуска
  * приложения. Сети тут нет и в помине, только уже полученное.
  */
-function oauthInput(runtime: Runtime): {
-  enabled: boolean
-  snapshot?: UsageSnapshot
-  retryAt?: number
-} {
+function oauthInput(runtime: Runtime): NonNullable<SnapshotInput['oauth']> {
   return {
-    enabled: runtime.config.limits.claude.api.enabled,
-    ...(runtime.oauth.snapshot === undefined ? {} : { snapshot: runtime.oauth.snapshot }),
-    ...(runtime.oauth.throttle === undefined ? {} : { retryAt: runtime.oauth.throttle.retryAt }),
+    claude: {
+      enabled: runtime.config.limits.claude.api.enabled,
+      ...(runtime.oauth.snapshot === undefined ? {} : { snapshot: runtime.oauth.snapshot }),
+      ...(runtime.oauth.throttle === undefined ? {} : { retryAt: runtime.oauth.throttle.retryAt }),
+    },
+    codex: {
+      enabled: runtime.config.limits.codex.api.enabled,
+      ...(runtime.codexOauth.windows === undefined ? {} : { windows: runtime.codexOauth.windows }),
+      ...(runtime.codexOauth.fetchedAt === undefined
+        ? {}
+        : { fetchedAt: runtime.codexOauth.fetchedAt }),
+      ...(runtime.codexOauth.throttle === undefined
+        ? {}
+        : { retryAt: runtime.codexOauth.throttle.retryAt }),
+    },
+  }
+}
+
+/**
+ * То же самое для отчёта по лимитам: уже полученные окна провайдеров.
+ *
+ * Отдельно от `oauthInput`, потому что вопросы разные: снимку нужно ещё и
+ * состояние источника (что рисовать у кнопки), а отчёту — только окна.
+ */
+function freshWindows(runtime: Runtime): FreshWindows {
+  return {
+    ...(runtime.oauth.snapshot === undefined ? {} : { claude: runtime.oauth.snapshot }),
+    ...(runtime.codexOauth.windows === undefined ? {} : { codex: runtime.codexOauth.windows }),
   }
 }
 
@@ -1327,6 +1363,26 @@ function main(): void {
   }
 
   /**
+   * То же самое для Codex (6.4).
+   *
+   * Отдельной функцией, а не веткой внутри `collectOauth`: журнала здесь нет —
+   * калибровка 1.9 копит наблюдения ради веса `cache_read` у Claude, и чужие
+   * проценты в той выборке испортили бы решение системы. Всё, что даёт удачный
+   * ответ, — свежие окна в снимке.
+   */
+  const collectCodexOauth = (): void => {
+    if (runtime === undefined) return
+    if (!runtime.config.limits.codex.api.enabled) return
+    void pollCodexOauth(runtime.codexOauthHost, runtime.codexOauth, { enabled: true }).then(
+      (fresh) => {
+        if (fresh === null || runtime === undefined) return
+        emit('config:changed', configReport(runtime))
+      },
+      () => undefined,
+    )
+  }
+
+  /**
    * Записать измеренное в настройки — но только измеренное.
    *
    * Вес чтения кэша уезжает в конфиг всегда, когда калибровка сошлась: в логах
@@ -1364,6 +1420,7 @@ function main(): void {
     // не узнает никто. Сеть при этом трогается раз в четверть часа и только при
     // включённой настройке — решает это `pollOauth`, а не частота опроса.
     collectOauth()
+    collectCodexOauth()
     const shown = listeners().length > 0
     if (!shown && tick % HIDDEN_POLL_FACTOR !== 0) return
     // При закрытом попапе снимок всё равно снимается, только вшестеро реже.
@@ -1574,34 +1631,45 @@ function main(): void {
   }
 
   /**
-   * Разрешить или запретить запрос лимитов у Anthropic (6.3).
+   * Разрешить или запретить запрос лимитов у провайдера (6.3, 6.4).
    *
    * Запроса отсюда не уходит: тумблер — это согласие, а не команда. Первый
    * запрос сделает таймер или кнопка «Спросить сейчас».
    */
-  const changeOauth = (enabled: boolean): ConfigReport => {
-    const report = setOauth(runtime!, enabled)
+  const changeOauth = (provider: Provider, enabled: boolean): ConfigReport => {
+    const report = setOauth(runtime!, provider, enabled)
     emit('config:changed', report)
     return report
   }
 
   /**
-   * Спросить проценты прямо сейчас (6.3).
+   * Спросить проценты прямо сейчас (6.3, 6.4).
    *
    * Единственная кнопка продукта, кроме проверки обновлений, которая ходит в
    * сеть. `force` снимает кэш — но не окно ограничения и не 401: кнопка не
    * должна уметь ломать чужой запрет, иначе человек, нажимающий её от
    * нетерпения, продлевает себе тот самый запрет.
    *
-   * Калибровка пересчитывается только на новом снимке: ответ, совпавший с уже
-   * записанным, ничего к журналу не добавил, а полный проход по запросам Claude
-   * стоит секунд.
+   * Спрашиваются **оба** включённых источника, и порознь: отказ одного не
+   * отменяет ответа другого, поэтому ждём обоих, а не первого. Выключенный
+   * никуда не идёт — это решают `pollOauth`/`pollCodexOauth` по своему
+   * `enabled`.
+   *
+   * Калибровка пересчитывается только на новом снимке Claude: ответ, совпавший
+   * с уже записанным, ничего к журналу не добавил, а полный проход по запросам
+   * стоит секунд. Ответ Codex к журналу не относится вовсе.
    */
   const refreshOauth = async (): Promise<ConfigReport> => {
-    const fresh = await pollOauth(runtime!.oauthHost, runtime!.oauth, runtime!.usage, {
-      enabled: runtime!.config.limits.claude.api.enabled,
-      force: true,
-    })
+    const [fresh] = await Promise.all([
+      pollOauth(runtime!.oauthHost, runtime!.oauth, runtime!.usage, {
+        enabled: runtime!.config.limits.claude.api.enabled,
+        force: true,
+      }),
+      pollCodexOauth(runtime!.codexOauthHost, runtime!.codexOauth, {
+        enabled: runtime!.config.limits.codex.api.enabled,
+        force: true,
+      }),
+    ])
     if (fresh !== null) applyCalibration(recalibrate(runtime!.db, runtime!.usage))
     const report = configReport(runtime!)
     emit('config:changed', report)

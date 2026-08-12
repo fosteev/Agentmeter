@@ -18,14 +18,32 @@ const MINUTE_MS = 60_000
  * запросам Claude на каждый опрос трея плюс скрытая запись из читающего
  * модуля — известный долг 1.10.
  */
+/**
+ * Свежие окна от провайдеров — то, что приехало по требованию, а не из логов.
+ *
+ * Два поля, потому что источники разные и по форме, и по происхождению: у
+ * Claude процента в логах нет вовсе и ответ приходит снимком двух окон (6.3), у
+ * Codex окна в логах есть, но устаревают, и ответ приходит уже готовыми окнами
+ * (6.4). Слить их в один тип значило бы придумать общий, которого у провайдеров
+ * нет.
+ */
+export interface FreshWindows {
+  claude?: UsageSnapshot
+  codex?: readonly LimitWindow[]
+}
+
 export function limitsReport(
   db: Db,
   at: number,
   limits: ClaudeLimits,
   rateWindowMs = DEFAULT_RATE_WINDOW_MS,
-  provider?: UsageSnapshot,
+  fresh: FreshWindows = {},
 ): LimitsReport {
-  const windows = replaceClaude(readLimitWindows(db), provider)
+  const windows = replaceProvider(
+    replaceProvider(readLimitWindows(db), 'claude', claudeWindows(fresh.claude)),
+    'codex',
+    fresh.codex,
+  )
   return {
     emptyIndex: sourceCount(db) === 0,
     at,
@@ -58,20 +76,41 @@ export function limitsReport(
  * Поэтому окна Claude **заменяются целиком**, а не дополняются процентом:
  * половина от провайдера и половина от нас — это строка, у которой процент
  * относится к одному интервалу, а «сброс через» к другому.
+ *
+ * У Codex (6.4) довод тот же с точностью до источника расхождения. Процент в
+ * логах есть и он точный, но написан он в момент запроса: 10 августа лог
+ * сообщал 44% недельного окна, а 12-го тот же аккаунт по ответу провайдера
+ * стоял на нуле. И там, и там наши окна — расчёт по одной машине, а лимит
+ * считается по аккаунту.
  */
-function replaceClaude(
+function replaceProvider(
   windows: readonly LimitWindow[],
-  provider: UsageSnapshot | undefined,
+  provider: LimitWindow['provider'],
+  fromProvider: readonly LimitWindow[] | undefined,
 ): LimitWindow[] {
-  if (provider === undefined) return [...windows]
-  const fromProvider: LimitWindow[] = []
+  if (fromProvider === undefined || fromProvider.length === 0) return [...windows]
+  const kinds = new Set(fromProvider.map((window) => window.kind))
+  const kept = windows.filter(
+    (window) => window.provider !== provider || !kinds.has(window.kind),
+  )
+  return [...kept, ...fromProvider]
+}
+
+/**
+ * Снимок Claude → окна. Отдельно от `replaceProvider`, потому что у Claude
+ * ответ приходит не окнами: в нём процент и момент сброса, а длина окна известна
+ * из его вида — `session` пятичасовое, `weekly_all` недельное.
+ */
+function claudeWindows(provider: UsageSnapshot | undefined): LimitWindow[] {
+  if (provider === undefined) return []
+  const windows: LimitWindow[] = []
   for (const [kind, minutes] of [
     ['fiveHour', 300],
     ['weekly', 10_080],
   ] as const) {
     const sample = provider[kind]
     if (!sample) continue
-    fromProvider.push({
+    windows.push({
       provider: 'claude',
       kind,
       windowMinutes: minutes,
@@ -84,12 +123,7 @@ function replaceClaude(
       exact: true,
     })
   }
-  if (fromProvider.length === 0) return [...windows]
-  const kinds = new Set(fromProvider.map((window) => window.kind))
-  const kept = windows.filter(
-    (window) => window.provider !== 'claude' || !kinds.has(window.kind as 'fiveHour' | 'weekly'),
-  )
-  return [...kept, ...fromProvider]
+  return windows
 }
 
 /**

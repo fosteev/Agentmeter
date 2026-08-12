@@ -20,8 +20,7 @@ export interface Config {
 
   limits: {
     claude: ClaudeLimits
-    /** У Codex лимиты приходят точными прямо в логе, настраивать нечего. */
-    codex: { enabled: boolean }
+    codex: CodexLimits
   }
 
   alerts: {
@@ -174,6 +173,26 @@ export interface ClaudeLimits {
   api: { enabled: boolean }
 }
 
+/**
+ * Лимиты Codex. Потолков тут нет: проценты приходят точными прямо в логе, и
+ * считать их не из чего.
+ */
+export interface CodexLimits {
+  enabled: boolean
+  /**
+   * Спрашивать проценты у OpenAI напрямую (6.4).
+   *
+   * Третий и последний сетевой вызов продукта, и `false` по умолчанию по той же
+   * причине, что у Claude: включение — это согласие ходить в сеть креденшелами
+   * Codex, а согласие по умолчанию не бывает.
+   *
+   * В отличие от Claude, здесь источник добавляет не сам процент (он в логах
+   * есть), а его **свежесть**: в логе процент написан в момент запроса, и после
+   * дня без Codex он говорит о позавчерашнем окне.
+   */
+  api: { enabled: boolean }
+}
+
 export const DEFAULT_CONFIG: Config = {
   sources: { claudeHome: null, codexHome: null, extra: [] },
   limits: {
@@ -184,7 +203,7 @@ export const DEFAULT_CONFIG: Config = {
       plan: null,
       api: { enabled: false },
     },
-    codex: { enabled: true },
+    codex: { enabled: true, api: { enabled: false } },
   },
   alerts: {
     warnAtPercent: 75,

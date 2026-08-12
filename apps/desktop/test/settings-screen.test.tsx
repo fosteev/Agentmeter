@@ -44,6 +44,8 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
     // Второй источник лимитов (6.3): по умолчанию выключен, и экран обязан
     // выглядеть так же, как до этапа, — карточка есть, а спрашивать нечего.
     usageApi: { enabled: false, credentials: 'missing', needsLogin: false },
+    // И то же для Codex (6.4).
+    codexApi: { enabled: false, credentials: 'missing', needsLogin: false },
   }
 }
 
@@ -59,6 +61,7 @@ function usageProps(
   return {
     usage: report().usage,
     api: report().usageApi,
+    codexApi: report().codexApi,
     onToggle: () => undefined,
     onRefresh: () => undefined,
     onApiToggle: () => undefined,

@@ -34,6 +34,7 @@ import {
   type Config,
   type Db,
   type LiveLayerOptions,
+  type Provider,
 } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial, SourceStatus } from '@agentmeter/ipc'
 import { readStartup, writeStartup, type StartupHost } from './startup.ts'
@@ -45,6 +46,11 @@ import {
   type UsageJournal,
 } from './statusline.ts'
 import { oauthStatus, type OauthHost, type OauthState } from './oauth.ts'
+import {
+  codexOauthStatus,
+  type CodexOauthHost,
+  type CodexOauthState,
+} from './codex-oauth.ts'
 import type { UpdateState } from './update.ts'
 
 /** Что настройкам нужно от приложения, чтобы примениться без перезапуска. */
@@ -85,6 +91,9 @@ export interface ConfigTarget {
   oauthHost: OauthHost
   /** Последний ответ Anthropic, окно ограничения и 401 — всё, что живёт в памяти. */
   oauth: OauthState
+  /** То же для OpenAI и лимитов Codex (6.4). */
+  codexOauthHost: CodexOauthHost
+  codexOauth: CodexOauthState
 }
 
 /**
@@ -119,11 +128,16 @@ export function configReport(target: ConfigTarget): ConfigReport {
     update: target.update,
     usage: usageStatus(target.statusline, target.usage, target.usageProblem),
     usageApi: oauthStatus(target.oauthHost, target.oauth, target.config.limits.claude.api.enabled),
+    codexApi: codexOauthStatus(
+      target.codexOauthHost,
+      target.codexOauth,
+      target.config.limits.codex.api.enabled,
+    ),
   }
 }
 
 /**
- * Включить или выключить запрос лимитов у Anthropic (6.3).
+ * Включить или выключить запрос лимитов у провайдера (6.3, 6.4).
  *
  * В отличие от хука строки состояния, эта настройка живёт в **нашем** файле —
  * согласие на сетевой вызов хранить больше негде. И в отличие от остальных
@@ -134,18 +148,33 @@ export function configReport(target: ConfigTarget): ConfigReport {
  * «спроси сейчас»: первый запрос уйдёт по таймеру или по кнопке, когда человек
  * дочитает, что он включил.
  */
-export function setOauth(target: ConfigTarget, enabled: boolean): ConfigReport {
+export function setOauth(
+  target: ConfigTarget,
+  provider: Provider,
+  enabled: boolean,
+): ConfigReport {
   // Выключение стирает и накопленное в памяти: оставь мы прежний ответ, экран
   // показывал бы проценты под выключенным тумблером, и выглядело бы это так,
   // будто приложение продолжает ходить в сеть.
-  if (!enabled) {
-    delete target.oauth.snapshot
-    delete target.oauth.fetchedAt
-    delete target.oauth.problem
-    delete target.oauth.throttle
-    target.oauth.needsLogin = false
+  if (provider === 'claude') {
+    if (!enabled) {
+      delete target.oauth.snapshot
+      delete target.oauth.fetchedAt
+      delete target.oauth.problem
+      delete target.oauth.throttle
+      target.oauth.needsLogin = false
+    }
+    return setConfig(target, { limits: { claude: { api: { enabled } } } })
   }
-  return setConfig(target, { limits: { claude: { api: { enabled } } } })
+
+  if (!enabled) {
+    delete target.codexOauth.windows
+    delete target.codexOauth.fetchedAt
+    delete target.codexOauth.problem
+    delete target.codexOauth.throttle
+    target.codexOauth.needsLogin = false
+  }
+  return setConfig(target, { limits: { codex: { api: { enabled } } } })
 }
 
 /**

@@ -449,6 +449,20 @@ export const en = {
     oauthFetchedFew: 'asked {{ago}}, no windows in the reply',
     oauthRefresh: 'Ask now',
     oauthRetry: 'Anthropic asked us to wait — next try {{at}}',
+
+    // The same for Codex (6.4). The note is about freshness, not the number:
+    // Codex does log an exact percentage, but it is stamped at request time.
+    codexApiOn: 'Ask',
+    codexApiOff: 'Do not ask',
+    codexApiNote:
+      '— a request to OpenAI with your Codex token, every fifteen minutes. The logs carry an exact percentage, but it is stamped at the last request: after a day without Codex it describes the window before last',
+    codexApiCredsFile: 'token read from ~/.codex/auth.json',
+    codexApiCredsExpired: 'the Codex token has expired — run codex, it refreshes its own',
+    codexApiCredsMissing: 'no Codex token found — sign in to Codex itself',
+    codexApiNever: 'not asked yet',
+    codexApiFetched: 'asked {{ago}}: {{windows}}',
+    codexApiFetchedFew: 'asked {{ago}}, no windows in the reply',
+    codexApiRetry: 'OpenAI asked us to wait — next try {{at}}',
   },
 
   /** Failures of the second source (6.3). Our wording, never the server's body. */
@@ -459,6 +473,17 @@ export const en = {
     throttled: 'Anthropic asked us to slow down',
     httpError: 'Anthropic replied {{status}}',
     badBody: 'the reply from Anthropic does not parse',
+  },
+
+  /** Failures of the Codex second source (6.4). Our wording, same rule. */
+  codexOauth: {
+    noCredentials: 'no Codex token found',
+    expired: 'the Codex token has expired — run codex, it refreshes its own',
+    offline: 'could not reach OpenAI — showing the previous reply',
+    needsLogin: 'OpenAI rejected the token: sign in to Codex again',
+    throttled: 'OpenAI asked us to slow down',
+    httpError: 'OpenAI replied {{status}}',
+    badBody: 'the reply from OpenAI does not parse',
   },
 
   cli: {

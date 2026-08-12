@@ -61,7 +61,8 @@ certificates yet. In practice:
 Nothing leaves your machine unless you ask it to. Logs are read from disk,
 parsed locally and kept in a SQLite index inside the app's config directory.
 
-**There are exactly two network calls, and both are switches you control.**
+**There are exactly three network calls, and every one of them is a switch you
+control.**
 
 1. **The update check** — every six hours, against this repository's releases.
    On by default, turned off in Settings → Application.
@@ -69,9 +70,14 @@ parsed locally and kept in a SQLite index inside the app's config directory.
    on in Settings → Limits. When on, the app reads your existing Claude Code
    token (from `~/.claude/.credentials.json` or the macOS keychain) and asks
    `api.anthropic.com` how much of your 5-hour and weekly windows you have used,
-   at most once every fifteen minutes. Nothing else is sent, nothing is written
-   back: the app never refreshes or rewrites your credentials, and your token is
-   never logged or shown on screen.
+   at most once every fifteen minutes.
+3. **Asking OpenAI for your Codex limit percentages** — also **off by default**,
+   the same place and the same fifteen-minute pace. It reads the token Codex
+   already stores in `~/.codex/auth.json`.
+
+None of the three sends anything else, and none of them writes anything back:
+the app never refreshes or rewrites your credentials, and your tokens are never
+logged or shown on screen.
 
 Why the second one exists: Claude does not write the limit percentage into its
 logs at all. The status line hook (Settings → Limits) gets it without any
@@ -79,6 +85,12 @@ network — but the status line only exists in the terminal, so in VS Code and
 other editors there is nothing to hook. Asking directly is the only way to know
 the real number there, which is why it is offered — and why you have to say yes
 first.
+
+Why the third one exists: Codex *does* log an exact percentage — but stamped at
+the moment of the request. After a day without Codex it describes the window
+before last, and a limit is counted per account, so work from the web or from
+another machine never reaches your logs at all. This call refreshes the age of
+a number you already have, rather than producing a new one.
 
 Two privacy switches are there as well: “hide prompt texts” and “hide file
 paths”. Both remove data **from the app's response**, not from the markup — a

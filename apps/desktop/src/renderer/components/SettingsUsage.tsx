@@ -1,4 +1,5 @@
-import type { UsageApiStatus, UsageHookStatus } from '@agentmeter/ipc'
+import type { Provider } from '@agentmeter/core'
+import type { CodexApiStatus, UsageApiStatus, UsageHookStatus } from '@agentmeter/ipc'
 import { t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { SectionTitle } from './SectionTitle.tsx'
@@ -31,6 +32,15 @@ export interface SettingsUsageProps {
    * вовсе, и карточка выше в таком окружении бесполезна.
    */
   api: UsageApiStatus
+  /**
+   * Третья карточка того же блока — второй источник лимитов Codex (6.4).
+   *
+   * Здесь она отвечает на другой вопрос, чем две выше. У Claude процента в
+   * логах нет вовсе, и первые две карточки его **добывают**. У Codex процент
+   * есть и он точный, но написан в момент запроса — эта карточка обновляет его
+   * возраст, а не само число.
+   */
+  codexApi: CodexApiStatus
   onToggle: (enabled: boolean) => void
   /**
    * Пересчитать вес по журналу прямо сейчас.
@@ -40,10 +50,10 @@ export interface SettingsUsageProps {
    * уже собранное — потому и называется «Пересчитать», а не «Обновить».
    */
   onRefresh: () => void
-  /** Разрешить или запретить запрос к Anthropic (6.3). */
-  onApiToggle: (enabled: boolean) => void
+  /** Разрешить или запретить запрос к провайдеру (6.3, 6.4). */
+  onApiToggle: (provider: Provider, enabled: boolean) => void
   /**
-   * Спросить проценты прямо сейчас.
+   * Спросить проценты прямо сейчас — у всех разрешённых источников.
    *
    * В отличие от «Пересчитать» выше, эта кнопка **ходит в сеть** — потому и
    * называется «Спросить сейчас». Разница в словах здесь не стилистическая:
@@ -57,6 +67,7 @@ export interface SettingsUsageProps {
 export function SettingsUsage({
   usage,
   api,
+  codexApi,
   onToggle,
   onRefresh,
   onApiToggle,
@@ -113,7 +124,7 @@ export function SettingsUsage({
           label={api.enabled ? t('settings.oauthOn') : t('settings.oauthOff')}
           note={t('settings.oauthNote')}
           checked={api.enabled}
-          onChange={onApiToggle}
+          onChange={(enabled) => onApiToggle('claude', enabled)}
         />
 
         {api.enabled ? (
@@ -141,6 +152,51 @@ export function SettingsUsage({
             {api.problem === undefined ? null : (
               <span style={{ ...NOTE, color: 'var(--alarm)' }} data-oauth-problem="">
                 {api.problem}
+              </span>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      <div style={CARD}>
+        <Switch
+          name="codex-oauth"
+          label={codexApi.enabled ? t('settings.codexApiOn') : t('settings.codexApiOff')}
+          note={t('settings.codexApiNote')}
+          checked={codexApi.enabled}
+          onChange={(enabled) => onApiToggle('codex', enabled)}
+        />
+
+        {codexApi.enabled ? (
+          <>
+            <span style={NOTE} data-codex-oauth-credentials={codexApi.credentials}>
+              {t(CODEX_CREDENTIALS[codexApi.credentials])}
+            </span>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <span style={NOTE} data-codex-oauth-state="">
+                {codexFetched(codexApi, now)}
+              </span>
+              <button
+                type="button"
+                data-usage-action="ask-codex"
+                onClick={onApiRefresh}
+                style={CHIP}
+              >
+                {t('settings.oauthRefresh')}
+              </button>
+            </div>
+
+            {codexApi.problem === undefined ? null : (
+              <span style={{ ...NOTE, color: 'var(--alarm)' }} data-codex-oauth-problem="">
+                {codexApi.problem}
               </span>
             )}
           </>
@@ -180,6 +236,45 @@ function fetched(api: UsageApiStatus, now: number): string {
     ago: when,
     fiveHour: api.fiveHourPct ?? 0,
     weekly: api.weeklyPct ?? 0,
+  })
+}
+
+/** Ключи, а не подписи, по той же причине, что у соседа выше. */
+const CODEX_CREDENTIALS = {
+  file: 'settings.codexApiCredsFile',
+  expired: 'settings.codexApiCredsExpired',
+  missing: 'settings.codexApiCredsMissing',
+} as const satisfies Record<CodexApiStatus['credentials'], string>
+
+/** Названия видов окон — те же, что в попапе: одно окно, одно слово. */
+const KIND_KEY = {
+  fiveHour: 'limit.fiveHour',
+  weekly: 'limit.weekly',
+  monthly: 'limit.monthly',
+  other: 'limit.other',
+} as const satisfies Record<NonNullable<CodexApiStatus['windows']>[number]['kind'], string>
+
+/**
+ * Что показать про последний ответ OpenAI.
+ *
+ * Окна перечисляются списком, а не парой «5 ч / 7 дней», как у Claude, и это не
+ * прихоть: у Codex вид окна пришёл длиной, и до CLI 0.145.0 оно было
+ * пятичасовым, после — недельным (пункт 8). Пара полей заставила бы выбирать,
+ * куда положить окно, которое ни то и ни другое, — то есть выбросить его.
+ */
+function codexFetched(api: CodexApiStatus, now: number): string {
+  if (api.retryAt !== undefined && api.retryAt > now) {
+    return t('settings.codexApiRetry', { at: span(api.retryAt - now) })
+  }
+  if (api.fetchedAt === undefined) return t('settings.codexApiNever')
+  const when = ago(Math.max(0, now - api.fetchedAt))
+  const windows = api.windows ?? []
+  if (windows.length === 0) return t('settings.codexApiFetchedFew', { ago: when })
+  return t('settings.codexApiFetched', {
+    ago: when,
+    windows: windows
+      .map((window) => `${t(KIND_KEY[window.kind])} — ${window.pct}%`)
+      .join(', '),
   })
 }
 

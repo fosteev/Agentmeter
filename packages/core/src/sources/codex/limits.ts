@@ -61,6 +61,11 @@ function append(
   // а класть его в «текущее окно» наугад — тихо соврать.
   if (usedPercent === undefined || windowMinutes === undefined || resetsAt === undefined) return
   if (!Number.isFinite(ts)) return
+  // Окно нулевой длины — не окно: его начало совпало бы с концом, и в отчёт оно
+  // попало бы строкой, которая закрывается ровно тогда же, когда открылась. На
+  // живой машине такое наблюдение одно на 15 437 (22 февраля), но молчаливая
+  // строка «окно лимита 0 минут» дороже одной проверки.
+  if (windowMinutes <= 0) return
 
   observations.push({ ts, windowMinutes, usedPercent, resetsAt: resetsAt * 1000 })
 }

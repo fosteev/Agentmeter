@@ -1,0 +1,293 @@
+{
+  "_": "Второй источник лимитов Codex (6.4): ответ `chatgpt.com/backend-api/wham/usage` → окна лимита. Фикстура рукописная: каждый случай написан под одно правило, и правило названо в его `_`. Числа считаны руками от одного момента наблюдения `ts`, чтобы `startsAt` можно было проверить вычитанием в уме.",
+
+  "ts": 1786514400000,
+  "tsIso": "2026-08-12T06:00:00.000Z",
+
+  "cases": [
+    {
+      "name": "live",
+      "_": "Живой ответ 12 августа 2026, сокращённый до разбираемого. Недельное окно приехало в слоте `primary_window`, а `secondary_window` пуст — ровно та картинка, из-за которой имя слота считать нельзя (пункт 8 CLAUDE.md). ClaudeBar здесь показал бы недельный расход как пятичасовой, молча. Второе: при нулевом проценте `reset_at` равен `ts + limit_window_seconds` до секунды — провайдер отдаёт не границу, а заглушку, и `startsAt` совпадает с моментом наблюдения. Мы её берём как есть: «окно свежее» — это и есть то, что он говорит.",
+      "response": {
+        "plan_type": "plus",
+        "rate_limit": {
+          "allowed": true,
+          "limit_reached": false,
+          "primary_window": {
+            "used_percent": 0,
+            "limit_window_seconds": 604800,
+            "reset_after_seconds": 604800,
+            "reset_at": 1787119200
+          },
+          "secondary_window": null
+        },
+        "code_review_rate_limit": null,
+        "additional_rate_limits": null,
+        "credits": { "has_credits": false, "unlimited": false, "balance": "0" }
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": 1786514400000,
+          "resetsAt": 1787119200000,
+          "usedPercent": 0,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "slots-swapped",
+      "_": "Оба окна на месте, но недельное лежит в `primary_window`, а пятичасовое в `secondary_window`. Случай синтетический и написан затем, чтобы разбор по имени слота дал зелёное там, где он неверен: перепутай их — и `kind` поменяются местами, а сам факт «два окна, 43% и 12%» устоит. Вид окна берётся из `limit_window_seconds`: 604800 с = 10080 мин = недельное, 18000 с = 300 мин = пятичасовое.",
+      "response": {
+        "rate_limit": {
+          "primary_window": {
+            "used_percent": 43,
+            "limit_window_seconds": 604800,
+            "reset_at": 1787018400
+          },
+          "secondary_window": {
+            "used_percent": 12,
+            "limit_window_seconds": 18000,
+            "reset_at": 1786528800
+          }
+        }
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": 1786413600000,
+          "resetsAt": 1787018400000,
+          "usedPercent": 43,
+          "observedAt": 1786514400000,
+          "exact": true
+        },
+        {
+          "provider": "codex",
+          "kind": "fiveHour",
+          "windowMinutes": 300,
+          "startsAt": 1786510800000,
+          "resetsAt": 1786528800000,
+          "usedPercent": 12,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "length-missing",
+      "_": "У первого окна нет `limit_window_seconds`. Подставить сюда пять часов «потому что это primary» — та же ошибка, что разбор по имени слота, только с другого конца: окно без длины не имеет вида, и `startsAt` из него не выводится ничем. Такое окно выпадает целиком, соседнее остаётся — одна непонятная запись не делает соседнюю неверной.",
+      "response": {
+        "rate_limit": {
+          "primary_window": { "used_percent": 30, "reset_at": 1786528800 },
+          "secondary_window": {
+            "used_percent": 55,
+            "limit_window_seconds": 604800,
+            "reset_at": 1787018400
+          }
+        }
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": 1786413600000,
+          "resetsAt": 1787018400000,
+          "usedPercent": 55,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "reset-after",
+      "_": "Границы нет, есть только `reset_after_seconds` — 5400 с от момента наблюдения. Отсчёт идёт от `ts` запроса, а не от чего-либо в теле: другого времени в ответе нет вовсе. Заодно дробный процент: в логах Codex он приезжает как `44.0`, и округлять его до целого — терять то немногое, чем этот источник лучше целочисленного ответа Anthropic (пункт 23).",
+      "response": {
+        "rate_limit": {
+          "primary_window": {
+            "used_percent": 33.5,
+            "limit_window_seconds": 18000,
+            "reset_after_seconds": 5400
+          }
+        }
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "fiveHour",
+          "windowMinutes": 300,
+          "startsAt": 1786501800000,
+          "resetsAt": 1786519800000,
+          "usedPercent": 33.5,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "other-pools",
+      "_": "Рядом с `rate_limit` в ответе лежат `code_review_rate_limit` и `additional_rate_limits` — это другие пулы, со своими потолками. Взять их в тот же список значит показать два недельных окна Codex с разными процентами и без единого слова о том, чем они отличаются: `LimitWindow` различает окна длиной, а не источником. Разбирается только `rate_limit`, остальное пропускается молча.",
+      "response": {
+        "rate_limit": {
+          "primary_window": {
+            "used_percent": 7,
+            "limit_window_seconds": 604800,
+            "reset_at": 1787018400
+          },
+          "secondary_window": null
+        },
+        "code_review_rate_limit": {
+          "primary_window": {
+            "used_percent": 61,
+            "limit_window_seconds": 604800,
+            "reset_at": 1787018400
+          }
+        },
+        "additional_rate_limits": [
+          {
+            "limit_id": "cloud_tasks",
+            "primary_window": {
+              "used_percent": 88,
+              "limit_window_seconds": 18000,
+              "reset_at": 1786528800
+            }
+          }
+        ]
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": 1786413600000,
+          "resetsAt": 1787018400000,
+          "usedPercent": 7,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "junk",
+      "_": "Процент вне 0…100 роняет своё окно, а не ответ целиком — то же правило, что у `windowSample` в разборе Anthropic. Окно без `used_percent` выпадает по той же причине: ноль здесь означал бы «израсходовано ноль», а это другое утверждение (шапка `LimitWindow`). Окно без границы и без `reset_after_seconds` — тоже: интервала нет, считать нечего.",
+      "response": {
+        "rate_limit": {
+          "primary_window": {
+            "used_percent": 101,
+            "limit_window_seconds": 18000,
+            "reset_at": 1786528800
+          },
+          "secondary_window": {
+            "used_percent": 7,
+            "limit_window_seconds": 604800,
+            "reset_at": 1787018400
+          }
+        },
+        "additional": null
+      },
+      "windows": [
+        {
+          "provider": "codex",
+          "kind": "weekly",
+          "windowMinutes": 10080,
+          "startsAt": 1786413600000,
+          "resetsAt": 1787018400000,
+          "usedPercent": 7,
+          "observedAt": 1786514400000,
+          "exact": true
+        }
+      ]
+    },
+
+    {
+      "name": "no-boundary",
+      "_": "Единственное окно без обоих полей сброса. Пустой список — это «записывать нечего», и он не то же самое, что ошибка разбора: так выглядит ответ, из которого окон не собралось.",
+      "response": {
+        "rate_limit": {
+          "primary_window": { "used_percent": 20, "limit_window_seconds": 18000 }
+        }
+      },
+      "windows": []
+    },
+
+    {
+      "name": "empty",
+      "_": "`rate_limit: null` — так отвечают, когда лимитов на аккаунте нет вовсе. Тоже пустой список, а не исключение.",
+      "response": { "plan_type": "plus", "rate_limit": null },
+      "windows": []
+    }
+  ],
+
+  "credentials": [
+    {
+      "name": "oauth",
+      "_": "Обычный `~/.codex/auth.json`. Токен и `account_id` берутся из `tokens`, срок — из полезной нагрузки самого JWT (`exp`, секунды). Подпись не проверяется и проверять её нечем: нам нужен не факт подлинности, а ответ на вопрос «стоит ли вообще стучаться». Здесь `exp` = 2026-08-19T06:00:00Z, то есть в момент `ts` токен жив.",
+      "raw": {
+        "auth_mode": "chatgpt",
+        "OPENAI_API_KEY": null,
+        "tokens": {
+          "id_token": "e30.eyJleHAiOjE3ODcxMTkyMDB9.sig",
+          "access_token": "e30.eyJleHAiOjE3ODcxMTkyMDB9.sig",
+          "refresh_token": "rt.1.secret",
+          "account_id": "a3bf69ee-ed01-4ca0-a8ae-70560c648034"
+        },
+        "last_refresh": "2026-08-08T09:42:36.234308Z"
+      },
+      "parsed": {
+        "token": "e30.eyJleHAiOjE3ODcxMTkyMDB9.sig",
+        "accountId": "a3bf69ee-ed01-4ca0-a8ae-70560c648034",
+        "expiresAt": 1787119200000
+      },
+      "expired": false
+    },
+    {
+      "name": "expired",
+      "_": "Тот же файл, но `exp` = 2026-08-12T05:00:00Z — за час до `ts`. Запроса с таким токеном не будет: 401 мы и так получим, а лишний поход в сеть с заведомо мёртвым токеном ничего не выясняет. Человеку показывается «токен просрочен», а не «OpenAI не принял токен» — это разные советы.",
+      "raw": {
+        "auth_mode": "chatgpt",
+        "tokens": {
+          "access_token": "e30.eyJleHAiOjE3ODY1MTA4MDB9.sig",
+          "account_id": "a3bf69ee-ed01-4ca0-a8ae-70560c648034"
+        }
+      },
+      "parsed": {
+        "token": "e30.eyJleHAiOjE3ODY1MTA4MDB9.sig",
+        "accountId": "a3bf69ee-ed01-4ca0-a8ae-70560c648034",
+        "expiresAt": 1786510800000
+      },
+      "expired": true
+    },
+    {
+      "name": "opaque",
+      "_": "Токен, из которого срок не читается (не три сегмента, не JSON, нет `exp` — все три ведут сюда). Нечитаемый срок — **не** просроченный: отказаться от запроса из-за того, что мы не разобрали чужой формат, значит выключить источник на ровном месте. Идём в сеть и слушаем провайдера.",
+      "raw": { "tokens": { "access_token": "opaque-token-without-dots" } },
+      "parsed": { "token": "opaque-token-without-dots" },
+      "expired": false
+    },
+    {
+      "name": "api-key-only",
+      "_": "Вход по ключу API: `tokens` пуст. Эндпоинт лимитов подписки такому аккаунту не отвечает — у ключа нет ни плана, ни окон, — поэтому креденшелов у нас нет вовсе, а не «есть, но не подошли».",
+      "raw": { "auth_mode": "apikey", "OPENAI_API_KEY": "sk-proj-secret", "tokens": null },
+      "parsed": null,
+      "expired": false
+    },
+    {
+      "name": "broken",
+      "_": "Файл есть, но это не JSON. Ровно то же, что его отсутствие: токена нет.",
+      "raw": null,
+      "rawText": "{\"tokens\": ",
+      "parsed": null,
+      "expired": false
+    }
+  ]
+}

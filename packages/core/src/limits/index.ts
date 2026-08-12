@@ -1,6 +1,14 @@
 export { buildClaudeWindows } from './claude.ts'
 export type { LimitRequest } from './claude.ts'
-export { buildCodexWindows, currentWindows } from './windows.ts'
+export { buildCodexWindows, currentWindows, kindForMinutes } from './windows.ts'
+export {
+  CODEX_SNAPSHOT_TTL_MS,
+  CODEX_USAGE_URL,
+  codexTokenExpired,
+  parseCodexCredentials,
+  parseCodexUsage,
+} from './codex-oauth.ts'
+export type { CodexCredentials } from './codex-oauth.ts'
 export {
   CALIBRATION,
   appendUsageJournal,

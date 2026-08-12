@@ -17,6 +17,7 @@ import {
   type CurrentTurn as CoreCurrentTurn,
   type SourceIssue,
   type Db,
+  type LimitWindow,
   type LiveAgent as CoreLiveAgent,
   type LiveLayer,
   type Totals,
@@ -30,6 +31,7 @@ import type {
   CurrentTurn,
   DayTotals,
   LastAgent,
+  LimitsSource,
   LiveAgent,
   Measured,
   SourceProblem,
@@ -41,13 +43,26 @@ export interface SnapshotInput {
   issues?: readonly SourceIssue[]
   at?: number
   /**
-   * Ответ Anthropic про лимиты и состояние источника (6.3).
+   * Ответы провайдеров про лимиты и состояние источников (6.3, 6.4).
    *
-   * Приезжает сюда, а не читается отсюда: снимок собирается на каждый опрос
-   * трея, а ходить в сеть решает `pollOauth` — раз в четверть часа и только
-   * при включённой настройке.
+   * Приезжают сюда, а не читаются отсюда: снимок собирается на каждый опрос
+   * трея, а ходить в сеть решают `pollOauth`/`pollCodexOauth` — раз в четверть
+   * часа и только при включённой настройке.
+   *
+   * Два поля, потому что ответы разной формы: у Claude это снимок процентов, из
+   * которого окна выводятся (длина известна по виду), у Codex — сразу окна, у
+   * которых длина пришла числом. Плюс `fetchedAt` у Codex отдельно от окон:
+   * ответ «окон нет» — это тоже ответ, и его возраст попапу нужен.
    */
-  oauth?: { enabled: boolean; snapshot?: UsageSnapshot; retryAt?: number }
+  oauth?: {
+    claude: { enabled: boolean; snapshot?: UsageSnapshot; retryAt?: number }
+    codex: {
+      enabled: boolean
+      windows?: readonly LimitWindow[]
+      fetchedAt?: number
+      retryAt?: number
+    }
+  }
 }
 
 export function buildSnapshot(
@@ -60,14 +75,13 @@ export function buildSnapshot(
   const liveSnapshot = live.snapshot(at)
   // Ответ провайдера сильнее нашего расчёта — и по проценту, и по границам
   // окна: лимит считается по аккаунту, и окно могло начаться с запроса,
-  // которого у нас нет. Подробности — в шапке `replaceClaude`.
-  const limits = limitsReport(
-    db,
-    at,
-    config.limits.claude,
-    undefined,
-    input.oauth?.snapshot,
-  ).windows
+  // которого у нас нет. Подробности — в шапке `replaceProvider`.
+  const limits = limitsReport(db, at, config.limits.claude, undefined, {
+    ...(input.oauth?.claude.snapshot === undefined
+      ? {}
+      : { claude: input.oauth.claude.snapshot }),
+    ...(input.oauth?.codex.windows === undefined ? {} : { codex: input.oauth.codex.windows }),
+  }).windows
   const today = todayReport(db, dayRange(at, config.ui.dayStartsAtHour))
 
   const snapshot: TraySnapshot = {
@@ -77,15 +91,11 @@ export function buildSnapshot(
     today: toDayTotals(today.totals, today.approximate, today.sessions, today.projects.length),
     // Пустой список — это утверждение «источники прочитаны», а не молчание.
     problems: toProblems(input.issues ?? []),
-    // Откуда взялись проценты Claude и можно ли спросить заново (6.3). Поле
-    // есть всегда: «источник выключен» — такое же утверждение, как «спрошено
-    // две минуты назад», и попапу нужно различать их, а не догадываться по
+    // Откуда взялись проценты и можно ли спросить заново (6.3, 6.4). Поле есть
+    // всегда: «источник выключен» — такое же утверждение, как «спрошено две
+    // минуты назад», и попапу нужно различать их, а не догадываться по
     // отсутствию.
-    limitsSource: {
-      enabled: input.oauth?.enabled ?? false,
-      ...(input.oauth?.snapshot === undefined ? {} : { askedAt: input.oauth.snapshot.ts }),
-      ...(input.oauth?.retryAt === undefined ? {} : { retryAt: input.oauth.retryAt }),
-    },
+    limitsSource: limitsSource(input.oauth),
   }
 
   // Кого видели последним — только когда сейчас никого нет: попапу это нужно
@@ -105,6 +115,42 @@ export function buildSnapshot(
   if (known.length > 0) snapshot.nearestLimitPercent = Math.max(...known)
 
   return snapshot
+}
+
+/**
+ * Два источника → одна подпись над блоком лимитов (6.4).
+ *
+ * Кнопка в попапе одна, значит и строка про неё одна, а сводятся два состояния
+ * по худшему случаю — правила и причины расписаны у `LimitsSource` в
+ * [контракте](../../../../packages/ipc/src/index.ts). Коротко: включён хотя бы
+ * один; возраст — самого старого из полученных ответов; ждать надо, только
+ * когда ограничены все включённые, иначе кнопка гасла бы, умея сработать.
+ */
+export function limitsSource(oauth: SnapshotInput['oauth']): LimitsSource {
+  const sources = [
+    {
+      enabled: oauth?.claude.enabled ?? false,
+      askedAt: oauth?.claude.snapshot?.ts,
+      retryAt: oauth?.claude.retryAt,
+    },
+    {
+      enabled: oauth?.codex.enabled ?? false,
+      askedAt: oauth?.codex.fetchedAt,
+      retryAt: oauth?.codex.retryAt,
+    },
+  ].filter((source) => source.enabled)
+
+  const source: LimitsSource = { enabled: sources.length > 0 }
+  if (sources.length === 0) return source
+
+  const asked = sources
+    .map((one) => one.askedAt)
+    .filter((at): at is number => at !== undefined)
+  if (asked.length > 0) source.askedAt = Math.min(...asked)
+
+  const waits = sources.map((one) => one.retryAt)
+  if (waits.every((at): at is number => at !== undefined)) source.retryAt = Math.min(...waits)
+  return source
 }
 
 /** Имена продуктов не переводятся: это их названия, а не слова. */

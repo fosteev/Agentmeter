@@ -565,6 +565,21 @@ export const ru = {
     oauthFetchedFew: 'спрошено {{ago}}, окон в ответе нет',
     oauthRefresh: 'Спросить сейчас',
     oauthRetry: 'Anthropic просит подождать — следующая попытка {{at}}',
+
+    // То же для Codex (6.4). Подпись говорит про свежесть, а не про сам
+    // процент: процент у Codex есть и в логах, а вот возраст его — вчерашний,
+    // и это единственное, что тумблер меняет.
+    codexApiOn: 'Спрашивать',
+    codexApiOff: 'Не спрашивать',
+    codexApiNote:
+      '— запрос к OpenAI токеном Codex, раз в четверть часа. В логах процент точный, но написан он в момент последнего запроса: после дня без Codex он про позавчерашнее окно',
+    codexApiCredsFile: 'токен взят из ~/.codex/auth.json',
+    codexApiCredsExpired: 'токен Codex просрочен — запустите codex, он обновит его сам',
+    codexApiCredsMissing: 'токен Codex не найден — авторизуйтесь в самом Codex',
+    codexApiNever: 'ещё не спрашивали',
+    codexApiFetched: 'спрошено {{ago}}: {{windows}}',
+    codexApiFetchedFew: 'спрошено {{ago}}, окон в ответе нет',
+    codexApiRetry: 'OpenAI просит подождать — следующая попытка {{at}}',
   },
 
   /**
@@ -580,6 +595,17 @@ export const ru = {
     throttled: 'Anthropic просит спрашивать реже',
     httpError: 'Anthropic ответил {{status}}',
     badBody: 'ответ Anthropic не разбирается',
+  },
+
+  /** Отказы второго источника Codex (6.4). То же правило: наш пересказ. */
+  codexOauth: {
+    noCredentials: 'токен Codex не найден',
+    expired: 'токен Codex просрочен — запустите codex, он обновит его сам',
+    offline: 'не дозвонились до OpenAI — показан прежний ответ',
+    needsLogin: 'OpenAI не принял токен: авторизуйтесь в Codex заново',
+    throttled: 'OpenAI просит спрашивать реже',
+    httpError: 'OpenAI ответил {{status}}',
+    badBody: 'ответ OpenAI не разбирается',
   },
 
   /** CLI: заголовки колонок и сообщения команд. */
