@@ -16,6 +16,12 @@ export interface PopupIdleProps {
   snapshot: TraySnapshot
   now: number
   onOpenWindow?: (() => void) | undefined
+  /**
+   * Пересборка снимка по кнопке в шапке (7.2). Кнопка нужна и здесь: «поток
+   * встал» выглядит в этих состояниях убедительнее всего — на экране написано,
+   * что никого нет.
+   */
+  refresh?: { onRefresh?: (() => void) | undefined; busy?: boolean } | undefined
 }
 
 const PROVIDER: Record<Provider, string> = {
@@ -46,7 +52,7 @@ function caption(window: LimitReportRow, at: number): string {
  */
 const MARK = '\u0000'
 
-export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
+export function PopupIdle({ snapshot, now, onOpenWindow, refresh }: PopupIdleProps) {
   const { at, lastAgent, limits, today } = snapshot
   if (lastAgent === undefined) return null
 
@@ -57,7 +63,11 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
 
   return (
     <PopupShell>
-      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
+      <PopupHeader
+        updated={t('popup.updatedAgo', { ago: ago(now - at) })}
+        onRefresh={refresh?.onRefresh}
+        busy={refresh?.busy ?? false}
+      />
 
       <SectionTitle title={t('popup.working')} padding="14px 14px 6px" />
       <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -93,8 +103,15 @@ export function PopupIdle({ snapshot, now, onOpenWindow }: PopupIdleProps) {
         {limits.map((window) => (
           <PopupLimit
             key={`${window.provider}-${window.kind}-${window.startsAt}`}
-            provider={window.provider}
-            title={t(KIND_KEY[window.kind])}
+            // Провайдер здесь стоит в самом имени окна — «Claude, 5-часовое
+            // окно», строка 1297 макета. Табов над этим списком нет: в паузе
+            // ничего не работает вовсе, разводить подробности по вкладкам
+            // нечего, а окна обоих провайдеров лежат вперемешку, и бейджа,
+            // который их различал, с 7.1 больше нет.
+            title={t('limit.ofProvider', {
+              provider: PROVIDER[window.provider],
+              window: t(KIND_KEY[window.kind]),
+            })}
             percent={window.usedPercent}
             approximate={!window.exact}
             caption={caption(window, at)}

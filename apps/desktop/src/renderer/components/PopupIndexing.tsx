@@ -14,6 +14,12 @@ export interface PopupIndexingProps {
   progress: IndexProgress
   now: number
   onOpenWindow?: (() => void) | undefined
+  /**
+   * Пересборка снимка по кнопке в шапке (7.2). Кнопка нужна и здесь: «поток
+   * встал» выглядит в этих состояниях убедительнее всего — на экране написано,
+   * что никого нет.
+   */
+  refresh?: { onRefresh?: (() => void) | undefined; busy?: boolean } | undefined
 }
 
 /**
@@ -40,7 +46,13 @@ function remaining(ms: number): string {
   return `≈ ${span(ms)}`
 }
 
-export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIndexingProps) {
+export function PopupIndexing({
+  snapshot,
+  progress,
+  now,
+  onOpenWindow,
+  refresh,
+}: PopupIndexingProps) {
   const { at, today } = snapshot
   const percent =
     progress.bytesTotal === 0
@@ -51,7 +63,11 @@ export function PopupIndexing({ snapshot, progress, now, onOpenWindow }: PopupIn
 
   return (
     <PopupShell>
-      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
+      <PopupHeader
+        updated={t('popup.updatedAgo', { ago: ago(now - at) })}
+        onRefresh={refresh?.onRefresh}
+        busy={refresh?.busy ?? false}
+      />
 
       <div
         style={{

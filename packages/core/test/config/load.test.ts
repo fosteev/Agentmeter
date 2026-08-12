@@ -149,13 +149,52 @@ describe('конфиг', () => {
     expect(problems).toHaveLength(1)
   })
 
+  /**
+   * Ловит тарифные потолки, доехавшие до поля, которое теперь означает
+   * измеренное (7.4).
+   *
+   * Лишние ключи загрузчик игнорирует молча, и `plan` из конфига исчезает сам —
+   * а числа под ним остались бы валидными числами и поехали бы дальше как
+   * измерение. 220 000 у «Max 20×» — заявленный тариф, которого никто не мерил,
+   * и процент от него был бы посчитан от выдуманного знаменателя.
+   */
+  it('потолки, выбранные планом, сбрасываются и об этом сказано', () => {
+    writeFileSync(
+      path(),
+      JSON.stringify({
+        limits: {
+          claude: { plan: 'Max 20×', fiveHourCap: 220_000, weeklyCap: 4_400_000, cacheReadWeight: 0.2 },
+        },
+      }),
+    )
+    const { config, problems } = loadConfig(path())
+
+    expect(config.limits.claude.fiveHourCap).toBeNull()
+    expect(config.limits.claude.weeklyCap).toBeNull()
+    // Вес остаётся: его мерила калибровка, а не таблица тарифов.
+    expect(config.limits.claude.cacheReadWeight).toBe(0.2)
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain('Max 20×')
+  })
+
+  /** Ловит сброс потолков у того, кто плана не выбирал: мерить их заново незачем. */
+  it('измеренные потолки без плана остаются на месте', () => {
+    writeFileSync(
+      path(),
+      JSON.stringify({ limits: { claude: { fiveHourCap: 3_900_000, weeklyCap: 48_000_000 } } }),
+    )
+    const { config, problems } = loadConfig(path())
+
+    expect(config.limits.claude.fiveHourCap).toBe(3_900_000)
+    expect(problems).toEqual([])
+  })
+
   it('сохранённый конфиг читается обратно без изменений', () => {
     const cfg = structuredClone(DEFAULT_CONFIG)
     cfg.limits.claude = {
       fiveHourCap: 44_000_000,
       weeklyCap: 480_000_000,
       cacheReadWeight: 0.1,
-      plan: 'max20',
       api: { enabled: false },
     }
     saveConfig(cfg, path())

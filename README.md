@@ -17,8 +17,11 @@ to be never called, and they cost 11.4M tokens.
 - **Who is working right now** — the tray popup: agent, project, state
   (thinking, waiting for you, silent), pace in tokens per minute, and how much
   of the context window is left.
-- **Limits** — the 5-hour and weekly windows. Codex reports exact percentages
-  from the server; Claude's are marked with `≈` (see “What it does not know”).
+- **Limits** — the 5-hour and weekly windows, one tab per provider. The popup
+  opens on the most alarming one, and the tab left behind keeps a dot in the
+  colour of its own worst window, so nothing hides behind a click. Codex reports
+  exact percentages from the server; Claude's are marked with `≈` (see “What it
+  does not know”).
 - **The whole day** — a feed of tasks with an expandable card: request
   timeline, token kinds, tools, files touched, subagents. Plus breakdowns by
   hour, project and ticket. Sessions that are running right now are pinned to
@@ -29,7 +32,9 @@ to be never called, and they cost 11.4M tokens.
   never called across 34 sessions; turning it off returns 194.7k”.
 - **History** — a calendar week, 30 days or all time, with a day × hour heatmap.
 
-The popup is shown at its real size — 400 × 600, right under the tray icon:
+The popup is shown at its real size — 400 × 600, right under the tray icon. Its
+header carries the age of the snapshot and a button that rebuilds it from the
+index — `⌘R` does the same:
 
 <img src="docs/screenshots/en/popup.png" alt="Tray popup" width="380">
 
@@ -107,9 +112,11 @@ smoothed over. Everything that is an estimate carries an `≈`.
   marked `≈`, the gap is ≤ 3.3% and always downward.
 - **The weight of a cache-read token against the Claude subscription limit is
   unknown.** The difference between counting it and ignoring it is two orders of
-  magnitude, so Claude percentages stay marked as estimates until they are
-  calibrated by hand against `/usage`. Codex percentages come from the server
-  and are exact.
+  magnitude, so Claude percentages stay marked as estimates until the weight is
+  calibrated. It is not guessed and not typed in: the weight and the window cap
+  are solved together from the percentages Claude itself reports — to its status
+  line and, if you allow the request, to the app. Codex percentages come from
+  the server and are exact.
 - **Claude's housekeeping Haiku calls** (session titles, “while you were away”
   summaries) are absent from transcripts entirely. Against Claude Code's own
   numbers that is 1.3% of the spend overall — but up to 30% on small projects,

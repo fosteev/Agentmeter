@@ -1,6 +1,7 @@
-import type { Entrypoint, LimitReportRow } from '@agentmeter/core'
+import type { Entrypoint, LimitReportRow, Provider } from '@agentmeter/core'
 import type { LiveAgent, TraySnapshot } from '@agentmeter/ipc'
 import { formatTokens, t } from '../format.ts'
+import type { RefreshState } from '../refresh.ts'
 import { ago, span } from '../time.ts'
 import { AGENT_STATUS, AgentRow } from './AgentRow.tsx'
 import { LimitsAside } from './LimitsAside.tsx'
@@ -10,6 +11,7 @@ import { PopupEmpty } from './PopupEmpty.tsx'
 import { PopupIdle } from './PopupIdle.tsx'
 import { PopupIndexing } from './PopupIndexing.tsx'
 import { PopupLimit } from './PopupLimit.tsx'
+import { alarmingProvider, limitTabs, PopupLimitTabs } from './PopupLimitTabs.tsx'
 import { PopupProblem } from './PopupProblem.tsx'
 import { PopupShell } from './PopupShell.tsx'
 import { SectionTitle } from './SectionTitle.tsx'
@@ -37,6 +39,20 @@ export interface PopupProps {
    * выглядит ровно так, как до этапа.
    */
   onAskLimits?: (() => void) | undefined
+  /**
+   * Пересобрать снимок из индекса — кнопка в шапке и `⌘R` (7.2). Соседняя
+   * кнопка «спросить» ходит в сеть за лимитами: это разные действия, и они
+   * стоят рядом намеренно.
+   */
+  onRefresh?: (() => void) | undefined
+  /** Ход пересборки: занято и отказ. Держит его тот, кто зовёт `onRefresh`. */
+  refresh?: RefreshState | undefined
+  /**
+   * Выбранный таб провайдера в блоке лимитов (7.1). Не задан — попап открыт на
+   * самом тревожном: выбор считается из окон снимка, а не запоминается.
+   */
+  limitTab?: Provider | undefined
+  onLimitTab?: ((provider: Provider) => void) | undefined
 }
 
 /** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
@@ -65,10 +81,32 @@ const ROW = 42
 /** Сколько строк списка видно даже в самом тесном случае. */
 const MIN_ROWS = 2
 
-export function Popup({ snapshot, now = Date.now(), onOpenWindow, onAskLimits }: PopupProps) {
-  if (snapshot.problems.length > 0) {
-    return <PopupProblem snapshot={snapshot} onOpenWindow={onOpenWindow} />
+export function Popup({
+  snapshot,
+  now = Date.now(),
+  onOpenWindow,
+  onAskLimits,
+  onRefresh,
+  refresh,
+  limitTab,
+  onLimitTab,
+}: PopupProps) {
+  // Отказавшая пересборка выигрывает у обычного попапа по тому же правилу, что
+  // и нечитаемые логи: прежние числа под прежним «обновлено 2 с назад» человек
+  // прочитает как свежие раньше, чем заметит, что нажатие ничего не дало.
+  if (snapshot.problems.length > 0 || refresh?.failure !== undefined) {
+    return (
+      <PopupProblem
+        snapshot={snapshot}
+        onOpenWindow={onOpenWindow}
+        failure={refresh?.failure}
+        onRetry={onRefresh}
+      />
+    )
   }
+  // Кнопка обновления едет во все состояния с шапкой (7.2): «поток встал»
+  // выглядит убедительнее всего там, где на экране написано, что никого нет.
+  const refreshUi = { onRefresh, busy: refresh?.busy ?? false }
   if (snapshot.indexing !== undefined && snapshot.indexing.phase !== 'done') {
     return (
       <PopupIndexing
@@ -76,21 +114,39 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow, onAskLimits }:
         progress={snapshot.indexing}
         now={now}
         onOpenWindow={onOpenWindow}
+        refresh={refreshUi}
       />
     )
   }
   if (snapshot.agents.length === 0 && snapshot.lastAgent === undefined) {
-    return <PopupEmpty snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} />
+    return (
+      <PopupEmpty snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} refresh={refreshUi} />
+    )
   }
   if (snapshot.agents.length === 0) {
-    return <PopupIdle snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} />
+    return (
+      <PopupIdle snapshot={snapshot} now={now} onOpenWindow={onOpenWindow} refresh={refreshUi} />
+    )
   }
 
   const { at, agents, limits, limitsSource, today } = snapshot
 
+  // Табы и выбранный провайдер — из тех же окон, что рисуются ниже. Один
+  // включённый провайдер даёт один таб, а ряд из одного таба ничего не разводит
+  // и только занимает место, поэтому рисуется он с двух.
+  const tabs = limitTabs(limits)
+  const chosen = tabs.some((tab) => tab.provider === limitTab)
+    ? limitTab
+    : alarmingProvider(tabs)
+  const shown = tabs.length > 1 ? limits.filter((window) => window.provider === chosen) : limits
+
   return (
     <PopupShell>
-      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
+      <PopupHeader
+        updated={t('popup.updatedAgo', { ago: ago(now - at) })}
+        onRefresh={refreshUi.onRefresh}
+        busy={refreshUi.busy}
+      />
 
       <div style={{ flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/*
@@ -163,21 +219,32 @@ export function Popup({ snapshot, now = Date.now(), onOpenWindow, onAskLimits }:
           <SectionTitle
             title={t('popup.limits')}
             padding="16px 14px 4px"
+            // Подпись про оценку — о том, что показано, а не обо всём снимке:
+            // окна под ней теперь одного провайдера, и «≈ оценка» над точными
+            // процентами Codex было бы приуменьшением точности.
             aside={
-              <LimitsAside
-                limits={limits}
-                source={limitsSource}
-                now={now}
-                onAsk={onAskLimits}
-              />
+              <LimitsAside limits={shown} source={limitsSource} now={now} onAsk={onAskLimits} />
             }
           />
 
-          <div style={{ padding: '6px 14px', display: 'flex', flexDirection: 'column', gap: 13 }}>
-            {limits.map((window) => (
+          {tabs.length > 1 ? (
+            <PopupLimitTabs tabs={tabs} active={chosen} onSelect={onLimitTab} />
+          ) : null}
+
+          <div
+            style={{
+              // Поле сверху больше, когда над списком стоит отчёркнутый ряд
+              // табов (макет, 431), и меньше, когда полосы идут сразу за
+              // заголовком, — оба числа из макета, разные у разных соседей.
+              padding: tabs.length > 1 ? '12px 14px 6px' : '6px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 13,
+            }}
+          >
+            {shown.map((window) => (
               <PopupLimit
                 key={`${window.provider}-${window.kind}-${window.startsAt}`}
-                provider={window.provider}
                 title={t(KIND_KEY[window.kind])}
                 percent={window.usedPercent}
                 approximate={!window.exact}

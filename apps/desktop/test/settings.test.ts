@@ -8,9 +8,12 @@ import {
   openDb,
   setLocale,
   t,
+  type Calibration,
+  type ClaudeLimits,
   type Config,
   type Db,
 } from '@agentmeter/core'
+import { calibrationPatch } from '../src/main/calibration.ts'
 import { configReport, setConfig, type ConfigTarget } from '../src/main/config.ts'
 import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
 import { openOauth } from '../src/main/oauth.ts'
@@ -140,12 +143,15 @@ describe('настройки в main', () => {
     expect(target.liveOptions.idleMs).toBe(30_000)
   })
 
-  /** Ловит потолки лимитов, не доехавшие до пересборки окон. */
+  /**
+   * Ловит потолки лимитов, не доехавшие до пересборки окон. Пишет их теперь
+   * только калибровка (7.4), но путь до живого слоя у правки тот же.
+   */
   it('потолки лимитов доезжают до живого слоя', () => {
-    setConfig(target, { limits: { claude: { plan: 'Max 5×', fiveHourCap: 88_000 } } })
+    setConfig(target, { limits: { claude: { fiveHourCap: 88_000, cacheReadWeight: 0.2 } } })
 
     expect(target.liveOptions.claudeLimits?.fiveHourCap).toBe(88_000)
-    expect(saved().limits.claude.plan).toBe('Max 5×')
+    expect(saved().limits.claude.cacheReadWeight).toBe(0.2)
   })
 
   /**
@@ -211,5 +217,72 @@ describe('настройки в main', () => {
     expect(english).not.toBe(russian)
     expect(russian).toMatch(/[А-Яа-я]/)
     expect(english).not.toMatch(/[А-Яа-я]/)
+  })
+})
+
+/**
+ * Что калибровка 1.9 записывает в настройки (7.4).
+ *
+ * Единственное место, где измеренное число попадает в конфиг, — и до 7.4 у него
+ * было исключение: выбранный план запрещал записать измеренный потолок. Плана
+ * больше нет, исключения тоже, и проверка стоит ровно на этом.
+ */
+describe('запись калибровки', () => {
+  const limits = (over: Partial<ClaudeLimits> = {}): ClaudeLimits => ({
+    fiveHourCap: null,
+    weeklyCap: null,
+    cacheReadWeight: null,
+    api: { enabled: false },
+    ...over,
+  })
+
+  const solved = (over: Partial<Calibration> = {}): Calibration =>
+    ({
+      ok: true,
+      cacheReadWeight: 0.2,
+      fiveHourCap: 3_900_000,
+      weeklyCap: 48_000_000,
+      ...over,
+    }) as Calibration
+
+  /** Ловит измеренное, не доехавшее до конфига: другого источника у этих чисел нет. */
+  it('сошедшаяся калибровка пишет и вес, и оба потолка', () => {
+    expect(calibrationPatch(limits(), solved())).toEqual({
+      cacheReadWeight: 0.2,
+      fiveHourCap: 3_900_000,
+      weeklyCap: 48_000_000,
+    })
+  })
+
+  /**
+   * Ловит правдоподобное число, подставленное вместо признания незнания:
+   * «данных мало» — нормальный исход, при котором в конфиг не едет ничего.
+   *
+   * Числа в несошедшейся калибровке намеренно **не** обнулены: по договору типа
+   * там `null`, и проверка на нулях прошла бы и без единой строки кода —
+   * `differs` не пишет `null` в любом случае. Смотреть надо на решение, а не на
+   * его вход.
+   */
+  it('несошедшаяся не пишет ничего, даже когда числа в ней есть', () => {
+    expect(calibrationPatch(limits(), solved({ ok: false }))).toEqual({})
+  })
+
+  /** Ловит перезапись тем же значением: она дёргает файл настроек на каждый опрос. */
+  it('то же самое второй раз не пишется', () => {
+    const current = limits({ cacheReadWeight: 0.2, fiveHourCap: 3_900_000, weeklyCap: 48_000_000 })
+    expect(calibrationPatch(current, solved())).toEqual({})
+  })
+
+  /**
+   * Ловит вернувшуюся оговорку про выбранный план: заявленный тариф — число в
+   * других единицах, и перебивать им измеренный потолок нельзя.
+   */
+  it('прежние потолки перебиваются измеренными, а не наоборот', () => {
+    const current = limits({ fiveHourCap: 220_000, weeklyCap: 4_400_000 })
+    expect(calibrationPatch(current, solved())).toEqual({
+      cacheReadWeight: 0.2,
+      fiveHourCap: 3_900_000,
+      weeklyCap: 48_000_000,
+    })
   })
 })

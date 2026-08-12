@@ -10,11 +10,17 @@ import {
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { formatTokens as coreFormat } from '@agentmeter/core/format'
+import type { Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
 import { AgentRow } from '../src/renderer/components/AgentRow.tsx'
 import { Popup } from '../src/renderer/components/Popup.tsx'
+import { PopupHeader } from '../src/renderer/components/PopupHeader.tsx'
 import { PopupLimit } from '../src/renderer/components/PopupLimit.tsx'
+import { LimitsAside } from '../src/renderer/components/LimitsAside.tsx'
+import { limitTabs, PopupLimitTabs } from '../src/renderer/components/PopupLimitTabs.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
+import { createRefresh } from '../src/renderer/refresh.ts'
+import { isRefreshKey } from '../src/main/popup-keys.ts'
 
 /**
  * Разметка попапа на фикстуре. Браузер не запускается: строка статической
@@ -33,6 +39,17 @@ const snapshot = JSON.parse(
 
 setLocale('ru')
 const markup = renderToStaticMarkup(<Popup snapshot={snapshot} now={snapshot.at + 2000} />)
+/**
+ * Тот же попап на втором табе (7.1).
+ *
+ * Окна лимита с этого этапа разведены по провайдерам, и проверки «все окна
+ * показаны верно» сверяются с обоими табами разом: свойство «оценка помечена, а
+ * точное — нет» относится к каждому окну, а не к тому из них, что попало на
+ * открытый таб.
+ */
+const bothTabs = `${markup}${renderToStaticMarkup(
+  <Popup snapshot={snapshot} now={snapshot.at + 2000} limitTab="codex" />,
+)}`
 
 describe('попап на фикстуре', () => {
   /**
@@ -46,24 +63,24 @@ describe('попап на фикстуре', () => {
 
     // Ни числа «0%», ни заливки: пустая полоса читается как «израсходовано
     // нисколько», а это неправда — мы просто не знаем.
-    expect(markup).not.toContain('>0%<')
+    expect(bothTabs).not.toContain('>0%<')
 
     // Заливки сверяются с процентами поимённо. «Нет ширины 0%» мало: неизвестный
     // процент, дошедший до стиля, даёт не ноль, а мусор вроде `width:null%` —
     // полоса рисуется, а проверка молчит. «Их столько же и они не нули» тоже
     // мало: константа в ширине прошла бы насквозь, а показать чужой процент —
     // ровно то, ради чего затевался 1.8.
-    const fills = [...markup.matchAll(/width:\s*([^;"]+)%/g)].map(([, value]) => Number(value))
+    const fills = [...bothTabs.matchAll(/width:\s*([^;"]+)%/g)].map(([, value]) => Number(value))
     const known = snapshot.limits
       .map((window) => window.usedPercent)
       .filter((percent): percent is number => percent !== null)
     expect([...fills].sort((a, b) => a - b)).toEqual([...known].sort((a, b) => a - b))
 
     for (const window of unknown) {
-      expect(markup).toContain(window.unavailableReason)
+      expect(bothTabs).toContain(window.unavailableReason)
     }
     // Прочерк вместо числа — ровно столько раз, сколько неизвестных окон.
-    expect(markup.split('>—<').length - 1).toBe(unknown.length)
+    expect(bothTabs.split('>—<').length - 1).toBe(unknown.length)
   })
 
   /**
@@ -78,14 +95,14 @@ describe('попап на фикстуре', () => {
     expect(solid.length).toBeGreaterThan(0)
 
     for (const window of hatched) {
-      expect(markup).toContain(`≈${Math.round(window.usedPercent!)}%`)
+      expect(bothTabs).toContain(`≈${Math.round(window.usedPercent!)}%`)
     }
     for (const window of solid) {
-      expect(markup).toContain(`>${Math.round(window.usedPercent!)}%<`)
-      expect(markup).not.toContain(`≈${Math.round(window.usedPercent!)}%`)
+      expect(bothTabs).toContain(`>${Math.round(window.usedPercent!)}%<`)
+      expect(bothTabs).not.toContain(`≈${Math.round(window.usedPercent!)}%`)
     }
     // Штриховка ровно у оценок: repeating-linear-gradient рисуется только там.
-    expect(markup.split('repeating-linear-gradient').length - 1).toBe(hatched.length)
+    expect(bothTabs.split('repeating-linear-gradient').length - 1).toBe(hatched.length)
   })
 
   /**
@@ -184,6 +201,317 @@ describe('подпись над лимитами', () => {
     const html = withSource({ enabled: true, retryAt: snapshot.at + 300_000 })
     expect(html).toContain('disabled')
     expect(html).toContain('ждём')
+  })
+})
+
+/**
+ * Табы провайдеров над списком лимитов (7.1).
+ *
+ * Этап разводит пять окон двух провайдеров по вкладкам, и вся его опасность в
+ * одном: за табом можно спрятать тревогу. Поэтому проверяется не наличие
+ * табов — их видно и так, — а два свойства, без которых попап перестаёт
+ * отвечать на свой единственный вопрос: на каком провайдере он открывается и
+ * что видно про того, кто остался за кликом.
+ */
+describe('табы провайдеров в лимитах', () => {
+  /** Тот же снимок, но проценты у провайдеров заданы: `null` — окно без процента. */
+  function withPercents(claude: number | null, codex: number | null): TraySnapshot {
+    return {
+      ...snapshot,
+      limits: snapshot.limits.map((window) => {
+        const percent = window.provider === 'claude' ? claude : codex
+        return {
+          ...window,
+          usedPercent: percent,
+          exact: true,
+          unavailableReason: percent === null ? 'потолок плана не задан' : null,
+        }
+      }),
+    }
+  }
+
+  const html = (next: TraySnapshot, limitTab?: Provider): string =>
+    renderToStaticMarkup(<Popup snapshot={next} now={next.at + 2000} limitTab={limitTab} />)
+
+  /** Кусок разметки одного таба: у каждого свой `data-limit-tab`. */
+  function tab(markup: string, provider: Provider): string {
+    const found = markup.match(
+      new RegExp(`<button[^>]*data-limit-tab="${provider}"[\\s\\S]*?</button>`),
+    )
+    return found?.[0] ?? ''
+  }
+
+  /**
+   * Ловит попап, открывшийся на первом попавшемся провайдере. Codex на 94% за
+   * молчаливым табом — это прибор, который на вопрос «можно ли работать
+   * дальше» отвечает «да», когда ответ «нет».
+   */
+  it('открывается на провайдере с самым тревожным окном', () => {
+    const alarming = html(withPercents(12, 94))
+    expect(tab(alarming, 'codex')).toContain('aria-pressed="true"')
+    expect(tab(alarming, 'claude')).toContain('aria-pressed="false"')
+
+    // И наоборот — иначе проверку прошла бы зашитая строка «codex».
+    const other = html(withPercents(91, 30))
+    expect(tab(other, 'claude')).toContain('aria-pressed="true"')
+    expect(tab(other, 'codex')).toContain('aria-pressed="false"')
+  })
+
+  /**
+   * Ловит выбор по проценту там, где тревожиться не о чем: у Claude до 1.9
+   * процента нет ни у одного окна, и проиграй он чужим пяти процентам — за
+   * кликом оказался бы провайдер, которым человек и работает.
+   */
+  it('без тревоги выбор не отдаёт провайдера с неизвестным процентом', () => {
+    const unknown = html(withPercents(null, 5))
+    expect(tab(unknown, 'claude')).toContain('aria-pressed="true"')
+  })
+
+  /**
+   * Ловит потерянную точку — единственное, что говорит о провайдере за кликом.
+   * Уровни те же, что у процента в строке: >85 — `--alarm`, 60–85 — `--warn`.
+   */
+  it('у неактивного таба точка горит уровнем его худшего окна', () => {
+    const both = html(withPercents(70, 94))
+    expect(tab(both, 'claude')).toContain('data-limit-tab-dot="warn"')
+    expect(tab(both, 'claude')).toContain('background:var(--warn)')
+    // У выбранного точка остаётся цвета провайдера: его проценты видны числами
+    // строкой ниже, и второй раз говорить то же самое незачем.
+    expect(tab(both, 'codex')).toContain('data-limit-tab-dot="none"')
+    expect(tab(both, 'codex')).toContain('background:var(--codex)')
+
+    // Спокойный сосед не тревожит: точка его цвета, а не серая и не янтарная.
+    const calm = html(withPercents(91, 30))
+    expect(tab(calm, 'codex')).toContain('data-limit-tab-dot="none"')
+    expect(tab(calm, 'codex')).toContain('background:var(--codex)')
+  })
+
+  /**
+   * Ловит таб, ведущий на пустоту, и ряд из одного таба: первый обещает данные,
+   * которых нет, второй ничего не разводит и только занимает место.
+   */
+  it('таб есть только у провайдера с окнами, а при одном провайдере их нет вовсе', () => {
+    const single: TraySnapshot = {
+      ...snapshot,
+      limits: snapshot.limits.filter((window) => window.provider === 'claude'),
+    }
+    const only = html(single)
+    expect(only).not.toContain('data-limit-tabs')
+    expect(only).not.toContain('data-limit-tab="codex"')
+    // Окна при этом на месте: табов нет, а лимиты показаны все.
+    expect(only.split('data-limit-row').length - 1).toBe(single.limits.length)
+  })
+
+  /**
+   * Ловит таб, который переключает подпись, но не список: на экране остаётся
+   * провайдер, которого не выбирали.
+   */
+  it('на табе видны окна только своего провайдера', () => {
+    for (const provider of ['claude', 'codex'] as const) {
+      const shown = snapshot.limits.filter((window) => window.provider === provider)
+      const markupFor = html(snapshot, provider)
+      expect(markupFor.split('data-limit-row').length - 1).toBe(shown.length)
+      for (const window of shown) {
+        if (window.usedPercent !== null) {
+          expect(markupFor).toContain(`${Math.round(window.usedPercent)}%`)
+        }
+      }
+    }
+  })
+
+  /** Ловит таб, нарисованный картинкой: нажимать его должно быть можно. */
+  it('нажатие на таб называет выбранного провайдера', () => {
+    const chosen: Provider[] = []
+    const tree = PopupLimitTabs({
+      tabs: limitTabs(snapshot.limits),
+      active: 'claude',
+      onSelect: (provider) => chosen.push(provider),
+    })
+    const buttons = elements(tree).filter((node) => node.type === 'button')
+    expect(buttons.map((node) => node.props['data-limit-tab'])).toEqual(['claude', 'codex'])
+    buttons[1]!.props.onClick?.()
+    expect(chosen).toEqual(['codex'])
+  })
+
+  /**
+   * Ловит вернувшийся бейдж провайдера в строке лимита: провайдера называет
+   * таб, а вторая метка в попапе шириной 400 точек стоит места, которого нет.
+   */
+  it('в строке лимита бейджа нет — он остался только у агентов', () => {
+    const badges = markup.split('>CL<').length - 1 + (markup.split('>CX<').length - 1)
+    expect(badges).toBe(snapshot.agents.length)
+  })
+})
+
+/**
+ * Кнопка «Обновить» в шапке (7.2).
+ *
+ * Сделать здесь плохо значит соврать дважды: кнопкой, которая ничего не делает,
+ * и временем, которое после неё не обновилось. Поэтому проверяется поведение —
+ * замок на время опроса, вид на это время и судьба отказа, — а не наличие
+ * кнопки в разметке.
+ */
+describe('кнопка обновления', () => {
+  /**
+   * Ловит десять пересборок на десять кликов. Дёргают кнопку ровно тогда, когда
+   * попап и так подвис, и снятый замок кладёт его окончательно.
+   */
+  it('второе нажатие на время опроса не проходит, после ответа — проходит', () => {
+    let finish: (() => void) | undefined
+    let calls = 0
+    const states: Array<{ busy: boolean; failure?: string }> = []
+    const run = createRefresh(
+      () => {
+        calls += 1
+        return new Promise<void>((resolve) => {
+          finish = resolve
+        })
+      },
+      (state) => states.push(state),
+    )
+
+    run()
+    run()
+    run()
+    expect(calls).toBe(1)
+    expect(states).toEqual([{ busy: true }])
+
+    finish!()
+    return Promise.resolve().then(() => {
+      expect(states.at(-1)).toEqual({ busy: false })
+      run()
+      expect(calls).toBe(2)
+    })
+  })
+
+  /** Ловит отказ, проглоченный молча: состояние обязано его назвать. */
+  it('отказ доезжает состоянием, а не теряется', () => {
+    const states: Array<{ busy: boolean; failure?: string }> = []
+    const run = createRefresh(
+      () => Promise.reject(new Error('SQLITE_BUSY')),
+      (state) => states.push(state),
+    )
+    run()
+    return Promise.resolve()
+      .then(() => undefined)
+      .then(() => {
+        expect(states.at(-1)).toEqual({ busy: false, failure: 'SQLITE_BUSY' })
+      })
+  })
+
+  /**
+   * Ловит кнопку, которая на время пересборки выглядит нажимаемой. Пересборка
+   * идёт в main, и пока она идёт, ответить окну некому: вращение и мёртвая
+   * кнопка — единственный признак того, что нажатие дошло.
+   */
+  it('на время пересборки кнопка мертва и крутится', () => {
+    const busy = renderToStaticMarkup(
+      <Popup
+        snapshot={snapshot}
+        now={snapshot.at + 2000}
+        onRefresh={() => undefined}
+        refresh={{ busy: true }}
+      />,
+    )
+    expect(busy).toContain('data-popup-action="refresh"')
+    expect(busy).toContain('disabled')
+    expect(busy).toContain('am-spin')
+
+    const idle = renderToStaticMarkup(
+      <Popup snapshot={snapshot} now={snapshot.at + 2000} onRefresh={() => undefined} />,
+    )
+    expect(idle).toContain('data-popup-action="refresh"')
+    expect(idle).not.toContain('disabled')
+    expect(idle).not.toContain('am-spin')
+  })
+
+  /** Ловит кнопку без поведения: без обработчика её быть не должно вовсе. */
+  it('без обработчика кнопки нет', () => {
+    expect(markup).not.toContain('data-popup-action="refresh"')
+  })
+
+  /**
+   * Ловит слитые в одну кнопки «Обновить» и «спросить» (6.3, 6.4). Первая
+   * пересобирает снимок из индекса, вторая уходит в сеть с креденшелами
+   * человека, и общая на двоих означала бы либо сетевой вызов на каждое
+   * обновление, либо тихо не обновляемые лимиты.
+   */
+  it('«Обновить» и «спросить» — разные кнопки и разные обработчики', () => {
+    const refreshed: string[] = []
+    const asked: string[] = []
+    const next: TraySnapshot = {
+      ...snapshot,
+      limitsSource: { enabled: true, askedAt: snapshot.at - 120_000 },
+    }
+    const props = {
+      snapshot: next,
+      now: next.at + 2000,
+      onRefresh: () => refreshed.push('refresh'),
+      onAskLimits: () => asked.push('ask'),
+    }
+
+    const html = renderToStaticMarkup(<Popup {...props} />)
+    expect(html).toContain('data-popup-action="refresh"')
+    expect(html).toContain('data-limits-action="ask"')
+
+    // Заголовков разделов в попапе два, и кнопка «спросить» стоит у второго —
+    // ищется она по своему компоненту, а не по порядку.
+    const tree = Popup(props)
+    const header = elements(tree).find((node) => node.type === PopupHeader)
+    const aside = elements(tree)
+      .map((node) => node.props.aside)
+      .find((node) => isValidElement(node) && node.type === LimitsAside)
+    header?.props.onRefresh?.()
+    ;(isValidElement(aside) ? (aside.props as { onAsk?: () => void }).onAsk : undefined)?.()
+    expect(refreshed).toEqual(['refresh'])
+    expect(asked).toEqual(['ask'])
+  })
+
+  /**
+   * Ловит `⌘R`, оставшийся перезагрузкой окна: страница поднимется заново,
+   * снимок останется прежним, и «обновил» окажется враньём.
+   *
+   * Решение проверяется здесь, а применяется в `createPopup` — там живой
+   * `BrowserWindow`, и проверить его без запуска Electron нечем.
+   */
+  it('⌘R и его двойники уходят обновлению, чужие клавиши — нет', () => {
+    const key = (patch: Partial<Parameters<typeof isRefreshKey>[0]>) =>
+      isRefreshKey({
+        type: 'keyDown',
+        key: 'r',
+        control: false,
+        meta: false,
+        alt: false,
+        shift: false,
+        ...patch,
+      })
+
+    expect(key({ meta: true })).toBe(true)
+    // `Ctrl+R` — тот же пункт меню на Windows и Linux, `⇧⌘R` — `forceReload`
+    // оттуда же: оба стирают попап ровно так же.
+    expect(key({ control: true })).toBe(true)
+    expect(key({ meta: true, shift: true })).toBe(true)
+
+    expect(key({})).toBe(false)
+    expect(key({ meta: true, key: 'p' })).toBe(false)
+    expect(key({ meta: true, alt: true })).toBe(false)
+    // Отпускание клавиши — не второе нажатие.
+    expect(key({ meta: true, type: 'keyUp' })).toBe(false)
+  })
+
+  /**
+   * Ловит разъехавшиеся кнопку и клавишу: событие `popup:refresh` обязано
+   * уходить в тот же обработчик, что и нажатие в шапке. Разными они станут
+   * молча — оба пути по-прежнему «работают», просто по-разному.
+   */
+  it('кнопка и ⌘R зовут один обработчик', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../src/renderer/main.tsx', import.meta.url)),
+      'utf8',
+    )
+    const handler = source.match(/onRefresh=\{(\w+)\}/)?.[1]
+    expect(handler).toBeDefined()
+    expect(source).toContain(`'on:popup:refresh'](${handler})`)
   })
 })
 
@@ -322,16 +650,24 @@ describe('длинный список агентов', () => {
     expect(inside.filter((node) => node.type === AgentRow).length).toBe(12)
     expect(inside.filter((node) => node.type === PopupLimit)).toEqual([])
 
-    // Ни одна строка не потеряна по дороге: скролл, а не обрезание.
+    // Ни одна строка не потеряна по дороге: скролл, а не обрезание. Полос
+    // лимита столько, сколько окон у выбранного провайдера: с 7.1 список разведён
+    // табами, и сравнение со всеми окнами снимка проверяло бы отсутствие табов.
     const all = elements(tree)
+    const shown = many.limits.filter((window) => window.provider === 'claude')
+    expect(shown.length).toBeGreaterThan(0)
     expect(all.filter((node) => node.type === AgentRow).length).toBe(12)
-    expect(all.filter((node) => node.type === PopupLimit).length).toBe(many.limits.length)
+    expect(all.filter((node) => node.type === PopupLimit).length).toBe(shown.length)
   })
 })
 
 interface NodeProps {
   children?: ReactNode
   style?: CSSProperties
+  onClick?: (() => void) | undefined
+  onRefresh?: (() => void) | undefined
+  aside?: ReactNode
+  'data-limit-tab'?: string
 }
 
 /** Элемент и всё, что под ним, одним списком. */

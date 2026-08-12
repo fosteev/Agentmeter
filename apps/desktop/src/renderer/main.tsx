@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { Config } from '@agentmeter/core'
+import type { Config, Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
 import './tokens.css'
 import { Popup } from './components/Popup.tsx'
 import { POPUP_MAX_HEIGHT } from './components/PopupShell.tsx'
 import { setLocale } from './format.ts'
+import { createRefresh, REFRESH_IDLE, type RefreshState } from './refresh.ts'
 
 // Точка монтирования попапа. Данные — только через мост из preload: имён
 // каналов строками здесь нет, клиент собран по контракту.
@@ -84,8 +85,24 @@ function useFitWindow(): void {
 
 function App() {
   const [snapshot, setSnapshot] = useState<TraySnapshot | null>(null)
+  const [refresh, setRefresh] = useState<RefreshState>(REFRESH_IDLE)
+  // Выбранный таб лимитов (7.1) живёт здесь и только до закрытия окна: попап
+  // открывается на самом тревожном провайдере, а не на том, что смотрели
+  // прошлый раз. `undefined` и значит «выбирать заново».
+  const [limitTab, setLimitTab] = useState<Provider | undefined>(undefined)
   useTheme()
   useFitWindow()
+
+  // Пересборка снимка руками (7.2). Тем же путём, что и push-события: канал
+  // отдаёт новый снимок, окно кладёт его в то же состояние.
+  const runRefresh = useMemo(
+    () =>
+      createRefresh(
+        () => window.agentmeter['snapshot:get']().then((next) => setSnapshot(next)),
+        setRefresh,
+      ),
+    [],
+  )
 
   useEffect(() => {
     let alive = true
@@ -104,6 +121,11 @@ function App() {
     }
   }, [])
 
+  // `⌘R` приезжает событием из main: ускоритель там перехвачен, иначе Electron
+  // перезагрузил бы окно вместо обновления. Обработчик тот же самый, что у
+  // кнопки, — кнопка и клавиша обязаны делать одно и то же.
+  useEffect(() => window.agentmeter['on:popup:refresh'](runRefresh), [runRefresh])
+
   // Своих пустых состояний здесь нет: «пусто», «индексирование», «ошибка» и
   // «никого нет» выбирает сам `Popup` по снимку (2.8). До первого снимка окно
   // не рисует ничего — выдумывать пятый экран на «данных ещё не приехало»
@@ -120,6 +142,10 @@ function App() {
       onAskLimits={() => {
         void window.agentmeter['oauth:refresh']()
       }}
+      onRefresh={runRefresh}
+      refresh={refresh}
+      limitTab={limitTab}
+      onLimitTab={setLimitTab}
     />
   )
 }

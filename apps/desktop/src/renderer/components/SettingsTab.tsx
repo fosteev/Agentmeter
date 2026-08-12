@@ -138,7 +138,7 @@ export function SettingsTab({
         {active === 'sources' ? (
           <SettingsSources sources={report.sources} problems={report.problems} />
         ) : null}
-        {active === 'limits' ? <SettingsLimits config={config} onChange={onChange} /> : null}
+        {active === 'limits' ? <SettingsLimits config={config} /> : null}
         {active === 'limits' ? (
           <SettingsUsage
             usage={report.usage}

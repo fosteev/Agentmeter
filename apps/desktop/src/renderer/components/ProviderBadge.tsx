@@ -7,13 +7,11 @@ import type { Provider } from '@agentmeter/core'
 // без чтения текста.
 //
 // Контекстов было два, остался один: из строки лимита бейдж ушёл, там провайдера
-// называет таб (416–429, этап 7.1). Второй якорь снят вместе с ним — диапазон,
-// показывающий не то, что нарисовано, хуже отсутствующего.
+// называет таб (416–429, этап 7.1). Вместе с ним ушёл и отступ справа — он был
+// нужен только там, а в строке агента бейдж отбит зазором сетки.
 
 export interface ProviderBadgeProps {
   provider: Provider
-  /** Отступ справа: 6 в шапке лимита, в строке агента его нет. Уйдёт с табами. */
-  marginRight?: number
 }
 
 const ACCENT: Record<Provider, string> = {
@@ -26,7 +24,7 @@ const SHORT: Record<Provider, string> = {
   codex: 'CX',
 }
 
-export function ProviderBadge({ provider, marginRight }: ProviderBadgeProps) {
+export function ProviderBadge({ provider }: ProviderBadgeProps) {
   return (
     <span
       style={{
@@ -37,7 +35,6 @@ export function ProviderBadge({ provider, marginRight }: ProviderBadgeProps) {
         background: ACCENT[provider],
         borderRadius: 3,
         padding: '1px 4px',
-        marginRight,
         flex: 'none',
       }}
     >

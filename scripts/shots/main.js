@@ -40,9 +40,13 @@ const design = join(root, 'design/Agentmeter.dc.html')
 const outDir = join(root, 'docs/screenshots')
 
 /**
- * Два языка, две папки. Русский снимается **первым и с нетронутого макета**:
- * словарь не только заменяет подписи, но и снимает блоки, которых в продукте
- * нет, — то есть меняет вёрстку, и обратно её не собрать.
+ * Два языка, две папки. Проходов по странице тоже два, и порядок у них не
+ * случайный: сначала со страницы **у обоих наборов** убираются блоки, которых в
+ * продукте нет вовсе (кнопка «Отключить jira», табы Kimi и Ollama), и только
+ * потом английский набор получает подписи из каталога приложения. Обещание
+ * «этот провайдер поддержан» звучит одинаково на любом языке, и снимок,
+ * который его даёт, врёт независимо от подписей; а перевод обратно не
+ * собирается, поэтому он и идёт последним.
  */
 const LOCALES = [
   { dir: 'ru', translate: false },
@@ -95,17 +99,19 @@ async function capture() {
 
   const failures = []
 
+  // Лишнее убирается до первого снимка — оно лишнее на обоих языках.
+  const removed = await window.webContents.executeJavaScript(patch('drop'))
+  console.log(`словарь: убрано лишних блоков ${removed.dropped}`)
+  // Правило, которое перестало срабатывать, выглядит как «всё в порядке»:
+  // словарь, промахнувшийся мимо макета, дал бы снимки с чужими кнопками и ни
+  // одной жалобы.
+  if (removed.dropped === 0) failures.push('словарь не убрал ни одного лишнего блока')
+
   for (const locale of LOCALES) {
     if (locale.translate) {
-      const applied = await window.webContents.executeJavaScript(translate())
-      console.log(
-        `словарь: заменено ${applied.replaced} из ${DICTIONARY.length}, убрано ${applied.dropped}`,
-      )
-      // Правило, которое перестало срабатывать, выглядит как «всё в порядке»:
-      // словарь, промахнувшийся мимо макета целиком, дал бы русские снимки и ни
-      // одной жалобы.
+      const applied = await window.webContents.executeJavaScript(patch('translate'))
+      console.log(`словарь: заменено ${applied.replaced} из ${DICTIONARY.length}`)
       if (applied.replaced === 0) failures.push('словарь не заменил ни одной подписи')
-      if (applied.dropped === 0) failures.push('словарь не убрал ни одного лишнего блока')
     }
     failures.push(...(await shoot(window, locale)))
   }
@@ -239,9 +245,15 @@ function measure(label) {
  * абзаце. Узлы перебираются один раз и заменяются на месте, порядок правил
  * значения не имеет.
  */
-function translate() {
+/**
+ * Один проход по тексту страницы: `drop` — убрать лишнее, `translate` —
+ * заменить подписи. Одной функцией, потому что обход и правила разбора у них
+ * общие, а разъехавшись, они начали бы по-разному понимать один словарь.
+ */
+function patch(mode) {
   return `(() => {
     const dictionary = new Map(${JSON.stringify(DICTIONARY)})
+    const mode = ${JSON.stringify(mode)}
     let replaced = 0
     let dropped = 0
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
@@ -252,7 +264,9 @@ function translate() {
       const key = value.trim()
       const to = dictionary.get(key)
       if (to === undefined) continue
-      if (to === '__DROP_SELF__' || to === '__DROP_ROW__') {
+      const removes = to === '__DROP_SELF__' || to === '__DROP_ROW__'
+      if (removes !== (mode === 'drop')) continue
+      if (removes) {
         let target = node.parentElement
         if (to === '__DROP_ROW__') {
           while (target && !getComputedStyle(target).gridTemplateColumns.includes(' ')) {

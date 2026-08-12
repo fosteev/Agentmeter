@@ -74,7 +74,9 @@ import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
+import { calibrationPatch } from './calibration.ts'
 import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
+import { isRefreshKey } from './popup-keys.ts'
 import { buildSnapshot, type SnapshotInput } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 import { barBinaryPath, startNativeBar, type NativeBar } from './menubar.ts'
@@ -434,13 +436,10 @@ async function runSmoke(): Promise<void> {
   // раньше, чем окно создано.
   let popup: BrowserWindow | undefined
   let measured: number | undefined
+  let rebuilds = 0
   try {
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
-    registerIpc(
-      ipcMain,
-      // Главное окно смоук поднимает сам, ниже и явно: канал здесь заглушен,
-      // чтобы проверка не зависела от того, нажал ли кто-то кнопку в попапе.
-      createHandlers(
+    const handlers = createHandlers(
         () => runtime,
         () => undefined,
         (patch) => setConfig(runtime, patch),
@@ -467,8 +466,20 @@ async function runSmoke(): Promise<void> {
           measured = height
           if (popup !== undefined && !popup.isDestroyed()) fitPopup(popup, height)
         },
-      ),
-    )
+      )
+    // Главное окно смоук поднимает сам, ниже и явно: канал здесь заглушен,
+    // чтобы проверка не зависела от того, нажал ли кто-то кнопку в попапе.
+    //
+    // `snapshot:get` считается: пересборка по `⌘R` (7.2) видна только так —
+    // окно зовёт тот же канал, что и при загрузке, а нажатие, не доехавшее до
+    // рендерера, оставляет счётчик на месте.
+    registerIpc(ipcMain, {
+      ...handlers,
+      'snapshot:get': (arg) => {
+        rebuilds += 1
+        return handlers['snapshot:get'](arg)
+      },
+    })
 
     const window = createPopup('index', true)
     popup = window
@@ -559,6 +570,31 @@ async function runSmoke(): Promise<void> {
         `попап прокручивается сам: ${fit.scrollWidth}×${fit.scrollHeight} в окне ${fit.innerWidth}×${fit.inner}`,
       )
     }
+
+    // `⌘R` в попапе (7.2). Юнит-тесты знают про эту клавишу ровно одно — какое
+    // сочетание считать нашим; что перехват стоит на живом окне и что нажатие
+    // доезжает до рендерера и пересобирает снимок, видно только здесь.
+    //
+    // **Самой перезагрузки эта проба не воспроизводит, и вид у неё честный:**
+    // `sendInputEvent` кладёт событие прямо в web contents, а пункт меню
+    // `reload` живёт выше — у приложения. Синтетическим нажатием он не
+    // срабатывает ни с `preventDefault`, ни без него (проверено: без него
+    // страница не перезагрузилась), поэтому доказывать им «окно не
+    // перезагрузилось» значило бы держать проверку, которая зелена всегда.
+    // Проверяется то, что действительно ломается молча: перехватчик на месте
+    // и нажатие уходит в пересборку.
+    const beforeKey = rebuilds
+    window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'r', modifiers: ['cmd'] })
+    window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'r', modifiers: ['cmd'] })
+    for (let waited = 0; rebuilds === beforeKey && waited < 3_000; waited += 100) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    }
+    popupReport = {
+      ...(popupReport as Record<string, unknown>),
+      refreshed: rebuilds - beforeKey,
+      intercepts: window.webContents.listenerCount('before-input-event'),
+    }
+    if (rebuilds === beforeKey) problems.push('⌘R не пересобрал снимок: нажатие не доехало')
 
     // Иконка трея (2.7). Растр проверяется юнит-тестами без Electron, а здесь
     // единственное, чего те увидеть не могут: что `nativeImage` этот буфер
@@ -771,12 +807,6 @@ function createHandlers(
  * упорядочен одинаково, иначе «сверху самый важный» означает разное в трее и в
  * окне.
  */
-/** Разошлись ли числа настолько, чтобы переписывать настройку. */
-function differs(current: number | null, next: number | null, epsilon: number): boolean {
-  if (next === null) return false
-  return current === null || Math.abs(current - next) > epsilon
-}
-
 /**
  * Что снимок трея должен знать про вторые источники лимитов (6.3, 6.4).
  *
@@ -1010,6 +1040,18 @@ function createPopup(page: 'index' | 'gallery', frameless: boolean): BrowserWind
     // Уровень меню, а не «просто поверх»: попап выпадает из панели, и над ним
     // не должно оказаться чужое окно, тоже объявившее себя верхним.
     window.setAlwaysOnTop(true, 'pop-up-menu')
+  }
+  if (page === 'index') {
+    // `⌘R` уходит нам целиком (7.2). По умолчанию он перезагружает окно —
+    // страница поднимается заново, а снимок остаётся прежним, потому что
+    // пересобрать его перезагрузка никого не просит. `preventDefault` гасит и
+    // пункт меню, и клавишу в самой странице, поэтому нажатие доезжает до
+    // рендерера событием, а там его обрабатывает тот же код, что и кнопку.
+    window.webContents.on('before-input-event', (event, input) => {
+      if (!isRefreshKey(input)) return
+      event.preventDefault()
+      window.webContents.send('popup:refresh', undefined)
+    })
   }
   void window.loadFile(`${WEB}/${page}.html`)
   return window
@@ -1385,28 +1427,12 @@ function main(): void {
   /**
    * Записать измеренное в настройки — но только измеренное.
    *
-   * Вес чтения кэша уезжает в конфиг всегда, когда калибровка сошлась: в логах
-   * его нет, спросить не у кого, и другого источника у этого числа не будет.
-   * А вот потолки записываются, только если человек **не** выбирал план: его
-   * выбор — это заявление о подписке, и перебивать заявление измерением значит
-   * драться с кнопкой, которую он только что нажал. Разошлись — видно в
-   * настройках, решает он.
+   * Что именно писать, решает `calibrationPatch` — там же и довод, почему с
+   * 7.4 у правила «сошлось — пишем» нет исключений.
    */
   const applyCalibration = (calibration: Calibration): void => {
-    if (!calibration.ok || runtime === undefined) return
-    const claude = runtime.config.limits.claude
-    const patch: DeepPartial<Config['limits']['claude']> = {}
-    if (differs(claude.cacheReadWeight, calibration.cacheReadWeight, 1e-3)) {
-      patch.cacheReadWeight = calibration.cacheReadWeight
-    }
-    if (claude.plan === null) {
-      if (differs(claude.fiveHourCap, calibration.fiveHourCap, 1)) {
-        patch.fiveHourCap = calibration.fiveHourCap
-      }
-      if (differs(claude.weeklyCap, calibration.weeklyCap, 1)) {
-        patch.weeklyCap = calibration.weeklyCap
-      }
-    }
+    if (runtime === undefined) return
+    const patch = calibrationPatch(runtime.config.limits.claude, calibration)
     if (Object.keys(patch).length > 0) changeConfig({ limits: { claude: patch } })
   }
 

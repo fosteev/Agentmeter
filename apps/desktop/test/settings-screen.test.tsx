@@ -5,6 +5,7 @@ import { DEFAULT_CONFIG, type Config } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial } from '@agentmeter/ipc'
 import { SettingsAlerts } from '../src/renderer/components/SettingsAlerts.tsx'
 import { SettingsAppearance } from '../src/renderer/components/SettingsAppearance.tsx'
+import { SettingsLimits } from '../src/renderer/components/SettingsLimits.tsx'
 import { SettingsPrivacy } from '../src/renderer/components/SettingsPrivacy.tsx'
 import { SettingsTab } from '../src/renderer/components/SettingsTab.tsx'
 import { SettingsUsage } from '../src/renderer/components/SettingsUsage.tsx'
@@ -320,5 +321,61 @@ describe('экран настроек', () => {
     expect(at({ phase: 'error', current: '0.1.0', error: 'ENOTFOUND github.com' })).toContain(
       'ENOTFOUND github.com',
     )
+  })
+})
+
+/**
+ * Карточка потолков (7.4).
+ *
+ * Раньше здесь стояли чипы плана, и они писали в поле потолка числа из таблицы
+ * тарифов. Поле означает потолок во **взвешенных** токенах из калибровки 1.9, и
+ * объявленных тарифов в этих единицах не существует — то есть кнопки могли
+ * только одно: показать процент от выдуманного знаменателя. Проверяется поэтому
+ * не вид карточки, а два свойства: выбрать потолок нечем, а неизмеренное
+ * названо неизмеренным.
+ */
+describe('потолки лимитов', () => {
+  const measured = (over: Partial<Config['limits']['claude']>): string => {
+    const config = structuredClone(DEFAULT_CONFIG)
+    Object.assign(config.limits.claude, over)
+    return renderToStaticMarkup(<SettingsLimits config={config} />)
+  }
+
+  /** Ловит вернувшийся выбор плана: заявленное не должно перебивать измеренное. */
+  it('плана не выбрать: кнопок нет вовсе', () => {
+    const html = measured({})
+    expect(html).not.toContain('data-plan')
+    expect(html).not.toContain('Max 20')
+    expect(html).not.toContain('<button')
+  })
+
+  /**
+   * Ловит ноль или прочерк на месте неизмеренного потолка — ту же ошибку, что
+   * пустая полоса лимита в попапе: «не знаем» обязано быть сказано словами.
+   */
+  it('неизмеренное названо неизмеренным, а не нулём', () => {
+    const html = measured({ fiveHourCap: null, weeklyCap: null, cacheReadWeight: null })
+    expect(html.split('не измерено').length - 1).toBe(3)
+    expect(html).not.toContain('>0<')
+  })
+
+  /** Ловит измеренные числа, не доехавшие до экрана: их больше негде увидеть. */
+  it('измеренное показано числами', () => {
+    const html = measured({ fiveHourCap: 3_900_000, weeklyCap: 48_000_000, cacheReadWeight: 0.2 })
+    expect(html).toContain('3,9M')
+    expect(html).toContain('48M')
+    expect(html).toContain('0.20')
+    expect(html).not.toContain('не измерено')
+  })
+
+  /**
+   * Ловит потерянную оговорку про Codex: процент там точный, но написан в
+   * момент запроса, и «точные значения приходят от сервера» без этого читается
+   * как «здесь всё всегда верно» (6.4).
+   */
+  it('у Codex сказано и про источник процента, и про его возраст', () => {
+    const html = measured({})
+    expect(html).toContain('провайдер сообщает процент готовым')
+    expect(html).toContain('написан в момент запроса')
   })
 })

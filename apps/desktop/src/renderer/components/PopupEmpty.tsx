@@ -13,15 +13,25 @@ export interface PopupEmptyProps {
   snapshot: TraySnapshot
   now: number
   onOpenWindow?: (() => void) | undefined
+  /**
+   * Пересборка снимка по кнопке в шапке (7.2). Кнопка нужна и здесь: «поток
+   * встал» выглядит в этих состояниях убедительнее всего — на экране написано,
+   * что никого нет.
+   */
+  refresh?: { onRefresh?: (() => void) | undefined; busy?: boolean } | undefined
 }
 
-export function PopupEmpty({ snapshot, now, onOpenWindow }: PopupEmptyProps) {
+export function PopupEmpty({ snapshot, now, onOpenWindow, refresh }: PopupEmptyProps) {
   const { at, today } = snapshot
   const total = today.total.value === 0 ? '' : formatTokens(today.total.value)
 
   return (
     <PopupShell>
-      <PopupHeader updated={t('popup.updatedAgo', { ago: ago(now - at) })} />
+      <PopupHeader
+        updated={t('popup.updatedAgo', { ago: ago(now - at) })}
+        onRefresh={refresh?.onRefresh}
+        busy={refresh?.busy ?? false}
+      />
 
       <div
         style={{

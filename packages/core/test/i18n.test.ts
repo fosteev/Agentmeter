@@ -24,7 +24,12 @@ import { ru } from '../src/i18n/ru.ts'
  */
 const VALUES: Record<string, Record<string, string | number>> = {
   'state.finishedAgo': { ago: '18 мин назад' },
+  // Худшее из встречающихся: попап на спящей машине показывает сутки, а не
+  // секунды, и «обновлено 18 мин назад» короче «обновлено 12 дней назад».
+  'popup.updatedAgo': { ago: '12 дней назад' },
   'limit.resetsIn': { span: '4 ч 37 мин' },
+  // Худшее из встречающихся: самое длинное имя окна рядом с именем провайдера.
+  'limit.ofProvider': { provider: 'Claude', window: 'недельное окно' },
   'limit.untilCap': { reset: 'сброс через 4 ч', span: '52 мин' },
   'limit.idleWindow': { span: '4 ч 37 мин' },
   'card.files': { count: 128 },

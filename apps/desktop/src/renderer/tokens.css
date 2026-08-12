@@ -121,6 +121,15 @@
   }
 }
 
+/* Кнопка обновления на время пересборки (7.2). Крутится сам значок: пересборка
+   идёт в main, и пока она идёт, ответить окну некому — вращение здесь
+   единственный признак того, что нажатие дошло. */
+@keyframes am-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-task-card-reveal] {
     animation: none;

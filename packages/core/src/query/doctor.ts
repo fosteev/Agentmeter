@@ -41,7 +41,6 @@ export function doctorReport(db: Db, config: Config): DoctorReport {
       cacheReadWeight: config.limits.claude.cacheReadWeight,
       fiveHourCap: config.limits.claude.fiveHourCap,
       weeklyCap: config.limits.claude.weeklyCap,
-      plan: config.limits.claude.plan,
     },
   }
 }

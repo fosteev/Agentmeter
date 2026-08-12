@@ -126,7 +126,30 @@ function merge(raw: unknown): LoadResult {
   const result = walk(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw, '', problems)
   const config = result as unknown as Config
   crossChecks(config, DEFAULT_CONFIG, problems)
+  dropPlanCaps(config, raw, problems)
   return { config, problems }
+}
+
+/**
+ * Разовый перенос: потолки, выбранные планом, сбрасываются (7.4).
+ *
+ * Лишние ключи загрузчик игнорирует молча — и это правило здесь **опасно**:
+ * `plan` из конфига исчез, а числа под ним остались бы валидными числами и
+ * поехали бы дальше как измеренные. Между тем 220 000 у плана «Max 20×» — это
+ * заявленный тариф, которого никто не мерил, а поле теперь означает потолок во
+ * взвешенных токенах из калибровки 1.9. Оставить их значило бы показать
+ * процент, посчитанный от выдуманного знаменателя, — то есть ровно ту ложь, от
+ * которой этап и избавлялся.
+ *
+ * Замечание печатается: молчаливый сброс настройки человек обнаружит как
+ * «проценты пропали», и виноватым назначит приложение, а не находку.
+ */
+function dropPlanCaps(config: Config, raw: unknown, problems: string[]): void {
+  const claude = isPlainObject(raw) && isPlainObject(raw['limits']) ? raw['limits']['claude'] : undefined
+  if (!isPlainObject(claude) || claude['plan'] === undefined || claude['plan'] === null) return
+  config.limits.claude.fiveHourCap = null
+  config.limits.claude.weeklyCap = null
+  problems.push(t('config.planDropped', { plan: String(claude['plan']) }))
 }
 
 /**

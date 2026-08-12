@@ -173,6 +173,5 @@ export interface DoctorReport {
     cacheReadWeight: number | null
     fiveHourCap: number | null
     weeklyCap: number | null
-    plan: string | null
   }
 }

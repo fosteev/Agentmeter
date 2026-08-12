@@ -168,6 +168,103 @@ describe('выбор состояния попапа', () => {
     vi.unstubAllGlobals()
   })
 
+  /**
+   * Ловит отказ пересборки, проглоченный молча (7.2).
+   *
+   * Прежние числа под прежним «обновлено 2 с назад» после нажатия на кнопку
+   * врут дважды — и цифрами, и временем, — поэтому отказ забирает экран
+   * целиком, как нечитаемые логи.
+   */
+  it('отказ пересборки уводит попап в состояние ошибки', () => {
+    const html = renderToStaticMarkup(
+      <Popup
+        snapshot={snapshots.normal}
+        now={snapshots.normal.at + 2000}
+        refresh={{ busy: false, failure: 'SQLITE_BUSY: database is locked' }}
+      />,
+    )
+    expect(html).toContain('Не удалось обновить')
+    expect(html).toContain('SQLITE_BUSY: database is locked')
+    expect(html).toContain('Числа на экране — от прошлого снимка.')
+    // Ни прежнего списка, ни прежней свежести.
+    expect(html).not.toContain('обновлено')
+    expect(html).not.toContain(snapshots.normal.agents[0]!.project)
+  })
+
+  /**
+   * Ловит вторую беду, потерянную за первой: нечитаемый источник никуда не
+   * делся оттого, что вдобавок отказала пересборка, и умолчать о нём значит
+   * назвать неполные цифры полными.
+   */
+  it('отказ пересборки не заслоняет нечитаемые логи', () => {
+    const html = renderToStaticMarkup(
+      <Popup
+        snapshot={snapshots.error}
+        now={snapshots.error.at + 2000}
+        refresh={{ busy: false, failure: 'EPERM' }}
+      />,
+    )
+    const problem = snapshots.error.problems[0]!
+    expect(html).toContain('EPERM')
+    expect(html).toContain(`${problem.code} ${problem.path}`)
+    expect(html).toContain(problem.consequence)
+  })
+
+  /**
+   * Ловит «Повторить», которое после отказа пересборки зовёт переиндексацию:
+   * индекс тут ни при чём, повторять надо то, что не вышло.
+   */
+  it('после отказа «Повторить» повторяет пересборку, а не переиндексацию', () => {
+    const rebuild = vi.fn(() => Promise.resolve())
+    vi.stubGlobal('window', { agentmeter: { 'index:rebuild': rebuild } })
+    const retry = vi.fn()
+
+    const tree = PopupProblem({
+      snapshot: snapshots.normal,
+      failure: 'SQLITE_BUSY',
+      onRetry: retry,
+    })
+    const buttons = findButtons(tree)
+    // Кнопки «Указать путь» здесь нет: путь ни при чём, менять его незачем.
+    expect(buttons.map((button) => button.props.children)).toEqual(['Повторить'])
+    buttons[0]!.props.onClick?.()
+    expect(retry).toHaveBeenCalledOnce()
+    expect(rebuild).not.toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
+  })
+
+  /**
+   * Ловит окна лимита, оставшиеся без провайдера (7.1). Бейдж из строки лимита
+   * ушёл вместе с табами, но табов в паузе нет — окна обоих провайдеров лежат
+   * тут одним списком, и назвать их больше нечем.
+   */
+  it('в паузе имя окна называет провайдера', () => {
+    const html = markup(snapshots.nobody)
+    for (const window of snapshots.nobody.limits) {
+      expect(html).toContain(window.provider === 'claude' ? 'Claude, ' : 'Codex, ')
+    }
+    expect(html).not.toContain('>CL<')
+  })
+
+  /**
+   * Ловит кнопку обновления, доставшуюся одному состоянию из четырёх.
+   * «Поток встал» выглядит убедительнее всего там, где на экране написано, что
+   * никого нет: именно в этих состояниях руками пересобрать снимок и хочется.
+   */
+  it('кнопка обновления есть во всех состояниях с шапкой', () => {
+    for (const state of ['empty', 'indexing', 'nobody', 'normal'] as const) {
+      const html = renderToStaticMarkup(
+        <Popup
+          snapshot={snapshots[state]}
+          now={snapshots[state].at + 2000}
+          onRefresh={() => undefined}
+        />,
+      )
+      expect(html, state).toContain('data-popup-action="refresh"')
+    }
+  })
+
   /** Ловит новый селектор, который проглотил уже работающий обычный попап. */
   it('живые агенты без ошибки остаются обычным попапом', () => {
     const html = markup(snapshots.normal)

@@ -1,13 +1,11 @@
-import type { Provider } from '@agentmeter/core'
 import { LimitBar } from './LimitBar.tsx'
-import { ProviderBadge } from './ProviderBadge.tsx'
 
-// Блок лимита в попапе — строки 433–440 макета: шапка с бейджем, именем окна и
+// Блок лимита в попапе — строки 433–440 макета: шапка с именем окна и
 // процентом, под ней полоса, под ней тихая подпись про сброс.
 //
-// Бейджа в макете больше нет: провайдера называет таб над списком (416–429,
-// этап 7.1). Пока табов нет, бейдж остаётся — иначе три окна Claude и два Codex
-// лежали бы одним списком, не говоря, чьи они.
+// Бейджа провайдера здесь больше нет: провайдера называет таб над списком
+// (416–429, этап 7.1), и вторая метка на строке повторяла бы его молча — а
+// повтор в попапе шириной 400 точек стоит места, которого нет.
 //
 // Здесь живёт единственное место продукта, где «не знаем» обязано выглядеть не
 // как ноль. У Claude до калибровки веса `cache_read` (этап 1.9) процента нет
@@ -25,7 +23,6 @@ import { ProviderBadge } from './ProviderBadge.tsx'
 // не переехали: их шкала нарисована у полосы лимита (176–181, «норма <60»).
 
 export interface PopupLimitProps {
-  provider: Provider
   /** Имя окна: «недельное окно», «5-часовое окно». */
   title: string
   percent: number | null
@@ -38,18 +35,33 @@ export interface PopupLimitProps {
   caption: string
 }
 
+/**
+ * Уровень тревоги по проценту — одна шкала на число в строке и на точку таба
+ * (7.1).
+ *
+ * Отдельной функцией именно затем, чтобы у табов не завелась своя копия порогов:
+ * разъехавшись, они дали бы янтарное число под серой точкой, и человек поверил
+ * бы точке — она видна раньше.
+ */
+export function limitLevel(percent: number | null): 'alarm' | 'warn' | null {
+  if (percent === null) return null
+  if (percent > 85) return 'alarm'
+  if (percent >= 60) return 'warn'
+  return null
+}
+
 function percentColor(percent: number | null, approximate: boolean): string | undefined {
   if (percent === null) return 'var(--tx3)'
-  if (percent > 85) return 'var(--alarm)'
-  if (percent >= 60) return 'var(--warn)'
+  const level = limitLevel(percent)
+  if (level !== null) return `var(--${level})`
   return approximate ? 'var(--tx2)' : undefined
 }
 
-export function PopupLimit({ provider, title, percent, approximate, caption }: PopupLimitProps) {
+export function PopupLimit({ title, percent, approximate, caption }: PopupLimitProps) {
   const known = percent !== null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <div data-limit-row="" style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <div
         style={{
           display: 'flex',
@@ -58,10 +70,7 @@ export function PopupLimit({ provider, title, percent, approximate, caption }: P
           gap: 8,
         }}
       >
-        <span style={{ fontSize: 12 }}>
-          <ProviderBadge provider={provider} marginRight={6} />
-          {title}
-        </span>
+        <span style={{ fontSize: 12 }}>{title}</span>
         <span
           style={{
             fontFamily: "'IBM Plex Mono', monospace",

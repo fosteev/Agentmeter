@@ -8,7 +8,7 @@
  * в нём работает. Зелёный `npm run check` про приложение не говорит ничего: там
  * ни одного запуска Electron нет.
  *
- * Десять проверок, каждая названа по поломке, которую обязана поймать.
+ * Одиннадцать проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -264,6 +264,8 @@ const popup = payload.popup as
       innerWidth?: number
       measured?: number
       shrunk?: number
+      refreshed?: number
+      intercepts?: number
     }
   | undefined
 const popupOk =
@@ -280,6 +282,26 @@ report(
     ? 'приложение не отчиталось о попапе'
     : `окно ${popup.innerWidth}×${popup.inner} при содержимом ${popup.content}, прокрутка ${popup.scrollWidth}×${popup.scrollHeight}, после сжатия ${popup.shrunk}`,
   popupOk,
+)
+
+// 11. Ловит: `⌘R`, не доехавший до рендерера, и снятый перехватчик — то есть
+//     клавишу, которая перестала обновлять попап и вернулась к перезагрузке
+//     окна. Юнит-тесты знают про неё ровно одно: какое сочетание считать
+//     нашим. Что перехват стоит на живом окне и что нажатие уходит в
+//     пересборку, видно только с запущенным Electron.
+//
+//     Саму перезагрузку проба не воспроизводит и не делает вид, что
+//     воспроизводит: `sendInputEvent` кладёт событие в web contents, а пункт
+//     меню `reload` живёт выше — синтетическим нажатием он не срабатывает
+//     вовсе. Довод — в комментарии у самой проверки в `main/index.ts`.
+const keyOk = popup !== undefined && (popup.refreshed ?? 0) > 0 && (popup.intercepts ?? 0) > 0
+report(
+  11,
+  '⌘R доезжает до попапа и пересобирает снимок',
+  popup === undefined
+    ? 'приложение не отчиталось о попапе'
+    : `пересборок ${popup.refreshed}, перехватчиков ${popup.intercepts}`,
+  keyOk,
 )
 
 process.exit(failed ? 1 : 0)
