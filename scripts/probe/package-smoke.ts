@@ -234,13 +234,17 @@ const leaked = entries.filter(
     name.endsWith('.tsbuildinfo') ||
     name.includes('gallery'),
 )
-const needed = ['/dist/main/index.js', '/dist/preload/index.cjs', '/dist/web/window.html']
-const missing = needed.filter((name) => !entries.includes(name))
+// Имена свои, а не `needed`/`missing`: те заняты проверкой 3 выше. Файл идёт
+// одним модулем сверху вниз, и повторное `const` — не тень, а синтаксическая
+// ошибка: проба перестаёт разбираться целиком, включая проверки, к которым
+// правка отношения не имела.
+const required = ['/dist/main/index.js', '/dist/preload/index.cjs', '/dist/web/window.html']
+const lost = required.filter((name) => !entries.includes(name))
 report(
   5,
   'внутри asar только приложение',
-  `файлов ${entries.length}, лишних ${leaked.length}${leaked.length ? ` (${leaked.slice(0, 3).join(', ')})` : ''}, потерянных ${missing.length}${missing.length ? ` (${missing.join(', ')})` : ''}`,
-  entries.length > 0 && leaked.length === 0 && missing.length === 0,
+  `файлов ${entries.length}, лишних ${leaked.length}${leaked.length ? ` (${leaked.slice(0, 3).join(', ')})` : ''}, потерянных ${lost.length}${lost.length ? ` (${lost.join(', ')})` : ''}`,
+  entries.length > 0 && leaked.length === 0 && lost.length === 0,
 )
 
 // 6. Ловит: иконку, нарисованную прошлой версией генератора, и иконку, не
