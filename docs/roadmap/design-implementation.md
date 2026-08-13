@@ -247,11 +247,11 @@ template image для macOS menu bar. В монохроме роль цвета 
 | `BreakdownRow.tsx`       | 192–200, 926–930             | 2.4 и 3.4 |
 | `SettingsTab.tsx`        | 1170–1179                    | 3.6       |
 | `SettingsSources.tsx`    | 1181–1195                    | 3.6       |
-| `SettingsLimits.tsx`     | 1197–1218                    | 3.6       |
+| `SettingsPopupLimits.tsx` | 1197–1218, 1236–1243        | 7.5       |
 | `SettingsAlerts.tsx`     | 1220–1234                    | 3.6       |
 | `SettingsAppearance.tsx` | 1236–1243                    | 3.6       |
 | `SettingsPrivacy.tsx`    | 1236–1243                    | 3.6       |
-| `SettingsUsage.tsx`      | 1197–1218                    | 1.9       |
+| `SettingsUsage.tsx`      | 1197–1218, 1236–1243         | 6.3       |
 
 **Правая колонка настроек в макете нарисована со всеми группами сразу, и это
 лист образцов, а не один экран.** Слева пять пунктов, а справа одновременно

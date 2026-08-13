@@ -13,7 +13,7 @@ export type { HistoryDay as CoreHistoryDay, HistoryHour as CoreHistoryHour, Hist
 export { doctorReport } from './doctor.ts'
 export { changedFiles } from './files.ts'
 export type { ChangedFile } from './files.ts'
-export { limitsReport } from './limits.ts'
+export { limitsReport, popupWindows } from './limits.ts'
 export type { FreshWindows } from './limits.ts'
 export { loadedCategories } from './loaded.ts'
 export type { LoadedCategory, LoadedName, LoadedSource } from './loaded.ts'

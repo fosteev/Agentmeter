@@ -1,10 +1,10 @@
-import type { ClaudeLimits } from '../config/types.ts'
+import type { ClaudeLimits, PopupWindows } from '../config/types.ts'
 import type { Db, SqlValue } from '../index/db.ts'
 import { readLimitWindows } from '../index/limits.ts'
 
 import { DEFAULT_RATE_WINDOW_MS, perMinute } from '../live/rate.ts'
 import type { UsageSnapshot } from '../limits/usage.ts'
-import type { LimitWindow } from '../sources/types.ts'
+import type { LimitWindow, LimitWindowKind } from '../sources/types.ts'
 import { sourceCount } from './today.ts'
 import type { LimitForecast, LimitReportRow, LimitsReport } from './types.ts'
 
@@ -83,6 +83,32 @@ export function limitsReport(
  * стоял на нуле. И там, и там наши окна — расчёт по одной машине, а лимит
  * считается по аккаунту.
  */
+/**
+ * Отсеять окна, которые человек в попапе видеть не захотел (7.5).
+ *
+ * Стоит **между** отчётом и снимком, а не в самом попапе, и это главное правило
+ * настройки: тот же список красит значок в трее и поднимает уведомления. Отсей
+ * его только на экране — и спрятанное окно на 100% оставит значок красным без
+ * единой строки, объясняющей почему.
+ *
+ * Отчёт при этом не трогается: `limitsReport` отвечает на вопрос «какие окна
+ * действуют», а этот фильтр — на вопрос «о каких мне напоминать». Смешать их
+ * значило бы, что CLI и главное окно однажды покажут неполный список, не сказав
+ * об этом.
+ */
+export function popupWindows<T extends LimitWindow>(
+  windows: readonly T[],
+  shown: PopupWindows,
+): T[] {
+  return windows.filter((window) => {
+    // Вид окна, которого у провайдера в настройке нет (у Claude месячных не
+    // бывает), — показывается: настройка отвечает «спрятать», а молчание
+    // настройки не значит «спрятать».
+    const flags: Partial<Record<LimitWindowKind, boolean>> = shown[window.provider]
+    return flags[window.kind] !== false
+  })
+}
+
 function replaceProvider(
   windows: readonly LimitWindow[],
   provider: LimitWindow['provider'],

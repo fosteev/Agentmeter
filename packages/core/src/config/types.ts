@@ -21,6 +21,8 @@ export interface Config {
   limits: {
     claude: ClaudeLimits
     codex: CodexLimits
+    /** Какие окна лимита показывать в попапе (7.5). */
+    popup: PopupWindows
   }
 
   alerts: {
@@ -202,6 +204,35 @@ export interface CodexLimits {
   api: { enabled: boolean }
 }
 
+/**
+ * Какие окна лимита рисовать в попапе (7.5).
+ *
+ * Попап отвечает на один вопрос — «можно ли работать дальше», — и окна, до
+ * которых человеку дела нет, отвечают на него шумом: месячное окно Codex у того,
+ * кто Codex не запускает, занимает строку рядом с тем, ради чего попап открыли.
+ *
+ * Три правила, без которых настройка стала бы враньём:
+ *
+ * 1. **Список окон здесь постоянный, а не по снимку.** Окно появляется в
+ *    снимке, когда провайдер о нём заговорил, — и галочка обязана существовать
+ *    раньше, иначе первое месячное окно приедет в попап без спроса.
+ * 2. **Снятая галочка убирает окно везде, где живёт этот список** — из попапа,
+ *    из цвета значка и из уведомлений. Иначе спрятанное окно на 100% красит
+ *    значок в тревогу, а причины на экране нет: значок горит, попап спокоен.
+ * 3. **Умолчание — показывать всё.** Настройка убирает лишнее у того, кто о ней
+ *    попросил; молчаливо спрятанный лимит — это не тишина, а недосказанность.
+ */
+export interface PopupWindows {
+  claude: { fiveHour: boolean; weekly: boolean }
+  /**
+   * У Codex видов окна четыре: до CLI 0.145.0 недельное окно приезжало
+   * пятичасовым слотом, а `other` — это длина, которой мы не знаем имени
+   * (см. пункт 8 в `CLAUDE.md`). Разбирать их по слотам нельзя, поэтому и
+   * галочки стоят по видам.
+   */
+  codex: { fiveHour: boolean; weekly: boolean; monthly: boolean; other: boolean }
+}
+
 export const DEFAULT_CONFIG: Config = {
   sources: { claudeHome: null, codexHome: null, extra: [] },
   limits: {
@@ -212,6 +243,10 @@ export const DEFAULT_CONFIG: Config = {
       api: { enabled: false },
     },
     codex: { enabled: true, api: { enabled: false } },
+    popup: {
+      claude: { fiveHour: true, weekly: true },
+      codex: { fiveHour: true, weekly: true, monthly: true, other: true },
+    },
   },
   alerts: {
     warnAtPercent: 75,

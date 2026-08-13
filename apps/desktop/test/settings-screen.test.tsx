@@ -5,7 +5,7 @@ import { DEFAULT_CONFIG, type Config } from '@agentmeter/core'
 import type { ConfigReport, DeepPartial } from '@agentmeter/ipc'
 import { SettingsAlerts } from '../src/renderer/components/SettingsAlerts.tsx'
 import { SettingsAppearance } from '../src/renderer/components/SettingsAppearance.tsx'
-import { SettingsLimits } from '../src/renderer/components/SettingsLimits.tsx'
+import { SettingsPopupLimits } from '../src/renderer/components/SettingsPopupLimits.tsx'
 import { SettingsPrivacy } from '../src/renderer/components/SettingsPrivacy.tsx'
 import { SettingsTab } from '../src/renderer/components/SettingsTab.tsx'
 import { SettingsUsage } from '../src/renderer/components/SettingsUsage.tsx'
@@ -34,15 +34,7 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
     ],
     startup: { enabled: false, available: true },
     update: { phase: 'idle', current: '0.1.0' },
-    usage: {
-      installed: false,
-      settingsPath: '/home/u/.claude/settings.json',
-      points: 0,
-      windows: 0,
-      weight: null,
-      hookVersion: 1,
-    },
-    // Второй источник лимитов (6.3): по умолчанию выключен, и экран обязан
+    // Источник процентов лимита (6.3): по умолчанию выключен, и экран обязан
     // выглядеть так же, как до этапа, — карточка есть, а спрашивать нечего.
     usageApi: { enabled: false, credentials: 'missing', needsLogin: false },
     // И то же для Codex (6.4).
@@ -50,21 +42,13 @@ function report(over: DeepPartial<Config> = {}): ConfigReport {
   }
 }
 
-/**
- * Заготовка свойств карточки лимитов.
- *
- * Второй источник (6.3) здесь всегда выключен: проверки ниже про хук строки
- * состояния, и включённый запрос дорисовал бы им вторую карточку с процентами.
- */
+/** Заготовка свойств блока «Проценты лимита от провайдера». */
 function usageProps(
   over: Partial<Parameters<typeof SettingsUsage>[0]>,
 ): Parameters<typeof SettingsUsage>[0] {
   return {
-    usage: report().usage,
     api: report().usageApi,
     codexApi: report().codexApi,
-    onToggle: () => undefined,
-    onRefresh: () => undefined,
     onApiToggle: () => undefined,
     onApiRefresh: () => undefined,
     ...over,
@@ -113,7 +97,7 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 describe('экран настроек', () => {
   /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
   it('рисует шесть разделов и открывает первый', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html.split('data-settings-section=').length - 1).toBe(6)
     expect(html).toContain('data-settings-pane="sources"')
@@ -126,7 +110,7 @@ describe('экран настроек', () => {
    * которого нет: в отчёте это разные поля, и различать их обязан экран.
    */
   it('различает прочитанный источник и пропавший каталог', () => {
-    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
+    const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
     expect(html).toContain('/home/u/.claude')
     expect(html).toContain('412 файлов')
@@ -140,7 +124,7 @@ describe('экран настроек', () => {
   it('показывает замечания к файлу настроек', () => {
     const withProblems = { ...report(), problems: ['ui.theme: допустимо system | light | dark'] }
     const html = renderToStaticMarkup(
-      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onStatusline={() => undefined} onRefreshUsage={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
+      <SettingsTab report={withProblems} onChange={() => undefined} onStartup={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />,
     )
 
     expect(html).toContain('data-config-problems')
@@ -174,79 +158,24 @@ describe('экран настроек', () => {
   })
 
   /**
-   * Ловит тумблер хука, ушедший в общий канал настроек: он правит **чужой**
-   * файл, `~/.claude/settings.json`, и `config:set` его не поставит вовсе —
-   * ручка щёлкала бы и не делала ничего.
+   * Ловит вторую кнопку «Спросить сейчас»: канал спрашивает **все** включённые
+   * источники разом, и кнопка под карточкой Codex уводила бы в сеть и токен
+   * Anthropic. Кнопка одна на блок — и её нет, пока спрашивать некого.
    */
-  it('тумблер хука зовёт свой канал, а не правку конфига', () => {
-    const onToggle = vi.fn()
-    const onChange = vi.fn()
-    const tree = SettingsUsage(usageProps({ onToggle }))
+  it('кнопка запроса одна на блок и появляется только с включённым источником', () => {
+    const onApiRefresh = vi.fn()
+    const off = renderToStaticMarkup(SettingsUsage(usageProps({})))
+    expect(off).not.toContain('data-usage-action')
 
-    find(tree, 'data-setting', 'statusline').props.onChange!({
-      currentTarget: { value: '', checked: true },
+    const props = usageProps({
+      api: { enabled: true, credentials: 'file', needsLogin: false },
+      codexApi: { enabled: true, credentials: 'file', needsLogin: false },
+      onApiRefresh,
     })
+    expect(renderToStaticMarkup(SettingsUsage(props)).split('data-usage-action').length - 1).toBe(1)
 
-    expect(onToggle).toHaveBeenCalledWith(true)
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  /**
-   * Ловит правдоподобный коэффициент вместо «данных мало». Это тот самый экран,
-   * на котором соблазн показать красивое число сильнее всего: пока вес `null`,
-   * лимиты Claude помечены оценкой, и написать здесь что-то похожее на
-   * измерение нельзя.
-   */
-  it('без калибровки вместо веса стоит «данных мало»', () => {
-    const empty = renderToStaticMarkup(SettingsUsage(usageProps({})))
-    expect(empty).toContain('данных мало')
-    expect(empty).toContain('0 снимков')
-    expect(empty).toContain('хук не установлен')
-
-    const measured = renderToStaticMarkup(
-      SettingsUsage({
-        ...usageProps({}),
-        usage: { ...report().usage, installed: true, points: 42, windows: 4, weight: 0.18 },
-        onToggle: () => undefined,
-        onRefresh: () => undefined,
-      }),
-    )
-    expect(measured).toContain('0.18')
-    expect(measured).toContain('измерено')
-    expect(measured).not.toContain('данных мало')
-  })
-
-  /**
-   * Ловит потерянную чужую команду строки состояния: она сохранена и
-   * вызывается, и человек обязан это видеть — иначе установка выглядит как
-   * подмена его настройки.
-   */
-  it('чужая команда строки состояния названа вслух', () => {
-    const html = renderToStaticMarkup(
-      SettingsUsage({
-        ...usageProps({}),
-        usage: { ...report().usage, installed: true, chained: 'my-status.sh --short' },
-        onToggle: () => undefined,
-        onRefresh: () => undefined,
-      }),
-    )
-    expect(html).toContain('my-status.sh --short')
-  })
-
-  /**
-   * Ловит кнопку пересчёта, повешенную на тумблер или на правку конфига.
-   * Автоматический пересчёт идёт раз в пять минут — кнопка существует ровно
-   * затем, чтобы не ждать их сразу после установки хука.
-   */
-  it('кнопка пересчёта зовёт свой канал, а не тумблер', () => {
-    const onRefresh = vi.fn()
-    const onToggle = vi.fn()
-    const tree = SettingsUsage(usageProps({ onToggle, onRefresh }))
-
-    find(tree, 'data-usage-action', 'refresh').props.onClick!()
-
-    expect(onRefresh).toHaveBeenCalledTimes(1)
-    expect(onToggle).not.toHaveBeenCalled()
+    find(SettingsUsage(props), 'data-usage-action', 'ask').props.onClick!()
+    expect(onApiRefresh).toHaveBeenCalledTimes(1)
   })
 
   /** Ловит тумблер приватности, отправляющий чужое поле. */
@@ -325,57 +254,58 @@ describe('экран настроек', () => {
 })
 
 /**
- * Карточка потолков (7.4).
+ * «Что показывать в попапе» (7.5) — на месте карточек потолков плана.
  *
- * Раньше здесь стояли чипы плана, и они писали в поле потолка числа из таблицы
- * тарифов. Поле означает потолок во **взвешенных** токенах из калибровки 1.9, и
- * объявленных тарифов в этих единицах не существует — то есть кнопки могли
- * только одно: показать процент от выдуманного знаменателя. Проверяется поэтому
- * не вид карточки, а два свойства: выбрать потолок нечем, а неизмеренное
- * названо неизмеренным.
+ * Проверяется не вид карточек, а три свойства, на которых настройка врала бы
+ * молча: галочка шлёт **свою** правку, список окон постоянный (иначе первое
+ * месячное окно приедет в попап без спроса), и снятое исчезает не только из
+ * попапа — про значок и уведомления сказано прямо на экране.
  */
-describe('потолки лимитов', () => {
-  const measured = (over: Partial<Config['limits']['claude']>): string => {
-    const config = structuredClone(DEFAULT_CONFIG)
-    Object.assign(config.limits.claude, over)
-    return renderToStaticMarkup(<SettingsLimits config={config} />)
-  }
+describe('что показывать в попапе', () => {
+  const tree = (config = report().config) => SettingsPopupLimits({ config, onChange: () => undefined })
 
-  /** Ловит вернувшийся выбор плана: заявленное не должно перебивать измеренное. */
-  it('плана не выбрать: кнопок нет вовсе', () => {
-    const html = measured({})
-    expect(html).not.toContain('data-plan')
-    expect(html).not.toContain('Max 20')
-    expect(html).not.toContain('<button')
+  it('каждая галочка отправляет своё окно своего провайдера', () => {
+    const onChange = vi.fn()
+    const node = SettingsPopupLimits({ config: report().config, onChange })
+
+    find(node, 'data-setting', 'popup-claude-weekly').props.onChange!({
+      currentTarget: { value: '', checked: false },
+    })
+    find(node, 'data-setting', 'popup-codex-monthly').props.onChange!({
+      currentTarget: { value: '', checked: false },
+    })
+
+    expect(onChange).toHaveBeenNthCalledWith(1, {
+      limits: { popup: { claude: { weekly: false } } },
+    })
+    expect(onChange).toHaveBeenNthCalledWith(2, {
+      limits: { popup: { codex: { monthly: false } } },
+    })
   })
 
   /**
-   * Ловит ноль или прочерк на месте неизмеренного потолка — ту же ошибку, что
-   * пустая полоса лимита в попапе: «не знаем» обязано быть сказано словами.
+   * Ловит список, собранный по снимку: месячного окна Codex на машине может не
+   * быть месяцами, а появиться оно должно уже спрошенным.
    */
-  it('неизмеренное названо неизмеренным, а не нулём', () => {
-    const html = measured({ fiveHourCap: null, weeklyCap: null, cacheReadWeight: null })
-    expect(html.split('не измерено').length - 1).toBe(3)
-    expect(html).not.toContain('>0<')
+  it('окна перечислены все, включая те, которых сейчас нет', () => {
+    const html = renderToStaticMarkup(tree())
+    expect(html).toContain('месячное окно')
+    expect(html.split('5-часовое окно').length - 1).toBe(2)
   })
 
-  /** Ловит измеренные числа, не доехавшие до экрана: их больше негде увидеть. */
-  it('измеренное показано числами', () => {
-    const html = measured({ fiveHourCap: 3_900_000, weeklyCap: 48_000_000, cacheReadWeight: 0.2 })
-    expect(html).toContain('3,9M')
-    expect(html).toContain('48M')
-    expect(html).toContain('0.20')
-    expect(html).not.toContain('не измерено')
+  /** Ловит настройку, спрятавшую что-нибудь сама: умолчание — показывать всё. */
+  it('по умолчанию отмечено всё', () => {
+    const html = renderToStaticMarkup(tree())
+    expect(html.split('checked=""').length - 1).toBe(6)
   })
 
   /**
-   * Ловит потерянную оговорку про Codex: процент там точный, но написан в
-   * момент запроса, и «точные значения приходят от сервера» без этого читается
-   * как «здесь всё всегда верно» (6.4).
+   * Ловит подпись, обещающую меньше, чем настройка делает: тот же список
+   * красит значок в трее и поднимает уведомления.
    */
-  it('у Codex сказано и про источник процента, и про его возраст', () => {
-    const html = measured({})
-    expect(html).toContain('провайдер сообщает процент готовым')
-    expect(html).toContain('написан в момент запроса')
+  it('сказано, что снятое исчезает и из значка, и из уведомлений', () => {
+    const html = renderToStaticMarkup(tree())
+    expect(html).toContain('значка')
+    expect(html).toContain('уведомлений')
   })
 })

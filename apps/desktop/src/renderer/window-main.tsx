@@ -241,24 +241,6 @@ export function WindowApp() {
   }
 
   /**
-   * Хук строки состояния (1.9) — третий канал того же рода. Пишет он не в наш
-   * файл настроек, а в `~/.claude/settings.json`, и состояние в ответе тоже
-   * перечитано у файла: показать «включено» над записью, которая не прошла,
-   * значило бы соврать самым проверяемым способом.
-   */
-  const changeStatusline = (enabled: boolean): void => {
-    void window.agentmeter['statusline:set']({ enabled }).then(setConfigReport)
-  }
-
-  /**
-   * Пересчёт веса по журналу (1.9). Хук отсюда не зовётся и позваться не может:
-   * строку состояния рисует Claude Code, и проценты приходят в его ответе API.
-   */
-  const refreshUsage = (): void => {
-    void window.agentmeter['usage:refresh']().then(setConfigReport)
-  }
-
-  /**
    * Вторые источники лимитов (6.3, 6.4): разрешить и спросить.
    *
    * Два канала, а не один, и разница между ними существенна для человека:
@@ -400,8 +382,6 @@ export function WindowApp() {
           report={configReport}
           onChange={changeConfig}
           onStartup={changeStartup}
-          onStatusline={changeStatusline}
-          onRefreshUsage={refreshUsage}
           onOauth={changeOauth}
           onRefreshOauth={refreshOauth}
           onCheckUpdate={checkUpdate}

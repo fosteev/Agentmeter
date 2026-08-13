@@ -5,7 +5,7 @@ import { t } from '../format.ts'
 import { SettingsAlerts } from './SettingsAlerts.tsx'
 import { SettingsApp } from './SettingsApp.tsx'
 import { SettingsAppearance } from './SettingsAppearance.tsx'
-import { SettingsLimits } from './SettingsLimits.tsx'
+import { SettingsPopupLimits } from './SettingsPopupLimits.tsx'
 import { SettingsPrivacy } from './SettingsPrivacy.tsx'
 import { SettingsSources } from './SettingsSources.tsx'
 import { SettingsUsage } from './SettingsUsage.tsx'
@@ -45,16 +45,9 @@ export interface SettingsTabProps {
    */
   onStartup: (enabled: boolean) => void
   /**
-   * Поставить или снять хук строки состояния (1.9). Третий канал по тому же
-   * поводу: он пишет в файл настроек Claude Code, а не в наш.
-   */
-  onStatusline: (enabled: boolean) => void
-  /** Пересчитать вес по журналу строки состояния прямо сейчас (1.9). */
-  onRefreshUsage: () => void
-  /**
-   * Разрешить запрос лимитов у провайдера (6.3, 6.4). Четвёртый отдельный
-   * канал, и повод у него самый весомый из четырёх: это согласие на сетевой
-   * вызов креденшелами Claude Code или Codex.
+   * Разрешить запрос лимитов у провайдера (6.3, 6.4). Третий отдельный канал, и
+   * повод у него самый весомый из трёх: это согласие на сетевой вызов
+   * креденшелами Claude Code или Codex.
    */
   onOauth: (provider: Provider, enabled: boolean) => void
   /** Спросить проценты прямо сейчас — единственная кнопка настроек, идущая в сеть. */
@@ -70,8 +63,6 @@ export function SettingsTab({
   report,
   onChange,
   onStartup,
-  onStatusline,
-  onRefreshUsage,
   onOauth,
   onRefreshOauth,
   onCheckUpdate,
@@ -138,14 +129,13 @@ export function SettingsTab({
         {active === 'sources' ? (
           <SettingsSources sources={report.sources} problems={report.problems} />
         ) : null}
-        {active === 'limits' ? <SettingsLimits config={config} /> : null}
+        {active === 'limits' ? (
+          <SettingsPopupLimits config={config} onChange={onChange} />
+        ) : null}
         {active === 'limits' ? (
           <SettingsUsage
-            usage={report.usage}
             api={report.usageApi}
             codexApi={report.codexApi}
-            onToggle={onStatusline}
-            onRefresh={onRefreshUsage}
             onApiToggle={onOauth}
             onApiRefresh={onRefreshOauth}
           />

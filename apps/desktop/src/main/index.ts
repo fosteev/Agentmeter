@@ -68,7 +68,7 @@ import type {
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
-import { configReport, setConfig, setOauth, setStartup, setStatusline } from './config.ts'
+import { configReport, setConfig, setOauth, setStartup } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
@@ -81,14 +81,8 @@ import { buildSnapshot, type SnapshotInput } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
 import { barBinaryPath, startNativeBar, type NativeBar } from './menubar.ts'
 import { readStartup, type StartupHost } from './startup.ts'
-import {
-  drainSnapshot,
-  openJournal,
-  recalibrate,
-  refreshHook,
-  type StatuslineHost,
-  type UsageJournal,
-} from './statusline.ts'
+import { openJournal, recalibrate, type UsageJournal } from './usage.ts'
+import { dropStatusline, type StatuslineHost } from './statusline.ts'
 import { openOauth, pollOauth, type OauthHost, type OauthState } from './oauth.ts'
 import {
   openCodexOauth,
@@ -179,15 +173,6 @@ const UPDATE_EVERY_MS = 6 * 3_600_000
  * меньше паузы между «приложение поднялось» и «человек до него добрался».
  */
 const ACTIVATE_GRACE_MS = 3_000
-/**
- * Как часто пересчитывать вес чтения кэша по журналу строки состояния (1.9).
- *
- * Не на каждый снимок: калибровка читает запросы Claude за все дни, покрытые
- * журналом, и на опросе раз в секунду это был бы полный проход по индексу
- * шестьдесят раз в минуту. Пять минут против журнала, который копится днями, —
- * задержка, которой не видно.
- */
-const CALIBRATE_EVERY_MS = 5 * 60_000
 
 interface Runtime {
   db: Db
@@ -205,12 +190,8 @@ interface Runtime {
   startup: StartupHost
   /** Ход обновления (5.4). Живёт в памяти: перезапуск начинает проверку заново. */
   update: UpdateState
-  /** Куда ставится хук строки состояния и где лежит его журнал (1.9). */
-  statusline: StatuslineHost
-  /** Накопленные снимки строки состояния и последняя калибровка по ним. */
+  /** Накопленные наблюдения за лимитами и последняя калибровка по ним (1.9). */
   usage: UsageJournal
-  /** Что не приняла последняя попытка поставить или снять хук. */
-  usageProblem?: string
   /** Чем спрашивать Anthropic про лимиты (6.3). */
   oauthHost: OauthHost
   /** Последний ответ Anthropic и окно ограничения. Живёт в памяти: перезапуск спросит заново. */
@@ -325,9 +306,11 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
   // Тот же объект, а не его копия: разложи его здесь через `...` — и правка
   // порогов в настройках меняла бы копию, до которой слою нет дела.
   const live = createLiveLayer(db, liveOptions)
+  const configHome = dirname(configPath())
+  // Нужен ровно для разовой уборки за снятой настройкой — см. ниже.
   const statusline: StatuslineHost = {
     claudeHome: sources.claudeHome,
-    configDir: dirname(configPath()),
+    configDir: configHome,
     platform: process.platform,
   }
   const runtime: Runtime = {
@@ -341,8 +324,7 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     // знать не должен — его проверяют без запуска приложения.
     startup: app,
     update: initialUpdateState(app.getVersion(), app.isPackaged, config.updates.auto),
-    statusline,
-    usage: openJournal(statusline),
+    usage: openJournal({ configDir: configHome }),
     // `net.fetch` из Electron, а не `globalThis.fetch` из Node, и это не вкус:
     // на `/api/oauth/usage` стоит Cloudflare, который отсекает Node по
     // отпечатку TLS. Замерено 11 августа одним и тем же токеном и одними и
@@ -362,10 +344,12 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     codexOauth: openCodexOauth(),
     issues: ingested?.issues ?? [],
   }
-  // Тело хука меняется вместе с приложением, а лежит он в каталоге настроек и
-  // сам собой не обновится. Ставить его здесь при этом нельзя: установка — это
-  // правка чужого файла, и разрешает её человек кнопкой, а не запуск.
-  refreshHook(statusline)
+  // Разовая уборка за снятой настройкой (7.5): хук строки состояния ставился в
+  // **чужой** файл, а тумблера, которым его снимали, больше нет. Оставь запись
+  // — и Claude Code вечно звал бы скрипт, которого никто не читает. Своей
+  // записи там нет — уборка сводится к одному чтению `settings.json`.
+  const cleaned = dropStatusline(statusline, config.statusline.previous)
+  if (cleaned.removed) setConfig(runtime, { statusline: { previous: null } })
   if (defer) {
     runtime.pending = ingestSteps(db, { ...sources, progress: true })
     runtime.indexing = {
@@ -445,10 +429,6 @@ async function runSmoke(): Promise<void> {
         (patch) => setConfig(runtime, patch),
         // Смоук автозапуск не трогает: включить его значило бы записать
         // приложение в «Объекты входа» того, кто прогнал проверку.
-        () => configReport(runtime),
-        // И чужой файл настроек тоже: хук строки состояния ставится согласием
-        // человека, а не прогоном проверки.
-        () => configReport(runtime),
         () => configReport(runtime),
         // Второй источник лимитов смоук не включает и не спрашивает: включение
         // — это согласие человека на сетевой вызов его креденшелами, и прогон
@@ -727,8 +707,6 @@ function createHandlers(
   openWindow: (tab: WindowTab) => void,
   changeConfig: (patch: DeepPartial<Config>) => ConfigReport,
   changeStartup: (enabled: boolean) => ConfigReport,
-  changeStatusline: (enabled: boolean) => ConfigReport,
-  refreshUsage: () => ConfigReport,
   changeOauth: (provider: Provider, enabled: boolean) => ConfigReport,
   refreshOauth: () => Promise<ConfigReport>,
   checkUpdate: () => ConfigReport,
@@ -765,10 +743,6 @@ function createHandlers(
     // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
     // знать незачем: ответ тот же отчёт, и рассылается он так же.
     'startup:set': ({ enabled }) => changeStartup(enabled),
-    // Хук строки состояния пишется в чужой файл настроек, поэтому канал зовётся
-    // только кнопкой в окне — и никогда стартом приложения.
-    'statusline:set': ({ enabled }) => changeStatusline(enabled),
-    'usage:refresh': () => refreshUsage(),
     // Второй источник лимитов — тоже только кнопкой: канал включает согласие на
     // сетевой вызов, и звать его чем-то, кроме явного действия, нельзя.
     'oauth:set': ({ provider, enabled }) => changeOauth(provider, enabled),
@@ -1365,22 +1339,6 @@ function main(): void {
   }
 
   /**
-   * Дочитать снимок строки состояния и, если набежало новое, пересчитать вес
-   * чтения кэша (1.9).
-   *
-   * Стоит на опросе трея, а не на вотчере файла: снимок переписывается на
-   * каждую отрисовку строки состояния — вотчер дёргался бы десятки раз на одно
-   * наблюдение. Сам разбор дешёвый (сравнение времени файла), а калибровка —
-   * нет: она читает запросы Claude за дни, и потому идёт по таймеру.
-   */
-  const collectUsage = (): void => {
-    if (runtime === undefined) return
-    if (drainSnapshot(runtime.statusline, runtime.usage) === null) return
-    if (Date.now() - runtime.usage.calibratedAt < CALIBRATE_EVERY_MS) return
-    applyCalibration(recalibrate(runtime.db, runtime.usage))
-  }
-
-  /**
    * Спросить лимиты у Anthropic, если пора (6.3).
    *
    * Стоит на том же опросе трея, что и дочитывание снимка, — и это безопасно
@@ -1438,13 +1396,10 @@ function main(): void {
 
   const poll = (): void => {
     tick += 1
-    // До проверки «смотрит ли кто-то»: наблюдение строки состояния такое же
-    // невосстановимое, как журнал времён жизни рядом. Процент окна, не
-    // записанный сегодня, задним числом не узнает никто — ни мы, ни провайдер.
-    collectUsage()
-    // Рядом и по той же причине: процент, не спрошенный сегодня, задним числом
-    // не узнает никто. Сеть при этом трогается раз в четверть часа и только при
-    // включённой настройке — решает это `pollOauth`, а не частота опроса.
+    // До проверки «смотрит ли кто-то»: процент, не спрошенный сегодня, задним
+    // числом не узнает никто — ни мы, ни провайдер. Сеть при этом трогается раз
+    // в четверть часа и только при включённой настройке — решает это
+    // `pollOauth`, а не частота опроса.
     collectOauth()
     collectCodexOauth()
     const shown = listeners().length > 0
@@ -1614,49 +1569,6 @@ function main(): void {
   }
 
   /**
-   * Хук строки состояния (1.9): поставить или снять и разослать.
-   *
-   * Отдельно от `changeConfig` по той же причине, что автозапуск, только резче:
-   * пишется он в **чужой** файл настроек. Единственный путь сюда — кнопка в
-   * окне; ни старт приложения, ни применение конфига этого канала не трогают.
-   *
-   * Калибровка пересчитывается сразу после установки: журнал мог остаться с
-   * прошлого раза, и показывать «0 снимков» над непустым файлом было бы враньём
-   * ровно того сорта, от которого этап и затевался.
-   */
-  const changeStatusline = (enabled: boolean): ConfigReport => {
-    let report = setStatusline(runtime!, enabled)
-    if (enabled && runtime!.usage.snapshots.length > 0) {
-      applyCalibration(recalibrate(runtime!.db, runtime!.usage))
-      report = configReport(runtime!)
-    }
-    emit('config:changed', report)
-    return report
-  }
-
-  /**
-   * Пересчитать вес по журналу руками (1.9).
-   *
-   * Кнопка нужна ровно затем, зачем «Проверить» у обновлений: автоматический
-   * пересчёт идёт раз в пять минут, и это верно для фона и мучительно сразу
-   * после установки хука, когда хочется увидеть, сошлось ли. Дочитывание снимка
-   * тут же рядом — не ради скорости (опрос трея и так раз в секунду), а чтобы
-   * кнопка означала «посмотри на всё, что есть на диске», а не «пересчитай то,
-   * что успел заметить».
-   *
-   * Позвать сам хук отсюда нельзя, и это не недоделка: строку состояния рисует
-   * Claude Code, проценты приезжают в его ответе API, и наш скрипт, запущенный
-   * руками, получил бы пустой stdin и переписал бы снимок пустотой.
-   */
-  const refreshUsage = (): ConfigReport => {
-    drainSnapshot(runtime!.statusline, runtime!.usage)
-    applyCalibration(recalibrate(runtime!.db, runtime!.usage))
-    const report = configReport(runtime!)
-    emit('config:changed', report)
-    return report
-  }
-
-  /**
    * Разрешить или запретить запрос лимитов у провайдера (6.3, 6.4).
    *
    * Запроса отсюда не уходит: тумблер — это согласие, а не команда. Первый
@@ -1780,8 +1692,6 @@ function main(): void {
         openMainWindow,
         changeConfig,
         changeStartup,
-        changeStatusline,
-        refreshUsage,
         changeOauth,
         refreshOauth,
         () => checkUpdate(),

@@ -1,39 +1,19 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  utimesSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { setLocale, type UsageSnapshot } from '@agentmeter/core'
-import {
-  chainPath,
-  claudeSettingsPath,
-  drainSnapshot,
-  hookPath,
-  installHook,
-  latestPath,
-  openJournal,
-  readHook,
-  refreshHook,
-  removeHook,
-  usageStatus,
-  type StatuslineHost,
-} from '../src/main/statusline.ts'
-import { hookBody } from '../src/main/statusline-hook.ts'
+import { claudeSettingsPath, dropStatusline, hookPath, type StatuslineHost } from '../src/main/statusline.ts'
 
 /**
- * Хук строки состояния (1.9): установка, снятие и журнал наблюдений.
+ * Уборка за снятым хуком строки состояния (7.5).
  *
- * Проверки названы поломкой, которую ловят, и все они про одно: этап правит
- * **чужой** файл настроек. Потерянная чужая настройка здесь дороже любой
- * неточности в расчёте — её не восстановит ни пересборка индекса, ни повторная
- * установка.
+ * Настройка ушла из интерфейса вместе с потолками, а запись осталась бы в
+ * **чужом** файле навсегда: Claude Code продолжал бы звать скрипт, которого
+ * никто не читает, и снять его человеку стало бы нечем. Отсюда разовая уборка
+ * при старте — и проверки на неё названы поломкой, которую ловят.
+ *
+ * Дороже всего здесь не хук, а соседи по файлу: потерянная чужая настройка не
+ * восстанавливается ничем.
  */
 
 let dir: string
@@ -41,9 +21,9 @@ let host: StatuslineHost
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'agentmeter-statusline-'))
-  setLocale('ru')
   host = { claudeHome: join(dir, 'claude'), configDir: join(dir, 'config'), platform: 'darwin' }
   mkdirSync(host.claudeHome, { recursive: true })
+  mkdirSync(host.configDir, { recursive: true })
 })
 
 afterEach(() => {
@@ -58,223 +38,92 @@ function writeSettings(value: Record<string, unknown>): void {
   writeFileSync(claudeSettingsPath(host), JSON.stringify(value, null, 2), 'utf8')
 }
 
-describe('установка хука', () => {
-  it('прописывает команду и кладёт исполняемый файл', () => {
-    expect(readHook(host).installed).toBe(false)
-    const result = installHook(host)
-
-    expect(result.problems).toEqual([])
-    expect(result.previous).toBeNull()
-    expect(settings()['statusLine']).toEqual({ type: 'command', command: hookPath(host) })
-    expect(readFileSync(hookPath(host), 'utf8')).toBe(hookBody('darwin'))
-    // Без бита исполнения Claude Code получит EACCES и промолчит: в строке
-    // состояния просто ничего не появится. Бит проверяется там, где он есть:
-    // Windows прав доступа в этом виде не хранит вовсе, и `chmod` там ничего не
-    // меняет — сама установка (`statusline.ts`) на win32 его и не зовёт.
-    if (process.platform !== 'win32') {
-      expect(statSync(hookPath(host)).mode & 0o111).toBeGreaterThan(0)
-    }
-    expect(readHook(host).installed).toBe(true)
+/** Как выглядел диск у того, кто хук включал: запись у Claude Code, файлы у нас. */
+function installed(previous?: Record<string, unknown>): void {
+  writeSettings({
+    model: 'opus',
+    statusLine: { type: 'command', command: hookPath(host) },
+    ...(previous ?? {}),
   })
+  writeFileSync(hookPath(host), '#!/bin/sh\n', 'utf8')
+  writeFileSync(join(host.configDir, 'usage-latest.json'), '{}', 'utf8')
+}
 
-  /**
-   * Ловит запись поверх файла целиком. Чужие настройки Claude Code — не наше
-   * дело, и потерять их установкой было бы худшим исходом этапа.
-   */
-  it('чужие ключи файла настроек остаются на месте', () => {
-    writeSettings({ model: 'opus', permissions: { allow: ['Bash(ls:*)'] } })
-    installHook(host)
+describe('уборка за хуком', () => {
+  it('снимает свою запись и не трогает соседние ключи', () => {
+    installed()
 
-    expect(settings()['model']).toBe('opus')
-    expect(settings()['permissions']).toEqual({ allow: ['Bash(ls:*)'] })
-  })
-
-  /**
-   * Ловит потерю чужой строки состояния: она сохраняется дословно и снятие
-   * возвращает ровно её — вместе с полями помимо команды.
-   */
-  it('занятую строку состояния сохраняет дословно и вызывает', () => {
-    const mine = { type: 'command', command: 'my-status.sh --short', padding: 0 }
-    writeSettings({ statusLine: mine })
-
-    const result = installHook(host)
-    expect(result.previous).toBe(JSON.stringify(mine))
-    // Команду видит и сам хук: она лежит рядом простым текстом, потому что
-    // читать JSON из sh нечем.
-    expect(readFileSync(chainPath(host), 'utf8')).toBe('my-status.sh --short')
-    expect(readHook(host).chained).toBe('my-status.sh --short')
-
-    removeHook(host, result.previous!)
-    expect(settings()['statusLine']).toEqual(mine)
-  })
-
-  /**
-   * Ловит установку поверх себя: «прежним» стал бы наш собственный хук, и
-   * чужая настройка потерялась бы навсегда, причём молча.
-   */
-  it('повторная установка не объявляет прежним себя', () => {
-    writeSettings({ statusLine: { type: 'command', command: 'my-status.sh' } })
-    const first = installHook(host)
-    const second = installHook(host)
-
-    expect(first.previous).toBe(JSON.stringify({ type: 'command', command: 'my-status.sh' }))
-    expect(second.previous).toBeUndefined()
-    expect(readFileSync(chainPath(host), 'utf8')).toBe('my-status.sh')
-  })
-
-  /**
-   * Ловит «починку» чужого файла перезаписью. Битый JSON — повод отказаться:
-   * перезапись стёрла бы всё, что в нём было, и выглядела бы как успех.
-   */
-  it('битый файл настроек не переписывается', () => {
-    writeFileSync(claudeSettingsPath(host), '{ "statusLine": ', 'utf8')
-    const result = installHook(host)
-
-    expect(result.problems).toHaveLength(1)
-    expect(readFileSync(claudeSettingsPath(host), 'utf8')).toBe('{ "statusLine": ')
-    expect(readHook(host).installed).toBe(false)
-  })
-
-  it('без каталога Claude Code ставить некуда, и это сказано вслух', () => {
-    rmSync(host.claudeHome, { recursive: true, force: true })
-    const result = installHook(host)
-
-    expect(result.problems).toHaveLength(1)
-    expect(result.problems[0]).toContain(host.claudeHome)
-  })
-
-  /**
-   * Ловит снятие чужого хука: если в строке состояния стоит не наша команда,
-   * трогать её нельзя — человек поставил её после нас.
-   */
-  it('снятие не трогает чужую команду, вставшую поверх нашей', () => {
-    installHook(host)
-    writeSettings({ statusLine: { type: 'command', command: 'someone-else.sh' } })
-
-    removeHook(host, null)
-    expect(settings()['statusLine']).toEqual({ type: 'command', command: 'someone-else.sh' })
-  })
-
-  it('снятие убирает ключ, если до нас его не было', () => {
-    writeSettings({ model: 'opus' })
-    const result = installHook(host)
-
-    removeHook(host, result.previous ?? null)
+    expect(dropStatusline(host, null)).toEqual({ removed: true })
     expect('statusLine' in settings()).toBe(false)
     expect(settings()['model']).toBe('opus')
   })
 
   /**
-   * Ловит хук прошлой версии, оставшийся на диске: файл лежит в каталоге
-   * настроек, обновление приложения его не касается, а путь к нему записан в
-   * чужом файле и меняться не должен.
+   * Ловит уборку, теряющую чужую строку состояния: она стояла до нас, хук её
+   * вызывал, и после снятия человек обязан получить ровно то, что было.
    */
-  it('устаревшее тело хука переписывается при старте', () => {
-    installHook(host)
-    writeFileSync(hookPath(host), '#!/bin/sh\necho старый\n', 'utf8')
+  it('возвращает прежнюю команду дословно', () => {
+    installed()
+    const previous = JSON.stringify({ type: 'command', command: 'my-status.sh --short' })
 
-    refreshHook(host)
-    expect(readFileSync(hookPath(host), 'utf8')).toBe(hookBody('darwin'))
-  })
-
-  it('не установленный хук при старте не появляется сам', () => {
-    // Установка — правка чужого файла, и разрешает её человек кнопкой.
-    refreshHook(host)
-    expect(readHook(host).installed).toBe(false)
-  })
-})
-
-describe('журнал наблюдений', () => {
-  const stdin = {
-    session_id: 'aaaa',
-    version: '2.1.85',
-    rate_limits: {
-      five_hour: { used_percentage: 13, resets_at: 1777647600 },
-      seven_day: { used_percentage: 14.000000000000002, resets_at: 1777939200 },
-    },
-    context_window: { context_window_size: 200000 },
-  }
-
-  function drop(value: unknown, mtimeMs: number): void {
-    mkdirSync(host.configDir, { recursive: true })
-    writeFileSync(latestPath(host), JSON.stringify(value), 'utf8')
-    // Момент наблюдения берётся из времени файла: пишет его хук, а читаем мы с
-    // опозданием до периода опроса.
-    const seconds = mtimeMs / 1000
-    utimesSync(latestPath(host), seconds, seconds)
-  }
-
-  it('снимок доезжает до журнала с временем файла, а не «сейчас»', () => {
-    const journal = openJournal(host)
-    drop(stdin, 1777630200000)
-
-    const snapshot = drainSnapshot(host, journal, 9_999_999_999_999)
-    expect(snapshot?.ts).toBe(1777630200000)
-    expect(snapshot?.fiveHour).toEqual({ pct: 13, resetsAt: 1777647600000 })
-    expect(openJournal(host).snapshots).toHaveLength(1)
+    expect(dropStatusline(host, previous).removed).toBe(true)
+    expect(settings()['statusLine']).toEqual({ type: 'command', command: 'my-status.sh --short' })
   })
 
   /**
-   * Ловит журнал, растущий на каждую отрисовку строки состояния: хук зовётся
-   * десятки раз на одно наблюдение, и без дедупа файл распух бы за день.
+   * Ловит уборку, сносящую чужой хук: строка состояния могла быть переписана
+   * после нас, и тогда запись не наша.
    */
-  it('то же наблюдение второй раз не пишется', () => {
-    const journal = openJournal(host)
-    drop(stdin, 1777630200000)
-    expect(drainSnapshot(host, journal)).not.toBeNull()
+  it('чужую команду поверх нашей не трогает', () => {
+    installed()
+    writeSettings({ statusLine: { type: 'command', command: 'someone-else.sh' } })
 
-    drop(stdin, 1777630260000)
-    expect(drainSnapshot(host, journal)).toBeNull()
-    expect(openJournal(host).snapshots).toHaveLength(1)
+    expect(dropStatusline(host, null)).toEqual({ removed: false })
+    expect(settings()['statusLine']).toEqual({ type: 'command', command: 'someone-else.sh' })
   })
 
   /**
-   * Ловит дедуп, схлопывающий запись целиком по недельному окну: оно повторя-
-   * ется часами, и пятичасовые точки, ради которых всё затевалось, перестали
-   * бы копиться.
+   * Ловит перезапись битого файла: «починить» его нашей записью значит стереть
+   * всё, что в нём было.
    */
-  it('новое пятичасовое окно пишется, даже когда недельное не изменилось', () => {
-    const journal = openJournal(host)
-    drop(stdin, 1777630200000)
-    drainSnapshot(host, journal)
+  it('битый файл настроек не переписывается', () => {
+    writeFileSync(claudeSettingsPath(host), '{ не json', 'utf8')
 
-    const grown = {
-      ...stdin,
-      rate_limits: {
-        ...stdin.rate_limits,
-        five_hour: { used_percentage: 21, resets_at: 1777647600 },
-      },
-    }
-    drop(grown, 1777630800000)
-    expect(drainSnapshot(host, journal)?.fiveHour?.pct).toBe(21)
-    expect(openJournal(host).snapshots).toHaveLength(2)
+    const result = dropStatusline(host, null)
+    expect(result.removed).toBe(false)
+    expect(result.problem).toContain('settings.json')
+    expect(readFileSync(claudeSettingsPath(host), 'utf8')).toBe('{ не json')
   })
 
-  it('снимок без rate_limits журнал не трогает', () => {
-    const journal = openJournal(host)
-    drop({ session_id: 'aaaa', version: '2.1.85' }, 1777630200000)
+  it('свои файлы стирает и тогда, когда запись человек убрал руками', () => {
+    installed()
+    writeSettings({ model: 'opus' })
 
-    expect(drainSnapshot(host, journal)).toBeNull()
-    expect(openJournal(host).snapshots).toEqual([] as UsageSnapshot[])
+    expect(dropStatusline(host, null).removed).toBe(false)
+    expect(existsSync(hookPath(host))).toBe(false)
+    expect(existsSync(join(host.configDir, 'usage-latest.json'))).toBe(false)
   })
 
-  it('половина JSON на диске стоит одного наблюдения, а не падения', () => {
-    const journal = openJournal(host)
-    mkdirSync(host.configDir, { recursive: true })
-    writeFileSync(latestPath(host), '{"rate_limits": {"five', 'utf8')
+  /**
+   * Ловит уборку, которая при каждом старте объявляет себя сделавшей дело:
+   * `removed` включает запись в конфиг, и вечное `true` писало бы его на каждый
+   * запуск приложения.
+   */
+  it('второй раз ничего не находит и молчит', () => {
+    installed()
+    dropStatusline(host, null)
 
-    expect(drainSnapshot(host, journal)).toBeNull()
+    expect(dropStatusline(host, null)).toEqual({ removed: false })
   })
 
-  it('статус считает снимки и окна, а вес без калибровки остаётся пустым', () => {
-    const journal = openJournal(host)
-    drop(stdin, 1777630200000)
-    drainSnapshot(host, journal)
+  it('у того, кто хук не ставил, ничего не портит', () => {
+    writeSettings({ model: 'opus', statusLine: 'my-status.sh' })
 
-    const status = usageStatus(host, journal)
-    expect(status.points).toBe(1)
-    expect(status.windows).toBe(1)
-    expect(status.weight).toBeNull()
-    expect(status.installed).toBe(false)
+    expect(dropStatusline(host, null)).toEqual({ removed: false })
+    expect(settings()['statusLine']).toBe('my-status.sh')
+  })
+
+  it('без файла настроек Claude Code уборка молча ничего не делает', () => {
+    expect(dropStatusline(host, null)).toEqual({ removed: false })
   })
 })

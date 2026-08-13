@@ -30,23 +30,21 @@ import {
   OAUTH_BETA_HEADER,
   OAUTH_USAGE_URL,
   SNAPSHOT_TTL_MS,
-  appendUsageJournal,
   parseCredentials,
   parseOauthUsage,
   t,
   throttleFrom,
   throttled,
-  usageKeys,
   type Throttle,
   type UsageSnapshot,
 } from '@agentmeter/core'
 import type { UsageApiStatus } from '@agentmeter/ipc'
-import type { UsageJournal } from './statusline.ts'
+import { rememberSnapshot, type UsageJournal } from './usage.ts'
 
 /** Чем ходим в сеть: строка и заголовки, ничего сверх. */
 export type OauthFetch = (input: string, init?: RequestInit) => Promise<Response>
 
-/** Что модулю нужно от машины. Как у `StatuslineHost` — пути, а не `app`. */
+/** Что модулю нужно от машины: пути, а не `app`. */
 export interface OauthHost {
   /** Каталог настроек Claude Code: там `.credentials.json`. */
   claudeHome: string
@@ -237,15 +235,10 @@ export async function pollOauth(
   delete state.problem
   delete state.throttle
 
-  // Дедуп общий с журналом строки состояния: пара (процент, момент сброса)
-  // одинакова у обоих источников, и одно и то же наблюдение, пришедшее двумя
-  // путями, обязано лечь в журнал один раз.
-  const keys = usageKeys(snapshot)
-  if (keys.every((key) => journal.seen.has(key))) return null
-  appendUsageJournal(journal.path, [snapshot])
-  for (const key of keys) journal.seen.add(key)
-  journal.snapshots.push(snapshot)
-  return snapshot
+  // Дедуп по паре (процент, момент сброса): ответы приходят раз в четверть
+  // часа и повторяют друг друга, пока человек не работает, а пересчёт
+  // калибровки по повтору — полный проход по запросам Claude впустую.
+  return rememberSnapshot(journal, snapshot) ? snapshot : null
 }
 
 /** Строка раздела настроек: включено ли, откуда токен, что вышло. */

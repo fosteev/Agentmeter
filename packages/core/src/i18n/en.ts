@@ -383,14 +383,9 @@ export const en = {
     files_one: '{{count}} file',
     files_other: '{{count}} files',
     megabytes: '{{value}} MB',
-    caps: 'Limit caps',
-    claudeCaps: 'Claude — caps',
-    codexCaps: 'Codex — caps',
-    capsWeight: 'cache_read weight',
-    capsNotMeasured: 'not measured',
-    capsMeasuredNote: 'measured from provider answers — below',
-    capsCodexNote: 'no cap here: the provider reports the percentage itself',
-    capsCodexStale: 'in the log it is written at request time — the request below refreshes it',
+    popupLimits: 'What the popup shows',
+    popupLimitsNote:
+      'an unchecked window disappears from the popup, from the tray icon colour and from notifications — the app stops mentioning it',
     thresholds: 'Notification thresholds',
     warnAt: 'Warn at',
     dangerAt: 'Alarm at',
@@ -424,25 +419,10 @@ export const en = {
     launchUnpackaged: 'available in an installed app only',
     tabApp: 'Application',
 
-    // Real Claude limits (1.9): the Claude Code status line hook.
-    usage: 'Real Claude limits',
-    usageNote:
-      '— Claude Code hands the window percentage to its status line; the hook writes it to disk. No network involved',
-    usageOn: 'Collect',
-    usageOff: 'Do not collect',
-    usageInstalled: 'hook is set in {{path}}',
-    usageAbsent: 'hook is not installed — Claude limit percentages stay estimated',
-    usageChained: 'your previous status line command is kept and still runs: {{command}}',
-    usageCollected: '{{points}} · {{windows}}',
-    usagePoints_one: '{{count}} snapshot',
-    usagePoints_other: '{{count}} snapshots',
-    usageWindows_one: '{{count}} window',
-    usageWindows_other: '{{count}} windows',
-    usageRefresh: 'Recalculate',
-    usageWeight: 'cache read weight {{weight}} — measured',
-    usageFew: 'not enough data yet, limits stay estimated',
-    usageNoClaude: 'Claude Code directory not found: {{path}}',
-    usageBadSettings: 'the Claude Code settings file does not parse, leaving it alone: {{path}}',
+    // Where limit percentages come from (6.3, 6.4). The status line hook stood
+    // here until 7.5 and went out with the caps: only the terminal CLI draws a
+    // status line, so in VS Code it kept quiet for months.
+    usage: 'Limit percentages from the provider',
 
     // Second source for the same percentages (6.3): asking Anthropic directly.
     oauthOn: 'Ask',

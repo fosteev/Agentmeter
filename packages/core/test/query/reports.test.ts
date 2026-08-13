@@ -10,6 +10,7 @@ import {
   ensureLimitWindows,
   ingestFile,
   limitsReport,
+  popupWindows,
   readLimitWindows,
   taskRows,
   ticketKey,
@@ -394,6 +395,37 @@ describe('query reports', () => {
     })
     expect(emptyDay.emptyIndex).toBe(false)
     expect(emptyDay.emptyDay).toBe(true)
+  })
+
+  /**
+   * Отбор окон для попапа (7.5).
+   *
+   * Проверяется не «фильтр фильтрует», а два свойства, на которых он врал бы
+   * молча: снятое окно не остаётся под другим видом того же провайдера, а
+   * умолчание показывает всё — настройка, спрятавшая что-нибудь сама, хуже
+   * отсутствующей.
+   */
+  it('в попап едут только отмеченные окна, а по умолчанию все', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    const at = Date.parse('2026-07-28T13:00:00.000Z')
+    const all = limitsReport(db, at, config.limits.claude).windows
+    expect(all.some((window) => window.provider === 'claude' && window.kind === 'weekly')).toBe(true)
+
+    expect(popupWindows(all, config.limits.popup)).toEqual(all)
+
+    const hidden = structuredClone(config.limits.popup)
+    hidden.claude.weekly = false
+    const shown = popupWindows(all, hidden)
+    expect(shown.some((window) => window.provider === 'claude' && window.kind === 'weekly')).toBe(
+      false,
+    )
+    // Соседнее окно того же провайдера на месте: галочка про вид, а не про
+    // провайдера целиком.
+    expect(shown.some((window) => window.provider === 'claude' && window.kind === 'fiveHour')).toBe(
+      all.some((window) => window.provider === 'claude' && window.kind === 'fiveHour'),
+    )
   })
 })
 

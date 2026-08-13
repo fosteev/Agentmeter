@@ -1,63 +1,47 @@
 import type { Provider } from '@agentmeter/core'
-import type { CodexApiStatus, UsageApiStatus, UsageHookStatus } from '@agentmeter/ipc'
+import type { CodexApiStatus, UsageApiStatus } from '@agentmeter/ipc'
 import { t } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 import { Switch } from './Switch.tsx'
 
 /**
- * «Настоящие лимиты Claude» — блок раздела «Лимиты» (1.9).
+ * «Спрашивать проценты у провайдера» — блок раздела «Лимиты» (6.3, 6.4).
  *
- * Стоит рядом с потолками плана не случайно: подпись под ними — «оценка по
- * локальным логам», и здесь ровно то, что снимает это слово. Процента лимита
- * Claude в логи не пишет вовсе, но отдаёт его своей строке состояния, и хук
- * записывает полученное на диск.
+ * Здесь то единственное, что доводит проценты лимита до попапа: у Claude их в
+ * логах нет вовсе, у Codex они есть, но написаны в момент последнего запроса.
  *
- * Тумблер правит **чужой** файл настроек (`~/.claude/settings.json`), поэтому
- * путь к нему написан рядом с ним, а не спрятан: человек должен видеть, куда
- * приложение собирается писать, до того как нажмёт.
+ * Карточка хука строки состояния стояла тут первой до 7.5 и была снята вместе с
+ * потолками. Причина не «сложно», а «не работает у половины»: строку состояния
+ * рисует только терминальный Claude Code, в VS Code её нет вовсе — на живой
+ * машине хук стоял месяц и не дал **ни одного** наблюдения, пока рядом лежало
+ * 54 ответа провайдера. Экран, на котором тумблер месяцами показывает «0
+ * снимков», не сообщает о себе ничего, кроме собственной бесполезности.
  *
- * Ниже — счётчик накопленного, и он честный: пока снимков мало, вместо веса
- * стоит «данных мало», а не правдоподобное число. Это тот самый экран, на
- * котором соблазн показать красивый коэффициент сильнее всего.
+ * Оба тумблера здесь — согласие ходить в сеть чужими креденшелами, поэтому
+ * слово «запрос» стоит в первой строке подписи, а не в README.
  */
 export interface SettingsUsageProps {
-  usage: UsageHookStatus
   /**
-   * Второй источник тех же процентов (6.3) — запрос к Anthropic.
-   *
-   * Стоит второй карточкой в том же блоке, а не в отдельном разделе, потому что
-   * отвечает на тот же вопрос («откуда берётся настоящий процент») и заменяет
-   * первый источник там, где его нет: в VS Code строки состояния не рисуется
-   * вовсе, и карточка выше в таком окружении бесполезна.
+   * Запрос к Anthropic (6.3) — первая карточка блока.
    */
   api: UsageApiStatus
   /**
-   * Третья карточка того же блока — второй источник лимитов Codex (6.4).
+   * Вторая карточка — второй источник лимитов Codex (6.4).
    *
-   * Здесь она отвечает на другой вопрос, чем две выше. У Claude процента в
-   * логах нет вовсе, и первые две карточки его **добывают**. У Codex процент
-   * есть и он точный, но написан в момент запроса — эта карточка обновляет его
-   * возраст, а не само число.
+   * Отвечает на другой вопрос, чем соседняя. У Claude процента в логах нет
+   * вовсе, и карточка выше его **добывает**. У Codex процент есть и он точный,
+   * но написан в момент запроса — эта карточка обновляет его возраст, а не
+   * само число.
    */
   codexApi: CodexApiStatus
-  onToggle: (enabled: boolean) => void
-  /**
-   * Пересчитать вес по журналу прямо сейчас.
-   *
-   * Кнопка **не** зовёт хук: строку состояния рисует Claude Code, проценты
-   * приезжают в его ответе API, и снаружи этого не вызвать. Она пересчитывает
-   * уже собранное — потому и называется «Пересчитать», а не «Обновить».
-   */
-  onRefresh: () => void
   /** Разрешить или запретить запрос к провайдеру (6.3, 6.4). */
   onApiToggle: (provider: Provider, enabled: boolean) => void
   /**
    * Спросить проценты прямо сейчас — у всех разрешённых источников.
    *
-   * В отличие от «Пересчитать» выше, эта кнопка **ходит в сеть** — потому и
-   * называется «Спросить сейчас». Разница в словах здесь не стилистическая:
-   * человек вправе понимать, какая из двух кнопок отправит его токен наружу.
+   * Кнопка **ходит в сеть** — потому и называется «Спросить сейчас»: человек
+   * вправе понимать, что она отправит его токен наружу.
    */
   onApiRefresh: () => void
   /** «Сейчас» для возраста снимка. Параметром — иначе витрину не проверить. */
@@ -65,59 +49,26 @@ export interface SettingsUsageProps {
 }
 
 export function SettingsUsage({
-  usage,
   api,
   codexApi,
-  onToggle,
-  onRefresh,
   onApiToggle,
   onApiRefresh,
   now = Date.now(),
 }: SettingsUsageProps) {
-  const collected = t('settings.usageCollected', {
-    points: t('settings.usagePoints', { count: usage.points }),
-    windows: t('settings.usageWindows', { count: usage.windows }),
-  })
+  // Кнопка одна на блок, а не по кнопке в карточке: канал спрашивает **все**
+  // включённые источники разом, и две кнопки, делающие одно, врали бы каждая
+  // про свою карточку — «Спросить сейчас» под Codex уводила бы в сеть и токен
+  // Anthropic. Пока оба источника выключены, кнопки нет: ходить некуда.
+  const ask =
+    api.enabled || codexApi.enabled ? (
+      <button type="button" data-usage-action="ask" onClick={onApiRefresh} style={CHIP}>
+        {t('settings.oauthRefresh')}
+      </button>
+    ) : undefined
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <SectionTitle title={t('settings.usage')} />
-      <div style={CARD}>
-        <Switch
-          name="statusline"
-          label={usage.installed ? t('settings.usageOn') : t('settings.usageOff')}
-          note={t('settings.usageNote')}
-          checked={usage.installed}
-          onChange={onToggle}
-        />
-
-        <span style={NOTE} data-statusline-state="">
-          {usage.installed
-            ? t('settings.usageInstalled', { path: usage.settingsPath })
-            : t('settings.usageAbsent')}
-        </span>
-
-        {usage.chained === undefined ? null : (
-          <span style={NOTE}>{t('settings.usageChained', { command: usage.chained })}</span>
-        )}
-
-        {usage.problem === undefined ? null : (
-          <span style={{ ...NOTE, color: 'var(--alarm)' }}>{usage.problem}</span>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={NOTE} data-statusline-weight="">
-            {`${collected} · `}
-            {usage.weight === null
-              ? t('settings.usageFew')
-              : t('settings.usageWeight', { weight: usage.weight.toFixed(2) })}
-          </span>
-          <button type="button" data-usage-action="refresh" onClick={onRefresh} style={CHIP}>
-            {t('settings.usageRefresh')}
-          </button>
-        </div>
-      </div>
-
+      <SectionTitle title={t('settings.usage')} aside={ask} />
       <div style={CARD}>
         <Switch
           name="oauth"
@@ -133,21 +84,9 @@ export function SettingsUsage({
               {t(CREDENTIALS[api.credentials])}
             </span>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <span style={NOTE} data-oauth-state="">
-                {fetched(api, now)}
-              </span>
-              <button type="button" data-usage-action="ask" onClick={onApiRefresh} style={CHIP}>
-                {t('settings.oauthRefresh')}
-              </button>
-            </div>
+            <span style={NOTE} data-oauth-state="">
+              {fetched(api, now)}
+            </span>
 
             {api.problem === undefined ? null : (
               <span style={{ ...NOTE, color: 'var(--alarm)' }} data-oauth-problem="">
@@ -173,26 +112,9 @@ export function SettingsUsage({
               {t(CODEX_CREDENTIALS[codexApi.credentials])}
             </span>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <span style={NOTE} data-codex-oauth-state="">
-                {codexFetched(codexApi, now)}
-              </span>
-              <button
-                type="button"
-                data-usage-action="ask-codex"
-                onClick={onApiRefresh}
-                style={CHIP}
-              >
-                {t('settings.oauthRefresh')}
-              </button>
-            </div>
+            <span style={NOTE} data-codex-oauth-state="">
+              {codexFetched(codexApi, now)}
+            </span>
 
             {codexApi.problem === undefined ? null : (
               <span style={{ ...NOTE, color: 'var(--alarm)' }} data-codex-oauth-problem="">
@@ -294,7 +216,7 @@ const NOTE = {
   color: 'var(--tx3)',
 } as const
 
-/** Тот же вид кнопки, что у выбора плана в соседней карточке того же блока. */
+/** Тот же вид кнопки, что у «Проверить» в разделе «Приложение». */
 const CHIP = {
   padding: '4px 9px',
   border: 0,

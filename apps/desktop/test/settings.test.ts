@@ -15,7 +15,7 @@ import {
 } from '@agentmeter/core'
 import { calibrationPatch } from '../src/main/calibration.ts'
 import { configReport, setConfig, type ConfigTarget } from '../src/main/config.ts'
-import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
+import { openJournal } from '../src/main/usage.ts'
 import { openOauth } from '../src/main/oauth.ts'
 import { openCodexOauth } from '../src/main/codex-oauth.ts'
 
@@ -48,11 +48,9 @@ beforeEach(() => {
     // объектом с памятью: проверяется поведение — «что система ответила», — а
     // не то, что мы себе записали.
     startup: fakeHost(),
-    // Хук строки состояния (1.9) пишет в каталог Claude Code. Здесь он
-    // временный: тест, правящий `~/.claude/settings.json` человека, — это не
-    // тест, а происшествие.
-    statusline: statuslineHost(),
-    usage: openJournal(statuslineHost()),
+    // Журнал наблюдений (1.9) — во временном каталоге: тест, дописывающий
+    // журнал человека, это не тест, а происшествие.
+    usage: openJournal({ configDir: dir }),
     // Второй источник лимитов (6.3) — с `fetch`, который падает при вызове:
     // отчёт о настройках в сеть не ходит и ходить не должен.
     oauthHost: {
@@ -75,10 +73,6 @@ beforeEach(() => {
     codexOauth: openCodexOauth(),
   }
 })
-
-function statuslineHost(): StatuslineHost {
-  return { claudeHome: join(dir, 'claude'), configDir: dir, platform: 'darwin' }
-}
 
 afterEach(() => {
   db.close()

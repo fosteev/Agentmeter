@@ -1,5 +1,5 @@
 /**
- * Настоящие лимиты Claude по живому журналу строки состояния (1.9).
+ * Настоящие лимиты Claude по живому журналу наблюдений (1.9).
  *
  *     node --experimental-strip-types scripts/probe/usage-live.ts
  *
@@ -40,8 +40,8 @@ try {
   const path = usagePath()
   const journal = readUsageJournal(path)
 
-  // 1. Журнал разобран. Пустой — не провал: до установки хука процентов не
-  //    знает никто, и ретроспективы этап не даёт.
+  // 1. Журнал разобран. Пустой — не провал: пока проценты не спрошены у
+  //    провайдера, их не знает никто, и ретроспективы этап не даёт.
   const fiveHourWindows = new Set(
     journal.map((snapshot) => snapshot.fiveHour?.resetsAt).filter(defined),
   )
@@ -55,7 +55,9 @@ try {
     true,
   )
   if (journal.length === 0) {
-    console.log('  данных мало: хук ещё не собрал ни одного снимка — поставьте его в настройках')
+    console.log(
+      '  данных мало: журнал пуст — включите запрос лимитов у Anthropic в настройках («Лимиты»)',
+    )
     process.exit(0)
   }
 
@@ -73,9 +75,19 @@ try {
     .sort((left, right) => left - right)
 
   // 2. Границы окон, предсказанные в 1.8 по нашим запросам, против границ,
-  //    которые сообщает провайдер. Это чужая проверка, и она бесплатна: до 1.9
-  //    сверять `resets_at` было не с чем вовсе.
-  const distances = [...fiveHourWindows]
+  //    которые сообщает провайдер.
+  //
+  //    Сверяется **только по снимкам строки состояния**, и это не поблажка. У
+  //    ответа `/api/oauth/usage` границы приезжают по аккаунту целиком, а наши
+  //    якорятся на первом запросе этой машины — на живых данных расхождение
+  //    вышло в три часа при том, что пятичасовой паузы в запросах не было
+  //    вовсе (пункт 23 CLAUDE.md, 6.3). Считать это провалом предсказания
+  //    значит требовать от одной машины знания про весь аккаунт. С 7.5 хука
+  //    больше нет, и у нового журнала сверять здесь нечего — проверка молчит,
+  //    а не притворяется пройденной.
+  const local = journal.filter((snapshot) => (snapshot.source ?? 'statusline') === 'statusline')
+  const localWindows = new Set(local.map((snapshot) => snapshot.fiveHour?.resetsAt).filter(defined))
+  const distances = [...localWindows]
     .map((resetsAt) => nearest(predicted, resetsAt))
     .filter((distance) => Number.isFinite(distance))
   const within = distances.filter((distance) => distance <= MINUTE_MS).length
@@ -83,7 +95,9 @@ try {
   report(
     2,
     'границы окон (сверка 1.8)',
-    `совпало ${within}/${distances.length} (${share.toFixed(1)}%) в пределах 60 с, медиана ${seconds(median(distances))}, порог 90%`,
+    distances.length === 0
+      ? 'снимков строки состояния в журнале нет: границы окон приезжают от провайдера и сверке с нашими не подлежат (6.3)'
+      : `совпало ${within}/${distances.length} (${share.toFixed(1)}%) в пределах 60 с, медиана ${seconds(median(distances))}, порог 90%`,
     distances.length === 0 || share >= 90,
     distances.length === 0,
   )

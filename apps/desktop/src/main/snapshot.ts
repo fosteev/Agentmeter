@@ -11,6 +11,7 @@
 import {
   dayRange,
   limitsReport,
+  popupWindows,
   todayReport,
   type Config,
   type ContextFill as CoreContextFill,
@@ -77,12 +78,18 @@ export function buildSnapshot(
   // Ответ провайдера сильнее нашего расчёта — и по проценту, и по границам
   // окна: лимит считается по аккаунту, и окно могло начаться с запроса,
   // которого у нас нет. Подробности — в шапке `replaceProvider`.
-  const limits = limitsReport(db, at, config.limits.claude, undefined, {
-    ...(input.oauth?.claude.snapshot === undefined
-      ? {}
-      : { claude: input.oauth.claude.snapshot }),
-    ...(input.oauth?.codex.windows === undefined ? {} : { codex: input.oauth.codex.windows }),
-  }).windows
+  // Снятые галочки «показывать в попапе» (7.5) отсекаются здесь, а не в окне:
+  // этот же список красит значок в трее и поднимает уведомления, и спрятанное
+  // окно на 100% оставило бы значок красным без причины на экране.
+  const limits = popupWindows(
+    limitsReport(db, at, config.limits.claude, undefined, {
+      ...(input.oauth?.claude.snapshot === undefined
+        ? {}
+        : { claude: input.oauth.claude.snapshot }),
+      ...(input.oauth?.codex.windows === undefined ? {} : { codex: input.oauth.codex.windows }),
+    }).windows,
+    config.limits.popup,
+  )
   const today = todayReport(db, dayRange(at, config.ui.dayStartsAtHour))
 
   const snapshot: TraySnapshot = {

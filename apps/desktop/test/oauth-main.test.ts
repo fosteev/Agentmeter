@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { setLocale } from '@agentmeter/core'
 import { oauthStatus, openOauth, pollOauth, readToken, type OauthHost } from '../src/main/oauth.ts'
-import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
+import { openJournal } from '../src/main/usage.ts'
 
 /**
  * Второй источник лимитов в main (6.3): токен, запрос, кэш, журнал.
@@ -18,7 +18,7 @@ import { openJournal, type StatuslineHost } from '../src/main/statusline.ts'
  */
 
 let dir: string
-let host: StatuslineHost
+let host: { claudeHome: string; configDir: string; platform: NodeJS.Platform }
 let journal: ReturnType<typeof openJournal>
 
 /**

@@ -125,7 +125,7 @@ export {
   usagePath,
 } from './config/load.ts'
 export { DEFAULT_CONFIG } from './config/types.ts'
-export type { ClaudeLimits, Config, WindowBounds } from './config/types.ts'
+export type { ClaudeLimits, Config, PopupWindows, WindowBounds } from './config/types.ts'
 export type { LoadResult } from './config/load.ts'
 export { RULES, rulePathsInDefaults } from './config/validate.ts'
 export * from './query/index.ts'
