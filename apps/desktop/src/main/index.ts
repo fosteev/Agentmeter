@@ -76,6 +76,7 @@ import { buildTaskCard } from './task.ts'
 import { registerIpc, type IpcHandlers } from './ipc.ts'
 import { calibrationPatch } from './calibration.ts'
 import { emptyNotifyState, planNotifications, type Notice } from './notify.ts'
+import { createOwnerBook } from './owner.ts'
 import { isRefreshKey } from './popup-keys.ts'
 import { buildSnapshot, type SnapshotInput } from './snapshot.ts'
 import { levelFor, trayBitmap, type TrayState } from './tray-icon.ts'
@@ -1324,16 +1325,26 @@ function main(): void {
   }
 
   const notifyState = emptyNotifyState()
+  const owners = createOwnerBook()
   /**
    * Показ уведомления. Всё решение — в `notify.ts`; здесь только вызов ОС и
-   * клик, открывающий окно. `isSupported` спрашивается каждый раз, а не при
-   * старте: на Linux служба уведомлений может подняться позже приложения.
+   * клик. `isSupported` спрашивается каждый раз, а не при старте: на Linux
+   * служба уведомлений может подняться позже приложения.
+   *
+   * Клик ведёт в программу агента, а не к нам (7.6): человек, которому сказали
+   * «Claude закончил», возвращается в свой редактор. Своё окно открывается
+   * там, где программу не узнали, — у Codex, на Windows и Linux, и у поводов
+   * про лимит, которые сессии не принадлежат.
    */
   const show = (notices: readonly Notice[]): void => {
     if (notices.length === 0 || !Notification.isSupported()) return
     for (const notice of notices) {
       const item = new Notification({ title: notice.title, body: notice.body })
-      item.on('click', () => openMainWindow('today'))
+      item.on('click', () => {
+        void owners.reveal(notice.sessionId).then((opened) => {
+          if (!opened) openMainWindow('today')
+        })
+      })
       item.show()
     }
   }
@@ -1412,6 +1423,10 @@ function main(): void {
     const current = snapshot()
     paintTray(current)
     if (shown) emit('live:update', current)
+    // Кто в какой программе работает — узнаётся, пока агент жив: `done`
+    // означает, что процесса уже нет, и в момент самого нужного уведомления
+    // спрашивать было бы поздно (7.6). На знакомых сессиях это ничего не стоит.
+    owners.learn(current.agents.map((agent) => agent.sessionId))
     // Уведомления смотрят на **каждый** снимок, а не только на видимые: попап
     // закрыт как раз тогда, когда человек занят чем-то другим, и молчать в этот
     // момент значит молчать всегда, когда уведомление и нужно.

@@ -33,9 +33,12 @@
  * этом не потеряны: «Открыть окно» — это клик по самому уведомлению, а «Не
  * напоминать до сброса» и есть второе правило, только всегда включённое.
  *
- * По той же причине у повода нет поля «какую задачу открыть»: маршрута к
- * конкретной задаче у окна нет, а поле, которое некому прочитать, через месяц
- * читается как забытая функция.
+ * Маршрута «открыть эту задачу» у окна по-прежнему нет, и поля под него тоже.
+ * А вот `sessionId` у повода появился в 7.6, и читает его не окно, а
+ * [`owner.ts`](owner.ts): клик по уведомлению об агенте поднимает программу,
+ * в которой этот агент работает. У поводов про лимит поля нет — лимит
+ * принадлежит аккаунту, а не сессии, и открывать по нему чужой редактор не за
+ * что.
  */
 import { formatTokens, t, type Config } from '@agentmeter/core'
 import { locale } from '@agentmeter/core/i18n'
@@ -49,6 +52,8 @@ export interface Notice {
   kind: NoticeKind
   title: string
   body: string
+  /** Чья это сессия. По ней клик поднимает программу агента (7.6). */
+  sessionId?: string
 }
 
 /**
@@ -143,6 +148,7 @@ function sessionNotices(snapshot: TraySnapshot, config: Config): Notice[] {
       // же сессию обязано прийти заново — это уже другой повод.
       key: `session:${agent.sessionId}:${limit}`,
       kind: 'session' as const,
+      sessionId: agent.sessionId,
       title: t('notify.sessionTitle', { limit: formatTokens(limit, locale()) }),
       body: t('notify.sessionBody', {
         project: agent.project,
@@ -159,6 +165,7 @@ function agentNotices(snapshot: TraySnapshot, config: Config): Notice[] {
     .map((agent) => ({
       key: `agent:${agent.sessionId}:${agent.state}`,
       kind: 'agent' as const,
+      sessionId: agent.sessionId,
       title: t(agent.state === 'done' ? 'notify.doneTitle' : 'notify.waitingTitle', {
         provider: PROVIDER[agent.provider],
         project: agent.project,

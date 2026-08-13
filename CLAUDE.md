@@ -56,6 +56,7 @@ CSV/JSON и состав статей префикса по наведению. 
 | журнал наблюдений и калибровка потолков     | `apps/desktop/src/main/usage.ts`, `limits/usage.ts`         |
 | живой слой: кто работает, в каком состоянии | `packages/core/src/live/`                                   |
 | значок в menu bar на macOS (нативный)       | `apps/desktop/menubar/`, мост — `src/main/menubar.ts`       |
+| какую программу открыть по клику на уведомлении | `apps/desktop/src/main/owner.ts`, цепочка `ppid` — `live/process.ts` |
 | агрегаты под экраны                         | `packages/core/src/query/`                                  |
 | контракт main↔renderer                      | `packages/ipc/src/index.ts`                                 |
 | трей, окна, проводка IPC                    | `apps/desktop/src/main/`                                    |
@@ -73,7 +74,8 @@ CSV/JSON и состав статей префикса по наведению. 
 `states-live.ts` (ход, состояния, темп), `task-live.ts` (карточка задачи),
 `split-live.ts` (постоянное против разового), `breakdown-live.ts` (экран и советы),
 `cache-live.ts` (пересборка кэша), `history-live.ts` (история),
-`turn-live.ts` (текущий ход в ленте), `usage-live.ts` (журнал наблюдений
+`turn-live.ts` (текущий ход в ленте), `owner-live.ts` (программа-владелец
+живых сессий), `usage-live.ts` (журнал наблюдений
 и калибровка веса `cache_read`), `oauth-live.ts` и `codex-oauth-live.ts` (вторые
 источники лимитов; в сеть ходят только с `--live`, и не сами, а через
 `*-ask.cjs` под Electron) — все через `node --experimental-strip-types`. Смоуков два, и оба только на собранном:

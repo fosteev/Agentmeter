@@ -139,6 +139,27 @@ describe('planNotifications', () => {
     expect(again).toHaveLength(1)
   })
 
+  /**
+   * Ловит повод, по которому нечего открыть. Клик по уведомлению об агенте
+   * поднимает программу, в которой он работает (7.6), и найти её можно только
+   * по сессии. У лимита сессии нет и быть не может: процент считается по
+   * аккаунту, а не по чату, и открывать по нему чей-то редактор не за что.
+   */
+  it('повод об агенте несёт сессию, повод о лимите — нет', () => {
+    planNotifications(state, snap({}), config)
+    const notices = planNotifications(
+      state,
+      snap({ limits: [limit(94)], agents: [agent({ state: 'waiting', tokens: 9e9 })] }),
+      config,
+    )
+
+    expect(notices.map((notice) => [notice.kind, notice.sessionId])).toEqual([
+      ['danger', undefined],
+      ['session', 'seed'],
+      ['agent', 'seed'],
+    ])
+  })
+
   /** Ловит уведомление о простое при выключенной настройке. */
   it('выключенный тумблер молчит про агентов, но не про лимиты', () => {
     const quiet = { ...config, alerts: { ...config.alerts, notifyOnIdle: false } }

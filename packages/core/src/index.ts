@@ -81,8 +81,10 @@ export {
   LIVE_URGENCY,
   appendLifetimes,
   loadLifetimes,
+  ownerApps,
   processState,
 } from './live/index.ts'
+export type { OwnerApp } from './live/index.ts'
 export type {
   ContextFill,
   CurrentTurn,
