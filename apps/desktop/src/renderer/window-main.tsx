@@ -112,15 +112,22 @@ export function requestToday(
   return getToday(filter)
 }
 
-type BreakdownArg = { scope: 'day' | 'session'; from: number; to: number }
+type BreakdownArg = {
+  scope: 'day' | 'session'
+  from: number
+  to: number
+  provider?: Provider
+  project?: string
+}
 
 /**
- * Развёртка за тот же период, что и лента (4.2).
+ * Развёртка за тот же период — и тот же фильтр, — что и лента (4.2).
  *
  * Период берётся из фильтра ленты, а не из «сегодня» по часам процесса: иначе
  * человек, переключившийся на вкладку после полуночи, увидел бы развёртку
  * другого дня — и не имел бы способа это заметить, потому что даты на экране
- * рядом нет.
+ * рядом нет. Сужение — оттуда же и по той же причине: лента одного проекта над
+ * развёрткой всего дня — два ответа про «сегодня», оба настоящие по себе.
  */
 export function requestBreakdown(
   arg: BreakdownArg,
@@ -323,6 +330,8 @@ export function WindowApp() {
       scope: breakdownScope,
       from: todayFilter.from,
       to: todayFilter.to,
+      ...(todayFilter.provider === undefined ? {} : { provider: todayFilter.provider }),
+      ...(todayFilter.project === undefined ? {} : { project: todayFilter.project }),
     }).then((screen) => {
       if (request === breakdownRequest.current) setBreakdown(screen)
     })
@@ -364,7 +373,18 @@ export function WindowApp() {
           <TodaySide report={today} onOpenBreakdown={() => setTab('breakdown')} />
         </>
       ) : tab === 'breakdown' ? (
-        <BreakdownTab screen={breakdown} onScopeChange={setBreakdownScope} />
+        <BreakdownTab
+          screen={breakdown}
+          onScopeChange={setBreakdownScope}
+          {...(todayFilter === null
+            ? {}
+            : {
+                filter: {
+                  ...(todayFilter.provider === undefined ? {} : { provider: todayFilter.provider }),
+                  ...(todayFilter.project === undefined ? {} : { project: todayFilter.project }),
+                },
+              })}
+        />
       ) : tab === 'history' ? (
         <HistoryTab
           screen={history}

@@ -196,6 +196,85 @@ try {
     speechless.length > 0 && mute.length === 0,
   )
 
+  // 11. Правая колонка сходится с осью (ревизия, П4) — на каждом дне, не на
+  // удачном. Остаток мог уйти в минус только одним способом: сумма
+  // маржинальных вызовов превысила разовый срез, то есть атрибуция (1.6)
+  // приписала вызовам больше, чем весь остаток дня. Такой день — находка, а не
+  // погрешность, поэтому порог нулевой.
+  const divergent = screens.filter(({ day }) => {
+    if (day.split === undefined) return day.marginalRest !== undefined
+    const marginal = day.split.slices[1]!.tokens.value
+    return (
+      day.marginalRest === undefined ||
+      day.marginalRest.tokens.value < 0 ||
+      day.marginalRest.tokens.value + day.toolTotal.value !== marginal
+    )
+  }).length
+  report(
+    11,
+    'остаток разового неотрицателен и сходится со срезом',
+    `days=${screens.length} broken=${divergent}`,
+    screens.length > 0 && divergent === 0,
+  )
+
+  // 12. Сужение по провайдеру доезжает до правой колонки (ревизия, П1):
+  // партиция вызовов обязана сойтись с целым до штуки.
+  const claudeAll = buildSpendScreen(db, { ...all.range, scope: 'day', provider: 'claude' })
+  const codexAll = buildSpendScreen(db, { ...all.range, scope: 'day', provider: 'codex' })
+  report(
+    12,
+    'сужение по провайдеру доезжает до правой колонки',
+    `вызовов: всего ${all.toolCalls} = Claude ${claudeAll.toolCalls} + Codex ${codexAll.toolCalls}`,
+    claudeAll.toolCalls > 0 && claudeAll.toolCalls + codexAll.toolCalls === all.toolCalls,
+  )
+
+  // 13. Счёт раз — мера, множитель — отношение (ревизия, П2): «за сессию» счёт
+  // совпадает с множителем, множитель от переключателя не зависит.
+  const mismatched = screens.filter(
+    ({ day, session }) =>
+      session.reread.times !== day.reread.factor ||
+      session.reread.factor !== day.reread.factor ||
+      day.reread.times < day.reread.factor,
+  ).length
+  report(
+    13,
+    'счёт перечитываний делится, множитель скейл-фри',
+    `days=${screens.length} broken=${mismatched}`,
+    mismatched === 0,
+  )
+
+  // 14. Замеры для вердикта по подаче — числа, а не мнения. Проверка здесь
+  // только на здравость долей; распределения печатаются для решения человеком.
+  const withSplit = screens.filter(({ day }) => day.split !== undefined)
+  const adviceDays = screens.filter(({ day }) => (day.advice ?? []).length > 0).length
+  const rebuildDays = screens.filter(({ day }) => day.rebuilds !== undefined).length
+  const rowCounts = withSplit.map(({ day }) => day.tools.length)
+  const tails = withSplit.map(({ day }) =>
+    day.toolTotal.value === 0
+      ? 0
+      : day.tools.filter((row) => row.marginal.value < day.toolTotal.value / 100).length /
+        Math.max(1, day.tools.length),
+  )
+  const shares = withSplit.map(({ day }) => day.split!.slices[0]!.share)
+  const restShares = withSplit.map(({ day }) =>
+    day.split!.slices[1]!.tokens.value === 0
+      ? 0
+      : day.marginalRest!.tokens.value / day.split!.slices[1]!.tokens.value,
+  )
+  const sane =
+    shares.every((share) => share >= 0 && share <= 1) &&
+    restShares.every((share) => share >= 0 && share <= 1)
+  report(
+    14,
+    'замеры подачи',
+    `советы в ${adviceDays} из ${screens.length} дней, пересборки в ${rebuildDays}; ` +
+      `строк справа: медиана ${median(rowCounts)}, макс ${Math.max(0, ...rowCounts)}, ` +
+      `хвост <1% итога — медиана ${pct(median(tails))}; ` +
+      `доля постоянного: мин ${pct(Math.min(1, ...shares))}, медиана ${pct(median(shares))}, макс ${pct(Math.max(0, ...shares))}; ` +
+      `остаток разового сверх вызовов: медиана ${pct(median(restShares))}, мин ${pct(Math.min(1, ...restShares))}`,
+    withSplit.length > 0 && sane,
+  )
+
 } finally {
   db.close()
   rmSync(temp, { recursive: true, force: true })
@@ -220,6 +299,16 @@ function format(value: number): string {
   if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`
   if (value >= 1e3) return `${(value / 1e3).toFixed(1)}k`
   return String(value)
+}
+
+function median(values: readonly number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((left, right) => left - right)
+  return sorted[Math.floor(sorted.length / 2)]!
+}
+
+function pct(value: number): string {
+  return `${(value * 100).toFixed(1)}%`
 }
 
 function report(index: number, name: string, detail: string, ok: boolean): void {

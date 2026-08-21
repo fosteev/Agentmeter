@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
 import type { SpendCategoryRow, SpendScreen } from '@agentmeter/ipc'
-import { buildSpendScreen, rereadTimes } from '../src/main/breakdown.ts'
+import { buildSpendScreen, rereadFactor, rereadTimes } from '../src/main/breakdown.ts'
 import { buildDayReport } from '../src/main/day.ts'
 import { BreakdownTab } from '../src/renderer/components/BreakdownTab.tsx'
 import { SpendCategoryTable } from '../src/renderer/components/SpendCategoryTable.tsx'
@@ -185,6 +185,171 @@ describe('buildSpendScreen', () => {
 
     expect(screen.emptyScope).toBe(true)
     expect(screen.split).toBeUndefined()
+  })
+})
+
+/**
+ * Ревизия развёртки: сужение, знаменатель, сходимость.
+ *
+ * Три класса поломок одного корня — «каждое число по себе настоящее, а вместе
+ * они врут»: фильтр, доехавший до левой колонки и не доехавший до правой;
+ * переключатель, поделивший полосу и забывший таблицу под ней; колонка, чей
+ * итог не сходится с осью над ней.
+ */
+describe('ревизия: сужение, знаменатель, сходимость', () => {
+  /**
+   * Ловит фильтр, применённый к половине экрана. Сумма вызовов по провайдерам
+   * обязана давать вызовы дня: разойдись она — правая колонка показывает один
+   * период, а полоса над ней другой, и оба выглядят настоящими.
+   */
+  it('сужение по провайдеру доезжает до правой колонки', () => {
+    const all = buildSpendScreen(db, ALL)
+    const claude = buildSpendScreen(db, { ...ALL, provider: 'claude' })
+    const codex = buildSpendScreen(db, { ...ALL, provider: 'codex' })
+
+    expect(claude.toolCalls).toBeGreaterThan(0)
+    expect(codex.toolCalls).toBeGreaterThan(0)
+    expect(claude.toolCalls + codex.toolCalls).toBe(all.toolCalls)
+    // Инструмент Claude не может оказаться в развёртке одного Codex.
+    expect(codex.tools.some((row) => row.key === 'Read')).toBe(false)
+  })
+
+  /**
+   * Ловит «за день не работали» на дне, который полон, — фильтр отсёк всё, и
+   * это другие слова (пункт 15 CLAUDE.md). `emptyScope` при этом считается до
+   * сужения и остаётся ложью.
+   */
+  it('«фильтр отсёк всё» — свои слова, не «запросов не было»', () => {
+    const screen = buildSpendScreen(db, { ...ALL, project: 'no-such-project' })
+
+    expect(screen.emptyScope).toBe(false)
+    expect(screen.split).toBeUndefined()
+
+    const html = renderToStaticMarkup(
+      <BreakdownTab screen={screen} filter={{ project: 'no-such-project' }} onScopeChange={() => undefined} />,
+    )
+    expect(html).toContain('По выбранному фильтру')
+    expect(html).not.toContain('За этот период запросов не было')
+  })
+
+  /**
+   * Ловит фильтр, унаследованный молча: лента сужена, вкладка переключена, и
+   * без подписи экран читается как весь день.
+   */
+  it('унаследованный фильтр ленты назван на экране', () => {
+    const screen = buildSpendScreen(db, { ...ALL, provider: 'claude' })
+    const html = renderToStaticMarkup(
+      <BreakdownTab screen={screen} filter={{ provider: 'claude' }} onScopeChange={() => undefined} />,
+    )
+
+    expect(html).toContain('data-breakdown-filter')
+    expect(html).toContain('Claude')
+  })
+
+  /** Ловит «Первичное индексирование» в момент обычной загрузки вкладки. */
+  it('загрузка — это «загружаем», а не «индекс пуст»', () => {
+    const html = render(null)
+
+    expect(html).toContain('Загружаем развёртку')
+    expect(html).not.toContain('Первичное индексирование')
+  })
+
+  /**
+   * Ловит счёт раз, выданный за множитель сессии. Счёт — мера периода и
+   * делится переключателем; множитель — отношение, у него знаменателя нет,
+   * и в колонке «За сессию» стоит именно он.
+   */
+  it('множитель — скейл-фри, счёт раз делится переключателем', () => {
+    const day = buildSpendScreen(db, ALL)
+    const session = buildSpendScreen(db, { ...ALL, scope: 'session' })
+
+    // На фикстурах сессий больше одной — иначе счёт и множитель совпадают и
+    // проверка зелена при любой формуле.
+    expect(day.sessions).toBeGreaterThan(1)
+    expect(day.reread.times).toBeGreaterThan(day.reread.factor)
+    expect(session.reread.factor).toBe(day.reread.factor)
+    expect(session.reread.times).toBe(day.reread.factor)
+    expect(session.reread.tokens.value).toBe(
+      Math.round(day.reread.tokens.value / day.sessions),
+    )
+  })
+
+  /**
+   * Ловит множитель, посчитанный по числу запросов, — на известном ответе:
+   * два префикса по 1000 прочитаны на 10 000, значит каждый перечитан
+   * вчетверо сверх записи.
+   */
+  it('множитель сессии считается из токенов', () => {
+    expect(rereadFactor(10_000, 2000)).toBe(4)
+    expect(rereadFactor(2000, 2000)).toBe(0)
+    expect(rereadFactor(5000, 0)).toBe(0)
+  })
+
+  /** Ловит одно число на двух ролях: в ячейке — множитель, в подписи — счёт. */
+  it('в ячейке колонки множитель, в подписи — счёт раз', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const html = render(screen)
+
+    expect(screen.reread.times).not.toBe(screen.reread.factor)
+    expect(html).toContain(`×${screen.reread.factor}<`)
+    expect(html).toContain(`перечитан ${screen.reread.times} раз`)
+  })
+
+  /**
+   * Ловит правую колонку, оставшуюся в масштабе дня под полосой за сессию, —
+   * два масштаба на одном экране, оба похожие на правду.
+   */
+  it('«за сессию» делит и правую колонку', () => {
+    const day = buildSpendScreen(db, ALL)
+    const session = buildSpendScreen(db, { ...ALL, scope: 'session' })
+
+    expect(session.toolCalls).toBe(Math.round(day.toolCalls / day.sessions))
+    expect(session.toolTotal.value).toBe(Math.round(day.toolTotal.value / day.sessions))
+    for (const row of session.tools) {
+      const full = day.tools.find((candidate) => candidate.key === row.key)!
+      expect(row.marginal.value).toBe(Math.round(full.marginal.value / day.sessions))
+      expect(row.calls).toBe(Math.round(full.calls / day.sessions))
+      // Средняя цена вызова — отношение, переключатель её не трогает.
+      expect(row.average).toBe(full.average)
+    }
+  })
+
+  /**
+   * Ловит сумму оценок, показанную точным числом: итог приезжает из main
+   * готовым `Measured`, и знак у него — по худшей строке.
+   */
+  it('итог правой колонки несёт знак оценки', () => {
+    const screen = buildSpendScreen(db, ALL)
+
+    expect(screen.toolTotal.value).toBe(
+      screen.tools.reduce((sum, row) => sum + row.marginal.value, 0),
+    )
+    // В фикстуре parallel есть дележ между параллельными вызовами — точным
+    // такой итог быть не может.
+    expect(screen.toolTotal.confidence).toBe('estimate')
+    expect(render(screen)).toContain(`≈${formatTokens(screen.toolTotal.value)}`)
+  })
+
+  /**
+   * Ловит колонку, не сходящуюся с осью над ней: «Разовый · по вызовам» обещает
+   * раскрытие, а строки объясняют доли процента. Остаток — ответы модели, ввод
+   * и перечитывание результатов — назван строкой, как в макете (1139–1150).
+   */
+  it('правая колонка сходится с осью: остаток назван строкой', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const marginal = screen.split!.slices[1]!
+
+    expect(screen.marginalRest).toBeDefined()
+    expect(screen.marginalRest!.tokens.value).toBeGreaterThanOrEqual(0)
+    expect(screen.marginalRest!.tokens.value + screen.toolTotal.value).toBe(
+      marginal.tokens.value,
+    )
+
+    const html = render(screen)
+    expect(html).toContain('Ответы модели')
+    expect(html).toContain('Разовый расход за день')
+    // Итоговая строка — то же число, что подпись оси: один источник, не два.
+    expect(html).toContain(formatTokens(marginal.tokens.value))
   })
 })
 

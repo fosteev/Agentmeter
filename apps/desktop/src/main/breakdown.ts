@@ -12,7 +12,6 @@
  */
 import { homedir } from 'node:os'
 import {
-  breakdownReport,
   cacheRebuilds,
   hasRequests,
   loadedCategories,
@@ -20,6 +19,7 @@ import {
   spendSplit,
   sourceCount,
   t,
+  toolBreakdownRows,
   toolRowLabel,
   type CacheRebuildReport,
   type Db,
@@ -27,6 +27,7 @@ import {
   type LoadedSource,
   type Saving,
   type RequestScope,
+  type ToolBreakdownRow,
 } from '@agentmeter/core'
 import { formatTokens } from '@agentmeter/core/format'
 import { locale } from '@agentmeter/core/i18n'
@@ -83,13 +84,18 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
 
   const split = spendSplit(db, range, scope)
   const categories = loadedCategories(db, range, scope)
-  const tools = breakdownReport(db, { range })
+  // Сужение доезжает и до правой колонки: экран собирается из двух источников,
+  // и фильтр, применённый к одному, дал бы две правды на одном экране.
+  const tools = toolBreakdownRows(db, { range, scope })
   // Точность наследуется от итога ровно так же, как в «Сегодня»: внутри обеих
   // долей лежат восстановленные запросы (1.3), и доля от неточного целого
   // точной быть не может.
-  const approximate = reconstructed(db, range, scope)
+  const requests = scopedRequests(db, range, scope)
+  const approximate = requests.reconstructed
   const perSession = filter.scope === 'session'
   const sessions = Math.max(1, split.sessions)
+  const divisor = perSession ? sessions : 1
+  const toolTokens = tools.reduce((sum, row) => sum + basisSum(row.tokens), 0)
 
   return {
     range,
@@ -98,31 +104,78 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
     emptyScope: !hasRequests(db, range),
     sessions: split.sessions,
     // Переключатель делит **всё** одним и тем же знаменателем, включая полосу
-    // над колонками: покажи она расход дня над таблицей за сессию — на экране
-    // оказались бы два масштаба сразу, и оба выглядели бы настоящими. Доли при
-    // этом не меняются, меняются только абсолютные числа.
-    ...scaled(toSpendSplit(split, approximate), perSession ? sessions : 1),
+    // над колонками и правую колонку: покажи она расход дня под полосой за
+    // сессию — на экране оказались бы два масштаба сразу, и оба выглядели бы
+    // настоящими. Не делятся только отношения — доли, множитель, средняя цена
+    // вызова: у них знаменатель сокращается сам.
+    ...scaled(toSpendSplit(split, approximate), divisor),
     recurring: categories.map((row) => toCategoryRow(row, approximate, perSession, sessions)),
     ...toAdvice(savings(db, range, scope), approximate, perSession, sessions),
-    tools: tools.tool.map(toToolRow),
-    toolCalls: tools.tool.reduce((sum, row) => sum + basisSum(row.calls), 0),
+    tools: tools.map((row) => toToolRow(row, divisor)),
+    toolCalls: Math.round(tools.reduce((sum, row) => sum + basisSum(row.calls), 0) / divisor),
+    toolTotal: toolTotal(tools, divisor),
+    ...marginalRest(split, toolTokens, requests.count, approximate, divisor),
     beforeFirstWord: beforeFirstWord(categories, approximate, sessions, perSession),
     reread: {
-      // Сколько раз префикс перечитан сверх первой записи. Не число запросов:
+      // Счёт раз — мера периода, делится переключателем; за сессию он совпадает
+      // с множителем по построению: (R−F)/(F/N)/N = (R−F)/F. Не число запросов:
       // сессия, начавшаяся вчера, платит сегодня за каждый свой запрос, а
       // записала префикс вчера — и первой записи в этом периоде у неё нет.
-      times: rereadTimes(split.recurring, split.firstRead, sessions),
-      tokens: measured(
-        Math.round((split.recurring - split.firstRead) / (perSession ? sessions : 1)),
-        approximate,
-      ),
+      times: perSession
+        ? rereadFactor(split.recurring, split.firstRead)
+        : rereadTimes(split.recurring, split.firstRead, sessions),
+      factor: rereadFactor(split.recurring, split.firstRead),
+      tokens: measured(Math.round((split.recurring - split.firstRead) / divisor), approximate),
     },
-    ...toRebuilds(
-      cacheRebuilds(db, { range, scope }),
-      split.total,
-      approximate,
-      perSession ? sessions : 1,
-    ),
+    ...toRebuilds(cacheRebuilds(db, { range, scope }), split.total, approximate, divisor),
+  }
+}
+
+/**
+ * Итог правой колонки — готовым `Measured` (правило 3.0: число видно текстом).
+ *
+ * Знак — по строкам: сумма, где есть хоть одна оценка, точной не бывает, и
+ * оговорка у неё та же, что у строк, — по большинству неточных вызовов.
+ */
+function toolTotal(rows: readonly ToolBreakdownRow[], divisor: number): Measured {
+  const tokens = rows.reduce((sum, row) => sum + basisSum(row.tokens), 0)
+  const calls = rows.reduce(
+    (sum, row) => ({
+      measured: sum.measured + row.calls.measured,
+      split: sum.split + row.calls.split,
+      unknown: sum.unknown + row.calls.unknown,
+    }),
+    { measured: 0, split: 0, unknown: 0 },
+  )
+  const value = Math.round(tokens / divisor)
+  return calls.split === 0 && calls.unknown === 0
+    ? { value, confidence: 'exact' }
+    : { value, confidence: 'estimate', caveat: t(caveatKey(calls)) }
+}
+
+/**
+ * Остаток разового сверх строк инструментов — строки сходимости из макета
+ * (1141–1150): ответы модели, ввод человека и перечитывание результатов на
+ * каждом следующем запросе. Без него «Разовый · по вызовам» над колонкой,
+ * итог которой в разы меньше подписи оси, — обещание без исполнения.
+ *
+ * Считается вычитанием из того же среза, что в полосе, а не своей суммой:
+ * второй счёт разового разошёлся бы с первым (правило 4.1). Поля нет вместе
+ * со `split` — остаток от нуля не считается.
+ */
+function marginalRest(
+  split: { total: number; marginal: number },
+  toolTokens: number,
+  requests: number,
+  approximate: boolean,
+  divisor: number,
+): { marginalRest?: { requests: number; tokens: Measured } } {
+  if (split.total === 0) return {}
+  return {
+    marginalRest: {
+      requests: Math.round(requests / divisor),
+      tokens: measured(Math.round((split.marginal - toolTokens) / divisor), approximate),
+    },
   }
 }
 
@@ -284,6 +337,19 @@ export function rereadTimes(recurring: number, firstRead: number, sessions: numb
   return once === 0 ? 0 : Math.round((recurring - firstRead) / once)
 }
 
+/**
+ * Во сколько раз постоянное сессии больше её однократной записи.
+ *
+ * Отношение, а не мера: переключатель «за день / за сессию» его не меняет —
+ * числитель и знаменатель делятся на одно число сессий. Ровно поэтому оно и
+ * стоит в колонке «За сессию» рядом со счётом раз за период (`rereadTimes`):
+ * счёт периода в той колонке значил бы, что каждая сессия перечитала префикс
+ * за все сессии сразу.
+ */
+export function rereadFactor(recurring: number, firstRead: number): number {
+  return firstRead > 0 ? Math.round((recurring - firstRead) / firstRead) : 0
+}
+
 function toCategoryRow(
   row: LoadedCategory,
   approximate: boolean,
@@ -376,25 +442,27 @@ function toSourceRow(
  * Строка правой колонки. Точность — из самой атрибуции (1.6): через дележ между
  * параллельными вызовами проходит треть расхода у Claude и почти три четверти у
  * Codex, и такая строка обязана приезжать оценкой со своей оговоркой.
+ *
+ * Токены и вызовы — в масштабе переключателя; средняя цена вызова — из сырых
+ * чисел периода: отношение от знаменателя не зависит, а деление показанных
+ * друг на друга ломается на счётчике, округлённом до нуля.
  */
-function toToolRow(row: {
-  key: string
-  calls: Record<'measured' | 'split' | 'unknown', number>
-  tokens: Record<'measured' | 'split' | 'unknown', number>
-}): BreakdownRow {
+function toToolRow(row: ToolBreakdownRow, divisor: number): BreakdownRow {
   const calls = basisSum(row.calls)
   const tokens = basisSum(row.tokens)
+  const value = Math.round(tokens / divisor)
   const exact = row.calls.split === 0 && row.calls.unknown === 0
   const marginal: Measured = exact
-    ? { value: tokens, confidence: 'exact' }
-    : { value: tokens, confidence: 'estimate', caveat: t(caveatKey(row.calls)) }
+    ? { value, confidence: 'exact' }
+    : { value, confidence: 'estimate', caveat: t(caveatKey(row.calls)) }
   return {
     key: row.key,
     label: toolRowLabel(row.key),
     axis: 'tool',
     marginal,
     recurring: { value: 0, confidence: 'exact' },
-    calls,
+    calls: Math.round(calls / divisor),
+    average: calls === 0 ? 0 : Math.round(tokens / calls),
   }
 }
 
@@ -408,7 +476,18 @@ function basisSum(values: Record<'measured' | 'split' | 'unknown', number>): num
   return values.measured + values.split + values.unknown
 }
 
-function reconstructed(db: Db, range: { from: number; to: number }, scope: RequestScope): boolean {
+/**
+ * Сколько запросов попало в сужение и есть ли среди них восстановленные (1.3).
+ *
+ * Одним запросом, потому что оба ответа — про один и тот же отфильтрованный
+ * набор: счёт нужен строке остатка («N запросов»), признак — знаку `≈` всего
+ * экрана.
+ */
+function scopedRequests(
+  db: Db,
+  range: { from: number; to: number },
+  scope: RequestScope,
+): { count: number; reconstructed: boolean } {
   const filter: string[] = ['requests.ts >= ?', 'requests.ts < ?']
   const params: Array<number | string> = [range.from, range.to]
   if (scope.provider !== undefined) {
@@ -419,12 +498,13 @@ function reconstructed(db: Db, range: { from: number; to: number }, scope: Reque
     filter.push('sessions.project = ?')
     params.push(scope.project)
   }
-  return (
-    db.get<{ one: number }>(
-      `SELECT 1 AS one FROM requests
-       JOIN sessions ON sessions.id = requests.session_id
-       WHERE ${filter.join(' AND ')} AND requests.origin != 'log' LIMIT 1`,
-      ...params,
-    ) !== undefined
+  const row = db.get<{ count: number; reconstructed: number }>(
+    `SELECT count(*) AS count,
+            coalesce(sum(requests.origin != 'log'), 0) AS reconstructed
+     FROM requests
+     JOIN sessions ON sessions.id = requests.session_id
+     WHERE ${filter.join(' AND ')}`,
+    ...params,
   )
+  return { count: row?.count ?? 0, reconstructed: (row?.reconstructed ?? 0) > 0 }
 }

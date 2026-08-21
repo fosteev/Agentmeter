@@ -1,4 +1,4 @@
-export { IMAGE_ROW_KEY, breakdownReport, toolRowLabel } from './breakdown.ts'
+export { IMAGE_ROW_KEY, breakdownReport, toolBreakdownRows, toolRowLabel } from './breakdown.ts'
 export { CACHE_TTL_1H, CACHE_TTL_5M, PAUSE_BUCKETS, cacheRebuilds } from './cache.ts'
 export type {
   CacheRebuildReport,

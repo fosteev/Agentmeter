@@ -1,4 +1,4 @@
-import type { SpendScreen } from '@agentmeter/ipc'
+import type { SpendScreen, TodayFilter } from '@agentmeter/ipc'
 import { CacheRebuilds } from './CacheRebuilds.tsx'
 import { SpendCategoryTable, CATEGORY_GRID, mono } from './SpendCategoryTable.tsx'
 import { formatTokens, t } from '../format.ts'
@@ -19,11 +19,40 @@ import { hatch } from '../paint.ts'
 export interface BreakdownTabProps {
   screen: SpendScreen | null
   onScopeChange: (scope: 'day' | 'session') => void
+  /**
+   * Сужение, унаследованное от ленты. Экран обязан его назвать: молча суженная
+   * развёртка читается как весь день. Отсюда же слова пустоты — «фильтр отсёк
+   * всё» и «за период не работали» различимы только тем, был ли фильтр.
+   */
+  filter?: Pick<TodayFilter, 'provider' | 'project'>
 }
 
 const TOOL_GRID = '1fr 74px 74px 84px'
 
-export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
+/** Имена продуктов — не переводятся, как в фильтре ленты. */
+const PROVIDER_NAMES = { claude: 'Claude', codex: 'Codex' } as const
+
+/**
+ * Четыре пустоты — четырьмя фразами: загрузка, несобранный индекс, период без
+ * запросов и фильтр, отсёкший всё. Схлопни любые две — и одна из них соврёт:
+ * до фикса здесь обычная загрузка вкладки объявляла «первичное индексирование».
+ */
+function emptyMessage(
+  screen: SpendScreen | null,
+  filtered: boolean,
+): string {
+  if (screen === null) return t('breakdown.loading')
+  if (screen.emptyIndex) return t('breakdown.emptyIndex')
+  if (screen.emptyScope) return t('breakdown.emptyScope')
+  return filtered ? t('breakdown.emptyFilter') : t('breakdown.emptyScope')
+}
+
+export function BreakdownTab({ screen, onScopeChange, filter }: BreakdownTabProps) {
+  const filterParts = [
+    filter?.provider === undefined ? null : PROVIDER_NAMES[filter.provider],
+    filter?.project,
+  ].filter((part): part is string => part !== null && part !== undefined)
+
   if (screen === null || screen.emptyIndex || screen.emptyScope || screen.split === undefined) {
     return (
       <div
@@ -38,7 +67,7 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
           fontSize: 12.5,
         }}
       >
-        {screen?.emptyIndex === false ? t('breakdown.emptyScope') : t('breakdown.emptyIndex')}
+        {emptyMessage(screen, filterParts.length > 0)}
       </div>
     )
   }
@@ -78,29 +107,39 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
               {t('breakdown.lead')}
             </div>
           </div>
-          <div
-            style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--s1)', borderRadius: 6 }}
-          >
-            {(['day', 'session'] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                data-breakdown-scope={scope}
-                aria-pressed={screen.scope === scope}
-                onClick={() => onScopeChange(scope)}
-                style={{
-                  padding: '5px 11px',
-                  fontSize: 11.5,
-                  borderRadius: 4,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: screen.scope === scope ? 'var(--s2)' : 'transparent',
-                  color: screen.scope === scope ? 'var(--tx)' : 'var(--tx2)',
-                }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {filterParts.length === 0 ? null : (
+              <span
+                data-breakdown-filter
+                style={{ ...mono(10.5), color: 'var(--tx3)', whiteSpace: 'nowrap' }}
               >
-                {t(scope === 'day' ? 'breakdown.scopeDay' : 'breakdown.scopeSession')}
-              </button>
-            ))}
+                {t('breakdown.filterNote', { value: filterParts.join(' · ') })}
+              </span>
+            )}
+            <div
+              style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--s1)', borderRadius: 6 }}
+            >
+              {(['day', 'session'] as const).map((scope) => (
+                <button
+                  key={scope}
+                  type="button"
+                  data-breakdown-scope={scope}
+                  aria-pressed={screen.scope === scope}
+                  onClick={() => onScopeChange(scope)}
+                  style={{
+                    padding: '5px 11px',
+                    fontSize: 11.5,
+                    borderRadius: 4,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: screen.scope === scope ? 'var(--s2)' : 'transparent',
+                    color: screen.scope === scope ? 'var(--tx)' : 'var(--tx2)',
+                  }}
+                >
+                  {t(scope === 'day' ? 'breakdown.scopeDay' : 'breakdown.scopeSession')}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -296,8 +335,11 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
                 {t('breakdown.rereadHint', { count: screen.reread.times })}
               </span>
             </span>
+            {/* В ячейке — множитель, в подписи — счёт раз: ячейка стоит в
+                колонке «За сессию», и счёт периода в ней значил бы, что каждая
+                сессия перечитала префикс за все сессии сразу. */}
             <span style={{ ...mono(12, 'right'), color: 'var(--tx2)' }}>
-              {t('breakdown.rereadTimes', { count: screen.reread.times })}
+              {t('breakdown.rereadTimes', { count: screen.reread.factor })}
             </span>
             <span />
             <span style={{ ...mono(12, 'right'), fontWeight: 600, color: 'var(--warn)' }}>
@@ -353,6 +395,8 @@ export function BreakdownTab({ screen, onScopeChange }: BreakdownTabProps) {
 
 function ToolTable({ screen }: { screen: SpendScreen }) {
   const maximum = Math.max(0, ...screen.tools.map((row) => row.marginal.value))
+  // Таблица рисуется только при собранном экране — срез там есть всегда.
+  const marginal = screen.split!.slices[1]!
 
   return (
     <div data-spend-tools style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -379,7 +423,7 @@ function ToolTable({ screen }: { screen: SpendScreen }) {
           </div>
           <span style={{ ...mono(12, 'right'), color: 'var(--tx2)' }}>{row.calls}</span>
           <span style={{ ...mono(11, 'right'), color: 'var(--tx3)' }}>
-            {formatTokens(row.calls === 0 ? 0 : Math.round(row.marginal.value / row.calls))}
+            {formatTokens(row.average ?? 0)}
           </span>
           <span style={{ ...mono(12, 'right'), fontWeight: 600 }}>
             {row.marginal.confidence === 'exact' ? '' : '≈'}
@@ -397,12 +441,60 @@ function ToolTable({ screen }: { screen: SpendScreen }) {
           borderTop: '1px solid var(--line)',
           paddingTop: 11,
         }}
+        title={screen.toolTotal.caveat}
       >
         <span style={{ fontSize: 12.5, fontWeight: 600 }}>{t('breakdown.totalCalls')}</span>
         <span style={{ ...mono(12, 'right'), color: 'var(--tx2)' }}>{screen.toolCalls}</span>
         <span />
         <span style={{ ...mono(13, 'right'), fontWeight: 600 }}>
-          {formatTokens(screen.tools.reduce((sum, row) => sum + row.marginal.value, 0))}
+          {screen.toolTotal.confidence === 'exact' ? '' : '≈'}
+          {formatTokens(screen.toolTotal.value)}
+        </span>
+      </div>
+      {/*
+        Строки сходимости (макет, 1141–1150): без них ось «Разовый · по
+        вызовам» обещает раскрытие, а колонка объясняет доли процента. Итоговая
+        строка берёт число из среза полосы, а не складывает две верхние — один
+        источник, не два (правило 4.1).
+      */}
+      {screen.marginalRest === undefined ? null : (
+        <div
+          data-breakdown-total="marginal-rest"
+          style={{ display: 'grid', gridTemplateColumns: TOOL_GRID, gap: 12, alignItems: 'center' }}
+        >
+          <span style={{ fontSize: 12.5, color: 'var(--tx2)' }}>
+            {t('breakdown.marginalRest')}{' '}
+            <span style={{ ...mono(10.5), color: 'var(--tx3)' }}>
+              {t('breakdown.marginalRestRequests', { count: screen.marginalRest.requests })}
+            </span>
+          </span>
+          <span />
+          <span />
+          <span style={{ ...mono(12, 'right'), fontWeight: 600 }}>
+            {screen.marginalRest.tokens.confidence === 'exact' ? '' : '≈'}
+            {formatTokens(screen.marginalRest.tokens.value)}
+          </span>
+        </div>
+      )}
+      <div
+        data-breakdown-total="marginal"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: TOOL_GRID,
+          gap: 12,
+          alignItems: 'center',
+          borderTop: '1px solid var(--line)',
+          paddingTop: 11,
+        }}
+      >
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+          {t(screen.scope === 'session' ? 'breakdown.marginalTotalSession' : 'breakdown.marginalTotalDay')}
+        </span>
+        <span />
+        <span />
+        <span style={{ ...mono(13, 'right'), fontWeight: 600 }}>
+          {marginal.tokens.confidence === 'exact' ? '' : '≈'}
+          {formatTokens(marginal.tokens.value)}
         </span>
       </div>
     </div>

@@ -2,10 +2,11 @@ import { t } from '../i18n/index.ts'
 import type { Db, SqlValue } from '../index/db.ts'
 import type { MarginalBasis } from '../sources/types.ts'
 import { taskFilter, taskSessions } from './task.ts'
-import { emptyTotals, sourceCount, totalsFromRow } from './today.ts'
+import { emptyTotals, requestFilter, sourceCount, totalsFromRow } from './today.ts'
 import type {
   BreakdownReport,
   DayRange,
+  RequestScope,
   TokenBreakdownRow,
   ToolBreakdownRow,
   TotalsRow,
@@ -19,8 +20,15 @@ import type {
  *
  * `range` у задачи необязателен и означает то же, что у ленты: показать кусок
  * задачи, попавший в период. Без него — вся задача целиком.
+ *
+ * `scope` у периода — то же сужение, что у ленты (провайдер, проект). Оно
+ * обязано доезжать сюда, а не только до полосы: экран развёртки собирается из
+ * двух источников, и фильтр, применённый к одному, даёт две правды на одном
+ * экране — каждая настоящая по себе.
  */
-type Scope = { range: DayRange } | { sessionId: string; range?: DayRange }
+type Scope =
+  | { range: DayRange; scope?: RequestScope }
+  | { sessionId: string; range?: DayRange }
 
 interface TotalRow {
   input: number
@@ -67,6 +75,18 @@ export function breakdownReport(db: Db, scope: Scope): BreakdownReport {
     agent: totalRows(db, filter, "coalesce(sessions.agent_type, 'main')"),
     model: totalRows(db, filter, 'requests.model'),
   }
+}
+
+/**
+ * Одна ось «инструменты» без четырёх остальных.
+ *
+ * Экрану развёртки нужны только они, а `breakdownReport` собирает пять осей
+ * пятью `GROUP BY` — четыре из них уезжали в мусор на каждом открытии вкладки.
+ * Осей по имени, а не флагом в отчёте: пустой массив в поле `server` читался
+ * бы как «посчитали — пусто», а мы не считали.
+ */
+export function toolBreakdownRows(db: Db, scope: Scope): ToolBreakdownRow[] {
+  return toolRows(db, scopeFilter(db, scope))
 }
 
 /**
@@ -177,10 +197,7 @@ function totalRows(
 
 function scopeFilter(db: Db, scope: Scope): { sql: string; params: SqlValue[] } {
   if (!('sessionId' in scope)) {
-    return {
-      sql: 'requests.ts >= ? AND requests.ts < ?',
-      params: [scope.range.from, scope.range.to],
-    }
+    return requestFilter(scope.range, scope.scope ?? {})
   }
   return taskFilter(taskSessions(db, scope.sessionId), scope.range)
 }
