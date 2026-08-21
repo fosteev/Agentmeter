@@ -48,12 +48,27 @@ export function HistoryHeatmap({ days }: HistoryHeatmapProps) {
         </span>
         <span style={{ ...mono(11), color: 'var(--tx2)' }}>{t('history.heatmapHint')}</span>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0 }}>
+      {/*
+        Прокрутка сверху вниз, а не сжатие строк. У клетки есть измеренный
+        минимум высоты (24 точки макета), и тридцать строк в него не влезают:
+        без прокрутки нижние сутки уезжали за нижний край окна, где их обрезает
+        `overflow: hidden` рамы — то есть на «30 дней» половина хитмапа просто
+        переставала существовать, молча. `1 0 auto` вместо `1 1 0` держит то же
+        правило с другой стороны: на неделе строки тянутся во всю высоту, как в
+        макете, но ниже своей клетки не сжимаются никогда.
+      */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minHeight: 0, overflowY: 'auto' }}>
         {days.map((day) => (
           <div
             key={day.at}
             data-history-row={day.at}
-            style={{ flex: 1, display: 'grid', gridTemplateColumns: '44px 1fr', gap: 10, alignItems: 'stretch' }}
+            style={{
+              flex: '1 0 auto',
+              display: 'grid',
+              gridTemplateColumns: '44px 1fr',
+              gap: 10,
+              alignItems: 'stretch',
+            }}
           >
             <span style={{ ...mono(10.5), color: 'var(--tx3)' }}>{label(day.at)}</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2, height: '100%' }}>

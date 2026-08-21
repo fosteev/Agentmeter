@@ -58,9 +58,22 @@ export function HistoryTab({ screen, onSpanChange, onSelectDay }: HistoryTabProp
         display: 'grid',
         gridTemplateColumns: '1fr 320px',
         minHeight: 0,
+        // Ноль обеим сторонам, а не одной: колонка сетки по умолчанию не уже
+        // своего содержимого, а внутри левой лежит ряд столбиков шириной в
+        // тридцать колонок. Без этого прокручиваться начинал бы не ряд, а окно
+        // целиком — вместе с правой колонкой и шапкой периода.
+        minWidth: 0,
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--line)' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          minHeight: 0,
+          borderRight: '1px solid var(--line)',
+        }}
+      >
         <div
           style={{
             padding: '18px 24px 10px',
