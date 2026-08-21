@@ -10,7 +10,7 @@
  * файл, не попавший в `files`, путь, который в asar читается иначе, чем на
  * диске, и зависимость, оставшаяся в devDependencies.
  *
- * Десять проверок, каждая названа по поломке, которую обязана поймать.
+ * Одиннадцать проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -353,6 +353,34 @@ if (process.platform !== 'darwin') {
       ? `${arches || 'архитектуры не прочитаны'}, ${ready ? 'стартует' : 'не отчитался при запуске'}`
       : `нет файла ${helper ?? '—'}`,
     present && universal && ready,
+  )
+}
+
+// 11. Ловит: бандл без печати — то есть приложение, которому macOS не даёт
+//     показать ни одного уведомления (4.7). `identity: null` в конфиге
+//     означает «не подписывать вовсе», и упакованное приложение приезжает
+//     подписанным одним линкером: идентификатор `Electron`, `Info.plist` вне
+//     печати. UNUserNotificationCenter такому отказывает — `UNErrorDomain
+//     error 1` на каждый показ, — и узнать это по приложению нельзя:
+//     `isSupported()` отвечает `true`, `show()` молчит. Печать ставит
+//     `scripts/adhoc-sign.js`; проверяется её наличие, а не сертификат —
+//     сертификата у проекта нет (5.2).
+if (process.platform !== 'darwin') {
+  console.log('— 11. печать бандла: не macOS, подпись ставит своя система')
+} else {
+  const shown = app === null ? '' : spawnSync('codesign', ['-dv', app.dir], { encoding: 'utf8' }).stderr
+  const identifier = shown.match(/^Identifier=(.+)$/m)?.[1]?.trim()
+  const linker = /flags=[^(]*\([^)]*linker-signed/.test(shown)
+  const wantedId = readFileSync(configPath, 'utf8').match(/^appId:\s*(\S+)/m)?.[1]
+  const verified =
+    app === null ? null : spawnSync('codesign', ['--verify', '--strict', app.dir], { encoding: 'utf8' })
+  report(
+    11,
+    'бандл запечатан своим идентификатором — иначе уведомлений нет вовсе',
+    app === null
+      ? 'приложения нет'
+      : `${identifier ?? 'печати нет'}${linker ? ' (подписан линкером, а не бандлом)' : ''}, проверка подписи: ${verified?.status === 0 ? 'прошла' : (verified?.stderr ?? '').trim() || 'не прошла'}`,
+    identifier === wantedId && !linker && verified?.status === 0,
   )
 }
 

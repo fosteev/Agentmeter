@@ -1340,6 +1340,14 @@ function main(): void {
     if (notices.length === 0 || !Notification.isSupported()) return
     for (const notice of notices) {
       const item = new Notification({ title: notice.title, body: notice.body })
+      // Отказ ОС — в лог. Уведомление, которое не показалось, ничем себя не
+      // выдаёт: `isSupported()` отвечает `true`, `show()` молчит, и вся
+      // ошибка приезжает вот этим событием. Ровно так неподписанный бандл
+      // месяцами «показывал» уведомления, которых не видел никто, —
+      // `apps/desktop/scripts/adhoc-sign.js`.
+      item.on('failed', (_event, error) => {
+        console.warn(`notification failed: ${error}`)
+      })
       item.on('click', () => {
         void owners.reveal(notice.sessionId).then((opened) => {
           if (!opened) openMainWindow('today')
