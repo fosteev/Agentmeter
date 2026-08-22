@@ -14,11 +14,13 @@ export interface HistorySideProps {
   summary?: HistoryDaySummary
   firstDay: number
   daysWithSpend: number
+  /** Открыть вкладку «Развёртка» на этом дне. Кнопка есть только у сводки. */
+  onOpenBreakdown: (at: number) => void
 }
 
 const TOKEN_GRID = '1fr 62px 44px'
 
-export function HistorySide({ summary, firstDay, daysWithSpend }: HistorySideProps) {
+export function HistorySide({ summary, firstDay, daysWithSpend, onOpenBreakdown }: HistorySideProps) {
   return (
     <div
       data-history-side
@@ -59,6 +61,27 @@ export function HistorySide({ summary, firstDay, daysWithSpend }: HistorySidePro
                 requests: t('today.requests', { count: summary.requests }),
               })}
         </span>
+        {summary === undefined ? null : (
+          <button
+            type="button"
+            data-history-breakdown={summary.at}
+            onClick={() => onOpenBreakdown(summary.at)}
+            style={{
+              alignSelf: 'flex-start',
+              marginTop: 4,
+              // Отступы — из чисел своего блока макета (сторож tokens.test.ts).
+              padding: '4px 10px',
+              fontSize: 11.5,
+              borderRadius: 4,
+              border: '1px solid var(--line)',
+              background: 'transparent',
+              color: 'var(--tx2)',
+              cursor: 'pointer',
+            }}
+          >
+            {t('history.openBreakdown')} →
+          </button>
+        )}
       </div>
 
       {summary === undefined ? null : (

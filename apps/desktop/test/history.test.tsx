@@ -238,7 +238,12 @@ describe('HistoryTab', () => {
     )
     expect(
       renderToStaticMarkup(
-        <HistoryTab screen={null} onSpanChange={() => {}} onSelectDay={() => {}} />,
+        <HistoryTab
+          screen={null}
+          onSpanChange={() => {}}
+          onSelectDay={() => {}}
+          onOpenBreakdown={() => {}}
+        />,
       ),
     ).toMatch(/<div data-history-empty="true" style="grid-column:1 \/ -1/)
   })
@@ -283,6 +288,22 @@ describe('HistoryTab', () => {
   })
 
   /**
+   * Ловит выход на развёртку, привязанный не к тому дню. Кнопка в правой
+   * колонке несёт `at` выбранного дня — по нему развёртка узнаёт свои сутки, и
+   * взятый не оттуда `at` открыл бы её под подписью одного дня с числами
+   * другого. Без сводки кнопки нет: развёртку пустого периода открывать не с
+   * чего.
+   */
+  it('выход на развёртку несёт день выбранной сводки', () => {
+    seed(MONDAY, 'claude', 10, 1000)
+    const screen = buildHistoryScreen(db, { span: 'week' }, config, NOW)
+
+    const { selected, ...withoutSummary } = screen
+    expect(render(screen)).toContain(`data-history-breakdown="${selected!.at}"`)
+    expect(render(withoutSummary)).not.toContain('data-history-breakdown')
+  })
+
+  /**
    * Ловит столбик, стёртый округлением. День на 1/500 от самого высокого даёт
    * четверть пикселя, и без нижней границы на экране осталось бы пустое место —
    * то есть «работы не было» вместо «работы было на два процента».
@@ -321,7 +342,12 @@ function rowWidth(html: string): number {
 
 function render(screen: HistoryScreen): string {
   return renderToStaticMarkup(
-    <HistoryTab screen={screen} onSpanChange={() => {}} onSelectDay={() => {}} />,
+    <HistoryTab
+      screen={screen}
+      onSpanChange={() => {}}
+      onSelectDay={() => {}}
+      onOpenBreakdown={() => {}}
+    />,
   )
 }
 

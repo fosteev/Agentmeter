@@ -121,14 +121,42 @@ type BreakdownArg = {
 }
 
 /**
- * Развёртка за тот же период — и тот же фильтр, — что и лента (4.2).
+ * Период развёртки — у него два источника, и оба названы здесь (4.2, 4.6).
  *
- * Период берётся из фильтра ленты, а не из «сегодня» по часам процесса: иначе
+ * Обычный — фильтр ленты: период и сужение те же, что у вкладки «Сегодня».
+ * Период берётся из фильтра, а не из «сегодня» по часам процесса: иначе
  * человек, переключившийся на вкладку после полуночи, увидел бы развёртку
  * другого дня — и не имел бы способа это заметить, потому что даты на экране
  * рядом нет. Сужение — оттуда же и по той же причине: лента одного проекта над
  * развёрткой всего дня — два ответа про «сегодня», оба настоящие по себе.
+ *
+ * Второй — день, выбранный на «Истории». Тогда границы суток считаются тем же
+ * `dayRange`, что везде, а сужение ленты **не** едет следом: у истории фильтра
+ * нет, и молча унаследованный проект показал бы кусок дня под подписью целого.
+ * Дата такого дня обязана быть видна на самом экране — это чип в шапке
+ * развёртки, тем же правилом, что выше.
  */
+export function breakdownArg(
+  scope: 'day' | 'session',
+  filter: TodayFilter | null,
+  day: number | null,
+  dayStartsAtHour: number | null,
+): BreakdownArg | null {
+  if (day !== null) {
+    if (dayStartsAtHour === null) return null
+    const range = dayRange(day, dayStartsAtHour)
+    return { scope, from: range.from, to: range.to }
+  }
+  if (filter === null) return null
+  return {
+    scope,
+    from: filter.from,
+    to: filter.to,
+    ...(filter.provider === undefined ? {} : { provider: filter.provider }),
+    ...(filter.project === undefined ? {} : { project: filter.project }),
+  }
+}
+
 export function requestBreakdown(
   arg: BreakdownArg,
   getBreakdown: (arg: BreakdownArg) => Promise<SpendScreen> = window.agentmeter['breakdown:get'],
@@ -176,6 +204,11 @@ export function WindowApp() {
   const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
   const [breakdown, setBreakdown] = useState<SpendScreen | null>(null)
   const [breakdownScope, setBreakdownScope] = useState<'day' | 'session'>('day')
+  // День с «Истории», прикнопленный к развёртке. `null` — период ленты.
+  // Живёт только на переходе «история → развёртка этого дня»: любой вход через
+  // панель вкладок возвращает сегодняшний день, иначе прилипший вчерашний
+  // объявился бы под заголовком без даты через неделю.
+  const [breakdownDay, setBreakdownDay] = useState<number | null>(null)
   const [history, setHistory] = useState<HistoryScreen | null>(null)
   const [historySpan, setHistorySpan] = useState<HistorySpan>('week')
   // Какой день раскрыт справа. `null` — выбирает main: последний день периода
@@ -322,25 +355,30 @@ export function WindowApp() {
     })
   }, [tab, todayFilter, liveKey])
 
+  const dayStartsAtHour = config?.ui.dayStartsAtHour ?? null
   useEffect(() => {
-    if (todayFilter === null || tab !== 'breakdown') return
+    if (tab !== 'breakdown') return
+    const arg = breakdownArg(breakdownScope, todayFilter, breakdownDay, dayStartsAtHour)
+    if (arg === null) return
     const request = ++breakdownRequest.current
     setBreakdown(null)
-    void requestBreakdown({
-      scope: breakdownScope,
-      from: todayFilter.from,
-      to: todayFilter.to,
-      ...(todayFilter.provider === undefined ? {} : { provider: todayFilter.provider }),
-      ...(todayFilter.project === undefined ? {} : { project: todayFilter.project }),
-    }).then((screen) => {
+    void requestBreakdown(arg).then((screen) => {
       if (request === breakdownRequest.current) setBreakdown(screen)
     })
-  }, [tab, todayFilter, breakdownScope])
+  }, [tab, todayFilter, breakdownScope, breakdownDay, dayStartsAtHour])
+
+  // Пустая история — только при смене периода и вкладки, тем же правилом, что
+  // у ленты выше. Выбор дня экран не гасит: столбики и хитмап у нового ответа
+  // те же, меняется правая колонка — и ронять весь экран в «данных нет», чтобы
+  // собрать его заново, значит мигать всем ради одной колонки.
+  useEffect(() => {
+    if (tab !== 'history') return
+    setHistory(null)
+  }, [tab, historySpan])
 
   useEffect(() => {
     if (tab !== 'history') return
     const request = ++historyRequest.current
-    setHistory(null)
     void window.agentmeter['history:get']({
       span: historySpan,
       ...(historyDay === null ? {} : { at: historyDay }),
@@ -357,9 +395,21 @@ export function WindowApp() {
     })
   }
 
+  // Вход через панель вкладок — всегда сегодняшняя развёртка; день истории
+  // прикнопливается только своей кнопкой, которая зовёт `setTab` напрямую.
+  const changeTab = (next: WindowTab): void => {
+    if (next === 'breakdown') setBreakdownDay(null)
+    setTab(next)
+  }
+
+  const openDayBreakdown = (at: number): void => {
+    setBreakdownDay(at)
+    setTab('breakdown')
+  }
+
   if (snapshot === null || config === null) return null
   return (
-    <Window snapshot={snapshot} activeTab={tab} onTabChange={setTab}>
+    <Window snapshot={snapshot} activeTab={tab} onTabChange={changeTab}>
       {tab === 'today' && todayFilter !== null ? (
         <>
           <TodayTab
@@ -370,13 +420,16 @@ export function WindowApp() {
             agents={snapshot.agents}
             onTaskToggle={handleTaskToggle}
           />
-          <TodaySide report={today} onOpenBreakdown={() => setTab('breakdown')} />
+          <TodaySide report={today} onOpenBreakdown={() => changeTab('breakdown')} />
         </>
       ) : tab === 'breakdown' ? (
         <BreakdownTab
           screen={breakdown}
           onScopeChange={setBreakdownScope}
-          {...(todayFilter === null
+          {...(breakdownDay === null
+            ? {}
+            : { day: breakdownDay, onDayReset: () => setBreakdownDay(null) })}
+          {...(todayFilter === null || breakdownDay !== null
             ? {}
             : {
                 filter: {
@@ -396,6 +449,7 @@ export function WindowApp() {
             setHistoryDay(null)
           }}
           onSelectDay={setHistoryDay}
+          onOpenBreakdown={openDayBreakdown}
         />
       ) : tab === 'settings' && configReport !== null ? (
         <SettingsTab

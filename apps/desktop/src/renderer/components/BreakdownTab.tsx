@@ -25,6 +25,13 @@ export interface BreakdownTabProps {
    * всё» и «за период не работали» различимы только тем, был ли фильтр.
    */
   filter?: Pick<TodayFilter, 'provider' | 'project'>
+  /**
+   * День, открытый с «Истории», — начало его суток. Экран обязан назвать дату
+   * тем же правилом, что фильтр выше: развёртка чужого дня без подписи
+   * читается как сегодняшняя. Чип — он же кнопка возврата к текущему дню.
+   */
+  day?: number
+  onDayReset?: () => void
 }
 
 const TOOL_GRID = '1fr 74px 74px 84px'
@@ -47,11 +54,36 @@ function emptyMessage(
   return filtered ? t('breakdown.emptyFilter') : t('breakdown.emptyScope')
 }
 
-export function BreakdownTab({ screen, onScopeChange, filter }: BreakdownTabProps) {
+export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }: BreakdownTabProps) {
   const filterParts = [
     filter?.provider === undefined ? null : PROVIDER_NAMES[filter.provider],
     filter?.project,
   ].filter((part): part is string => part !== null && part !== undefined)
+
+  const dayChip =
+    day === undefined ? null : (
+      <button
+        type="button"
+        data-breakdown-day={day}
+        onClick={onDayReset}
+        title={t('breakdown.dayReset')}
+        style={{
+          ...mono(10.5),
+          padding: '4px 8px',
+          borderRadius: 4,
+          border: '1px solid var(--line)',
+          background: 'var(--s1)',
+          color: 'var(--tx2)',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {t('breakdown.dayNote', {
+          date: new Date(day).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }),
+        })}{' '}
+        ×
+      </button>
+    )
 
   if (screen === null || screen.emptyIndex || screen.emptyScope || screen.split === undefined) {
     return (
@@ -62,12 +94,16 @@ export function BreakdownTab({ screen, onScopeChange, filter }: BreakdownTabProp
           padding: '22px 24px',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'flex-start',
           gap: 6,
           color: 'var(--tx2)',
           fontSize: 12.5,
         }}
       >
         {emptyMessage(screen, filterParts.length > 0)}
+        {/* Чип и на пустом экране: развёртку чужого дня, где запросов не
+            нашлось, иначе нечем ни опознать, ни вернуть к сегодняшней. */}
+        {dayChip}
       </div>
     )
   }
@@ -108,6 +144,7 @@ export function BreakdownTab({ screen, onScopeChange, filter }: BreakdownTabProp
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {dayChip}
             {filterParts.length === 0 ? null : (
               <span
                 data-breakdown-filter

@@ -21,6 +21,8 @@ export interface HistoryTabProps {
   screen: HistoryScreen | null
   onSpanChange: (span: HistorySpan) => void
   onSelectDay: (at: number) => void
+  /** «Развёртка за этот день» в правой колонке — переход на вкладку 4.2. */
+  onOpenBreakdown: (at: number) => void
 }
 
 const SPANS: Array<{ span: HistorySpan; key: 'history.span7' | 'history.span30' | 'history.spanAll' }> = [
@@ -29,7 +31,7 @@ const SPANS: Array<{ span: HistorySpan; key: 'history.span7' | 'history.span30' 
   { span: 'all', key: 'history.spanAll' },
 ]
 
-export function HistoryTab({ screen, onSpanChange, onSelectDay }: HistoryTabProps) {
+export function HistoryTab({ screen, onSpanChange, onSelectDay, onOpenBreakdown }: HistoryTabProps) {
   if (screen === null || screen.emptyIndex || screen.firstDay === null) {
     return (
       <div
@@ -140,6 +142,7 @@ export function HistoryTab({ screen, onSpanChange, onSelectDay }: HistoryTabProp
         {...(screen.selected === undefined ? {} : { summary: screen.selected })}
         firstDay={screen.firstDay}
         daysWithSpend={screen.daysWithSpend}
+        onOpenBreakdown={onOpenBreakdown}
       />
     </div>
   )

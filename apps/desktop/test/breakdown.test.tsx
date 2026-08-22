@@ -4,11 +4,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
+import { dayRange, ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
 import type { SpendCategoryRow, SpendScreen } from '@agentmeter/ipc'
 import { buildSpendScreen, rereadFactor, rereadTimes } from '../src/main/breakdown.ts'
 import { buildDayReport } from '../src/main/day.ts'
 import { BreakdownTab } from '../src/renderer/components/BreakdownTab.tsx'
+import { breakdownArg } from '../src/renderer/window-main.tsx'
 import { SpendCategoryTable } from '../src/renderer/components/SpendCategoryTable.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
 
@@ -244,6 +245,53 @@ describe('ревизия: сужение, знаменатель, сходимо
 
     expect(html).toContain('data-breakdown-filter')
     expect(html).toContain('Claude')
+  })
+
+  /**
+   * Ловит период развёртки, прибитый к фильтру ленты. День с «Истории» задаёт
+   * границы суток тем же `dayRange`, что везде, а сужение ленты за ним не
+   * едет: у истории фильтра нет, и унаследованный проект показал бы кусок дня
+   * под подписью целого. Без дня — прежнее правило: период и сужение ленты.
+   */
+  it('период развёртки: день истории без фильтра, лента с фильтром', () => {
+    const filter = { from: 100, to: 200, provider: 'claude' as const, project: 'p', sort: 'tokens' as const }
+    const noon = new Date(2026, 7, 3, 12, 0, 0).getTime()
+
+    expect(breakdownArg('day', filter, null, 4)).toEqual({
+      scope: 'day',
+      from: 100,
+      to: 200,
+      provider: 'claude',
+      project: 'p',
+    })
+    expect(breakdownArg('session', filter, noon, 4)).toEqual({
+      scope: 'session',
+      ...dayRange(noon, 4),
+    })
+    // Границы суток без настройки не считаются: угаданная полночь на границе
+    // `dayStartsAtHour` открыла бы соседний день.
+    expect(breakdownArg('day', filter, noon, null)).toBeNull()
+  })
+
+  /**
+   * Ловит развёртку чужого дня, читающуюся как сегодняшняя: чип обязан назвать
+   * дату и остаться на пустом экране — иначе день, где запросов не нашлось, не
+   * опознать и не вернуть. Без дня чипа нет.
+   */
+  it('день с «Истории» назван чипом, и на пустом экране тоже', () => {
+    const day = new Date(2026, 7, 3, 4, 0, 0).getTime()
+    const screen = buildSpendScreen(db, ALL)
+    const withDay = renderToStaticMarkup(
+      <BreakdownTab screen={screen} day={day} onDayReset={() => undefined} onScopeChange={() => undefined} />,
+    )
+    const loading = renderToStaticMarkup(
+      <BreakdownTab screen={null} day={day} onDayReset={() => undefined} onScopeChange={() => undefined} />,
+    )
+
+    expect(withDay).toContain(`data-breakdown-day="${day}"`)
+    expect(withDay).toContain('день из истории')
+    expect(loading).toContain(`data-breakdown-day="${day}"`)
+    expect(render(screen)).not.toContain('data-breakdown-day')
   })
 
   /** Ловит «Первичное индексирование» в момент обычной загрузки вкладки. */
