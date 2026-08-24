@@ -2,12 +2,25 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
-- **Windows worked on paper only.** No Claude transcript ever reached the index,
-  and the CLI never started at all — its entry point could not match. Both are
-  fixed; a Windows install from 0.2.0 was showing an empty day, not a quiet one.
-- **The macOS downloads now carry their architecture** — `-arm64` for Apple
-  Silicon, `-x64` for Intel. Until now the Intel build was the unsuffixed one
-  and looked like the default download.
+- **An AI brief in the export menu.** A markdown file you can hand to any LLM
+  to get token-saving advice: the same numbers the screens show, plus the
+  measured reading rules — without them an outside model happily suggests
+  things this project has already disproven. Also `agentmeter brief` in the
+  CLI (`--json` gives the same data as an object).
+- **Notifications on macOS actually arrive now.** The bundle was not sealed,
+  and the system refused every notification silently — for four months this
+  looked like “notifications just don't come”. Packaging now seals the bundle
+  (ad-hoc: still no certificates, see below).
+- **Clicking a notification returns you to work**, not to the token meter: it
+  opens the app the agent runs in — VS Code, the terminal — where that app is
+  known; elsewhere it opens Agentmeter's window as before.
+- **The Limits settings lost what never worked** — the ceiling cards with
+  nothing to measure and the status-line hook that produced zero observations
+  in a month. In their place: checkboxes for which windows the popup shows. An
+  installed hook is removed from Claude's settings on startup.
+- **History longer than a week scrolls sideways** instead of crushing its own
+  labels; picking a day no longer dims the screen, and its breakdown opens
+  with a button. The breakdown filter now reaches the right column too.
 
 ## What it shows
 
@@ -25,6 +38,8 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
   versus what the agent actually called, with advice like “this server was
   never called across 34 sessions; turning it off returns 194.7k”.
 - **History** — a week, 30 days or all time, with a day × hour heatmap.
+- **Export** — the day's tasks as CSV/JSON, or an AI brief: a markdown file to
+  feed an LLM for savings advice grounded in the measured rules.
 
 English and Russian, following the system language.
 
