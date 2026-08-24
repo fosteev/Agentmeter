@@ -47,6 +47,8 @@ import {
   LIVE_URGENCY,
   exportRows,
   toCsv,
+  aiBrief,
+  briefMarkdown,
   type Calibration,
   type Config,
   type Db,
@@ -1290,15 +1292,19 @@ function main(): void {
    */
   const trayActions = (): { id: string; label: string; run: () => void }[] => [
     { id: 'export', label: t('menu.export'), run: () => void exportToFile() },
+    { id: 'brief', label: t('menu.brief'), run: () => void briefToFile() },
     { id: 'quit', label: t('menu.quit'), run: () => app.quit() },
   ]
 
   const trayMenu = (): Menu => {
-    const [first, ...rest] = trayActions()
+    // Разделитель — перед «Выйти», а не после первого пункта: обе выгрузки —
+    // одна группа, и новый пункт обязан попадать в неё, а не за черту.
+    const actions = trayActions()
+    const quit = actions.at(-1)!
     return Menu.buildFromTemplate([
-      { label: first!.label, click: first!.run },
+      ...actions.slice(0, -1).map((action) => ({ label: action.label, click: action.run })),
       { type: 'separator' },
-      ...rest.map((action) => ({ label: action.label, click: action.run })),
+      { label: quit.label, click: quit.run },
     ])
   }
 
@@ -1322,6 +1328,23 @@ function main(): void {
     if (target.canceled || target.filePath === undefined) return
     const json = target.filePath.toLowerCase().endsWith('.json')
     writeFileSync(target.filePath, json ? JSON.stringify(rows, null, 2) : toCsv(rows), 'utf8')
+  }
+
+  /**
+   * Бриф для ИИ (7.7) — тот же период, что у выгрузки: советы считаются по
+   * охвату («сервер не звали ни разу»), и на одном дне они врали бы.
+   */
+  const briefToFile = async (): Promise<void> => {
+    const config = runtime!.config
+    const day = dayRange(Date.now(), config.ui.dayStartsAtHour)
+    const range = { from: dayRange(day.from, config.ui.dayStartsAtHour, -29).from, to: day.to }
+    const report = aiBrief(runtime!.db, range)
+    const target = await dialog.showSaveDialog({
+      defaultPath: `agentmeter-brief-${new Date(day.from).toISOString().slice(0, 10)}.md`,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    })
+    if (target.canceled || target.filePath === undefined) return
+    writeFileSync(target.filePath, briefMarkdown(report), 'utf8')
   }
 
   const notifyState = emptyNotifyState()
@@ -1532,8 +1555,13 @@ function main(): void {
 
   /** Те же пункты, что у `trayMenu`, но списком для хелпера: разделитель — пустой. */
   const barMenu = (): { id?: string; label?: string }[] => {
-    const [first, ...rest] = trayActions()
-    return [{ id: first!.id, label: first!.label }, {}, ...rest.map(({ id, label }) => ({ id, label }))]
+    const actions = trayActions()
+    const quit = actions.at(-1)!
+    return [
+      ...actions.slice(0, -1).map(({ id, label }) => ({ id, label })),
+      {},
+      { id: quit.id, label: quit.label },
+    ]
   }
 
   /**

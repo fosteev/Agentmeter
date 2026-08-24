@@ -13,6 +13,7 @@
 import { homedir } from 'node:os'
 import {
   cacheRebuilds,
+  categoryLabel,
   hasRequests,
   loadedCategories,
   savings,
@@ -44,29 +45,6 @@ import type {
   SpendSourceRow,
   SpendSplit,
 } from '@agentmeter/ipc'
-
-/**
- * Как называется статья на экране.
- *
- * Ключ — категория плюс признак остатка, потому что `system` встречается в
- * обоих видах и означает разное: у Claude это неизмеримый остаток (системный
- * промпт со схемами вшитых тулов), у Codex — записанный в лог дословно
- * `base_instructions`. Одно имя на оба сказало бы, что мы измерили то, чего не
- * измеряли.
- */
-const LABELS = {
-  'system residual': 'breakdown.systemResidual',
-  'system estimated': 'breakdown.systemPrompt',
-  'toolSchemas residual': 'breakdown.toolSchemas',
-  'toolSchemas estimated': 'breakdown.toolSchemas',
-  'mcpTools estimated': 'breakdown.mcpTools',
-  'mcpInstructions estimated': 'breakdown.mcpInstructions',
-  'skills estimated': 'breakdown.skills',
-  'agents estimated': 'breakdown.agents',
-  'memory estimated': 'breakdown.memory',
-  'deferredTools estimated': 'breakdown.deferredTools',
-  'userTurn estimated': 'breakdown.userTurn',
-} as const
 
 export interface BreakdownFilter {
   scope: 'day' | 'session'
@@ -359,7 +337,8 @@ function toCategoryRow(
   const key = `${row.category} ${row.basis}`
   return {
     key,
-    label: t(LABELS[key as keyof typeof LABELS] ?? 'breakdown.other'),
+    // Имя статьи — из общего с брифом словаря в ядре: два словаря разъехались бы.
+    label: categoryLabel(row.category, row.basis),
     perSession: measured(row.perSession, approximate),
     // Переключатель меняет знаменатель, а не фильтр: «за сессию» — это тот же
     // расход, делённый на число сессий периода.

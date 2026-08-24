@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.ts'
 import type { Db, SqlValue } from '../index/db.ts'
-import type { MarginalBasis } from '../sources/types.ts'
+import type { MarginalBasis, PrefixCategory } from '../sources/types.ts'
 import { taskFilter, taskSessions } from './task.ts'
 import { emptyTotals, requestFilter, sourceCount, totalsFromRow } from './today.ts'
 import type {
@@ -107,6 +107,40 @@ export const IMAGE_ROW_KEY = '<images>'
  */
 export function toolRowLabel(key: string): string {
   return key === IMAGE_ROW_KEY ? t('breakdown.images') : key
+}
+
+/**
+ * Как называется статья постоянного расхода.
+ *
+ * Ключ — категория плюс признак остатка, потому что `system` встречается в
+ * обоих видах и означает разное: у Claude это неизмеримый остаток (системный
+ * промпт со схемами вшитых тулов), у Codex — записанный в лог дословно
+ * `base_instructions`. Одно имя на оба сказало бы, что мы измерили то, чего не
+ * измеряли.
+ *
+ * Живёт рядом с `toolRowLabel` по той же причине: потребителей у имени двое —
+ * экран развёртки и бриф для ИИ (7.7), и два словаря разъехались бы молча.
+ */
+const CATEGORY_LABELS = {
+  'system residual': 'breakdown.systemResidual',
+  'system estimated': 'breakdown.systemPrompt',
+  'toolSchemas residual': 'breakdown.toolSchemas',
+  'toolSchemas estimated': 'breakdown.toolSchemas',
+  'mcpTools estimated': 'breakdown.mcpTools',
+  'mcpInstructions estimated': 'breakdown.mcpInstructions',
+  'skills estimated': 'breakdown.skills',
+  'agents estimated': 'breakdown.agents',
+  'memory estimated': 'breakdown.memory',
+  'deferredTools estimated': 'breakdown.deferredTools',
+  'userTurn estimated': 'breakdown.userTurn',
+} as const
+
+export function categoryLabel(
+  category: PrefixCategory,
+  basis: 'estimated' | 'residual',
+): string {
+  const key = `${category} ${basis}` as keyof typeof CATEGORY_LABELS
+  return t(CATEGORY_LABELS[key] ?? 'breakdown.other')
 }
 
 /**

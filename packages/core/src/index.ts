@@ -108,6 +108,8 @@ export {
 } from './live/index.ts'
 export type { TurnSpend } from './live/index.ts'
 export { CSV_BOM, EXPORT_COLUMNS, exportRows, toCsv } from './export/index.ts'
+export { aiBrief, briefMarkdown } from './export/brief.ts'
+export type { AiBrief, BriefCache, BriefTool } from './export/brief.ts'
 export type { ExportGrain, ExportRow } from './export/index.ts'
 export { watchSources } from './index/watch.ts'
 export type { Watcher } from './index/watch.ts'

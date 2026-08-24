@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
+  aiBrief,
   breakdownReport,
+  briefMarkdown,
   claudeHome,
   codexHome,
   configPath as defaultConfigPath,
@@ -45,6 +47,7 @@ const COMMANDS = [
   'verify',
   'index',
   'export',
+  'brief',
 ] as const
 type Command = (typeof COMMANDS)[number]
 
@@ -70,6 +73,8 @@ function usage(): string {
     'live',
     'doctor',
     'index     [--rebuild]',
+    'export    [--day YYYY-MM-DD] [--days N] [--grain task|day]',
+    'brief     [--day YYYY-MM-DD] [--days N]',
   ].join('\n')
 }
 
@@ -115,6 +120,8 @@ export function run(argv: readonly string[]): number {
           return runDoctor(db, common, loaded.config, loaded.problems)
         case 'export':
           return runExport(db, common, loaded.config)
+        case 'brief':
+          return runBrief(db, common, loaded.config)
         default:
           throw new CliArgumentError(t('cli.unsupported', { command }))
       }
@@ -192,6 +199,32 @@ function runExport(
   // RFC 4180, и лишний превращается в пустую строку в конце таблицы.
   if (common.json) console.log(JSON.stringify(rows))
   else process.stdout.write(toCsv(rows))
+  return 0
+}
+
+/**
+ * Бриф для ИИ (7.7).
+ *
+ * Период по умолчанию — 30 дней, а не день, как у `export`: советы считаются по
+ * охвату («сервер не звали ни разу»), и на одном дне каждый второй сервер
+ * выглядел бы мёртвым. Markdown — в stdout, как CSV у `export`; `--json` отдаёт
+ * тот же объект, из которого markdown и собран, — второй правды у файла нет.
+ */
+function runBrief(
+  db: Parameters<typeof aiBrief>[0],
+  common: CommonOptions,
+  config: Config,
+): number {
+  const values = parseValues(common.rest, new Set(['--day', '--days']))
+  const days = positiveInteger(values.get('--days') ?? '30', '--days')
+  const endRange = rangeFor(values.get('--day'), config.ui.dayStartsAtHour)
+  const range = {
+    from: dayRange(endRange.from, config.ui.dayStartsAtHour, -(days - 1)).from,
+    to: endRange.to,
+  }
+  const report = aiBrief(db, range)
+  if (common.json) console.log(JSON.stringify(report))
+  else process.stdout.write(briefMarkdown(report))
   return 0
 }
 

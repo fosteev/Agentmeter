@@ -138,6 +138,57 @@ export const en = {
     link: 'Breakdown →',
   },
 
+  brief: {
+    title: '# Agentmeter — token spend for the period',
+    period: 'Period: {{from}} — {{to}}. All numbers are tokens.',
+    task: 'Task for the AI reading this: below is the user’s spend on coding agents (Claude Code, Codex), measured from their logs. Using only these numbers and the reading rules, suggest concrete ways to save tokens: what to turn off, what to change in the workflow, what to leave alone. Do not suggest anything that contradicts the reading rules; where a number is called a lower bound or unmeasured, present the advice as a hypothesis, not a fact.',
+    rulesTitle: '## Reading rules — measured, not assumed',
+    ruleTotal:
+      'The total is the sum of (prompt + output) over all requests, where prompt = input + cache write + cache read. Cache reads make up most of the total: they are cheaper than plain input but do count against subscription limits.',
+    ruleRecurring:
+      'Recurring spend is the session’s starting prefix (system prompt, tool schemas, MCP servers, skills, memory files), re-read by every request: almost all of its cost is re-reading, not the first load. The price of an enabled block = its size × the number of requests.',
+    ruleMarginal:
+      'One-off spend is tool results and model answers — also re-read by every following request: a large result keeps costing while it sits in the context.',
+    ruleDeferred:
+      'Where deferred tools (ToolSearch) are enabled, only MCP tool names travel in the prefix, without schemas — the same server costs an order of magnitude less. MCP advice holds only for measured sessions; about eager-set sessions the logs only say it cost more there.',
+    ruleCache:
+      'A cache rebuild adds no tokens to the period: the same tokens travel either as reads or as writes. The one saving here is not letting the cache expire — a pause longer than its lifetime re-writes the prefix at full price.',
+    ruleApprox:
+      'Numbers called a lower bound are exactly that: some requests are reconstructed from gaps in the cache chain, and service calls (session titles, summaries) are never written to the logs at all.',
+    totalsTitle: '## Totals',
+    empty: 'No requests in the period — nothing to advise on.',
+    totalsLine: 'Total: {{total}} tokens; requests: {{requests}}; sessions: {{sessions}}.',
+    kindsLine:
+      'Input: {{input}} · output: {{output}} · cache write: {{cacheWrite}} · cache read: {{cacheRead}}.',
+    totalsApprox: 'The period contains reconstructed requests: the total is a lower bound.',
+    splitTitle: '## Recurring vs one-off',
+    splitLine:
+      'Recurring: {{recurring}} of {{total}} ({{percent}}%), of which first load {{firstRead}} and re-reading {{reread}}. One-off: {{marginal}}.',
+    categoriesTitle: '### Recurring spend by block',
+    categoryLine: '- {{name}}: {{tokens}} for the period, {{perSession}} per session{{usage}}',
+    categoryUsage: '; loaded: {{loaded}}, used: {{used}}',
+    categoryUsageUnknown: '; usage cannot be measured',
+    serversTitle: '### MCP servers by name',
+    serverLine:
+      '- {{name}}: {{tokens}} for the period, {{perSession}} per session; tools loaded: {{loaded}}, of them called: {{used}}; calls in the period: {{calls}}',
+    adviceTitle: '## Measured advice',
+    adviceNone:
+      'No ready-made advice: every loaded MCP server was called at least once in the period. Look for savings in the numbers above.',
+    adviceLine:
+      '- Server {{name}} was never called, yet its descriptions loaded every time; sessions with it: {{sessions}}. Turning it off returns {{tokens}} for the period ({{perSession}} per session). Projects: {{projects}}.{{eager}}',
+    adviceEager:
+      ' Eager-set sessions: {{count}} — it cost more there, and the logs do not say how much.',
+    toolsTitle: '## One-off spend by tool',
+    toolLine: '- {{name}}: calls {{calls}}, tokens {{tokens}}',
+    toolsRest: '- …and more tools: {{count}}, tokens: {{tokens}}',
+    cacheTitle: '## Cache rebuilds (Claude only)',
+    cacheNone: 'No Claude requests in the period — cache rebuilds cannot be measured.',
+    cacheLine:
+      'Events: session start {{start}}, pause past the lifetime {{pause}}, earlier than the lifetime {{early}}, compact {{compact}}; written to cache by these events: {{tokens}}.',
+    cacheTtl: 'Cache lifetime in the period: {{minutes}} min.',
+    cacheWorst: 'Most expensive pause: {{minutes}} min, {{tokens}} written (project {{project}}).',
+  },
+
   breakdown: {
     title: 'What one session costs and what it became over the day',
     lead: 'On the left — what sits in the prompt before your first word: paid in full by every session. On the right — what the agent actually called: paid as it happens.',
@@ -224,6 +275,7 @@ export const en = {
 
   menu: {
     export: 'Export spend…',
+    brief: 'Export AI brief…',
     quit: 'Quit',
   },
 

@@ -167,7 +167,7 @@ function cell(value: string | number | boolean): string {
 }
 
 /** Дата в локальном времени: день в выгрузке тот же, что на экране. */
-function isoDate(at: number): string {
+export function isoDate(at: number): string {
   const date = new Date(at)
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
