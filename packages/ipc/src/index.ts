@@ -1366,6 +1366,14 @@ export interface IpcEvents {
    * странице, поэтому до рендерера нажатие доезжает только так.
    */
   'popup:refresh': void
+  /**
+   * Попап открыли или закрыли. Нужно потому, что закрытый попап на macOS не
+   * прячется, а гасится прозрачностью (`closePopup` в main): для рендерера он
+   * остаётся видимым, `document.visibilityState` не меняется, и анимации
+   * крутились бы у окна, которого никто не видит. По `false` рендерер ставит
+   * их на паузу, по `true` — снимает.
+   */
+  'popup:shown': boolean
 }
 
 export type IpcCallName = keyof IpcCalls
@@ -1401,4 +1409,5 @@ export const IPC_EVENTS = [
   'config:changed',
   'update:state',
   'popup:refresh',
+  'popup:shown',
 ] as const satisfies readonly IpcEventName[]

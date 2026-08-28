@@ -126,6 +126,17 @@ function App() {
   // кнопки, — кнопка и клавиша обязаны делать одно и то же.
   useEffect(() => window.agentmeter['on:popup:refresh'](runRefresh), [runRefresh])
 
+  // Закрытый попап на macOS остаётся видимым окном с нулевой прозрачностью
+  // (`closePopup` в main), и браузер не знает, что его никто не видит. Анимации
+  // ставятся на паузу атрибутом — правило в `tokens.css`.
+  useEffect(
+    () =>
+      window.agentmeter['on:popup:shown']((shown) => {
+        document.documentElement.toggleAttribute('data-popup-closed', !shown)
+      }),
+    [],
+  )
+
   // Своих пустых состояний здесь нет: «пусто», «индексирование», «ошибка» и
   // «никого нет» выбирает сам `Popup` по снимку (2.8). До первого снимка окно
   // не рисует ничего — выдумывать пятый экран на «данных ещё не приехало»

@@ -579,6 +579,26 @@ async function runSmoke(): Promise<void> {
     }
     if (rebuilds === beforeKey) problems.push('⌘R не пересобрал снимок: нажатие не доехало')
 
+    // Закрытый попап на macOS остаётся в WindowServer (см. `closePopup`): `hide()`
+    // вернул бы его на один рабочий стол при первом уничтожении Space. Смоук
+    // Space не уничтожает — он проверяет то, что от этого защищает: после
+    // закрытия окно по-прежнему `isVisible()`, но открытым не считается.
+    openPopup(window, undefined)
+    const opened = popupShown(window)
+    closePopup(window)
+    const kept = process.platform !== 'darwin' || window.isVisible()
+    popupReport = {
+      ...(popupReport as Record<string, unknown>),
+      opened,
+      closedKept: kept,
+      closedShown: popupShown(window),
+    }
+    if (!opened) problems.push('попап не открылся')
+    if (!kept) {
+      problems.push('закрытый попап выгружен из WindowServer: потеряет рабочие столы при первом уничтожении Space')
+    }
+    if (popupShown(window)) problems.push('закрытый попап считается открытым')
+
     // Иконка трея (2.7). Растр проверяется юнит-тестами без Electron, а здесь
     // единственное, чего те увидеть не могут: что `nativeImage` этот буфер
     // принял, что представления @2x и @3x доехали и что на macOS иконка
@@ -1157,6 +1177,54 @@ function positionPopup(window: BrowserWindow, trayBounds: Rectangle | undefined)
   window.setPosition(clampedX, clampedY, false)
 }
 
+/**
+ * Открыт ли попап. Определение одно на все платформы: закрытый на macOS попап
+ * **остаётся в WindowServer** (см. `closePopup`), и `isVisible()` у него
+ * `true` — поэтому «открыт» значит «виден и не прозрачен».
+ */
+function popupShown(window: BrowserWindow): boolean {
+  return window.isVisible() && window.getOpacity() > 0
+}
+
+/**
+ * Попап на macOS не прячется через `hide()`, а гасится на месте: прозрачность
+ * ноль, мышь насквозь. Это не оптимизация, а единственный найденный способ
+ * удержать его на всех рабочих столах.
+ *
+ * `hide()` — это `orderOut`, и выгруженное окно WindowServer держит по списку
+ * Spaces. Когда любой из них умирает (приложение вышло из полноэкранного
+ * режима — на живой машине таких Spaces двенадцать против одного обычного),
+ * спрятанное окно переселяется на рабочий стол и «на всех столах» теряет:
+ * следующий клик по значку показывает его там, а не где на него смотрят.
+ * Флаг на `NSWindow` при этом остаётся, `isVisibleOnAllWorkspaces()` отвечает
+ * `true`, и ни один из шести способов переставить его не возвращает окно на
+ * все столы. Видимое окно то же событие переживает — как и прозрачное, и
+ * увезённое за экран. Замер 28 августа через `CGSCopySpacesForWindows`: у
+ * свежего попапа 13 Spaces, у пожившего сутки — 1. CLAUDE.md, пункт 26.
+ *
+ * Цена: рендерер закрытого попапа считает себя видимым и крутил бы анимации
+ * дальше — поэтому вместе с прозрачностью ему уезжает `popup:shown`, и на
+ * паузу он ставит их сам. Снимков закрытый попап и раньше не получал.
+ */
+function closePopup(window: BrowserWindow): void {
+  if (process.platform === 'darwin') {
+    window.setOpacity(0)
+    window.setIgnoreMouseEvents(true)
+  } else {
+    window.hide()
+  }
+  window.webContents.send('popup:shown', false)
+}
+
+function openPopup(window: BrowserWindow, anchor: Rectangle | undefined): void {
+  positionPopup(window, anchor)
+  window.setIgnoreMouseEvents(false)
+  window.setOpacity(1)
+  window.show()
+  window.focus()
+  window.webContents.send('popup:shown', true)
+}
+
 function main(): void {
   assertElectron()
 
@@ -1204,7 +1272,7 @@ function main(): void {
   // `setImage` на каждый опрос — это мигание в menu bar на ровном месте.
   let painted = ''
 
-  const visible = (): boolean => window !== undefined && !window.isDestroyed() && window.isVisible()
+  const visible = (): boolean => window !== undefined && !window.isDestroyed() && popupShown(window)
 
   /**
    * Кому сейчас есть смысл слать снимок.
@@ -1498,19 +1566,17 @@ function main(): void {
     if (window === undefined || window.isDestroyed() || gallery) return
     // Открытый попап прижат к трею: снизу на Windows и Linux — там окно,
     // выросшее на сто точек, уехало бы под панель, если не пересчитать угол.
-    if (fitPopup(window, height) && window.isVisible()) positionPopup(window, anchor())
+    if (fitPopup(window, height) && popupShown(window)) positionPopup(window, anchor())
   }
 
   const toggle = (): void => {
     if (window === undefined || window.isDestroyed()) return
-    if (window.isVisible()) {
-      window.hide()
+    if (popupShown(window)) {
+      closePopup(window)
       return
     }
-    positionPopup(window, anchor())
     emit('live:update', snapshot())
-    window.show()
-    window.focus()
+    openPopup(window, anchor())
   }
 
   /** Значок средствами Electron. Работает везде, кроме macOS 26 — см. `menubar.ts`. */
@@ -1757,7 +1823,7 @@ function main(): void {
     })
     if (!windowed) {
       window.on('blur', () => {
-        window?.hide()
+        if (window !== undefined && !window.isDestroyed()) closePopup(window)
       })
     }
 

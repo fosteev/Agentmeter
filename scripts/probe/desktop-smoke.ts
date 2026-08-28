@@ -266,6 +266,9 @@ const popup = payload.popup as
       shrunk?: number
       refreshed?: number
       intercepts?: number
+      opened?: boolean
+      closedKept?: boolean
+      closedShown?: boolean
     }
   | undefined
 const popupOk =
@@ -302,6 +305,23 @@ report(
     ? 'приложение не отчиталось о попапе'
     : `пересборок ${popup.refreshed}, перехватчиков ${popup.intercepts}`,
   keyOk,
+)
+
+// 12. Закрытый попап остаётся в WindowServer (6.2, CLAUDE.md пункт 26).
+//     `hide()` выгружает окно, и при первом уничтожении любого Space оно
+//     переселяется на рабочий стол, теряя «на всех столах» — при зелёном
+//     `isVisibleOnAllWorkspaces()`. Смоук Space не уничтожает; он проверяет,
+//     что закрытый попап по-прежнему `isVisible()` (на macOS) и при этом
+//     открытым не считается. Мутация `closePopup → hide()` красит это красным.
+const closeOk =
+  popup !== undefined && popup.opened === true && popup.closedKept === true && popup.closedShown === false
+report(
+  12,
+  'закрытый попап остаётся в WindowServer, но открытым не считается',
+  popup === undefined
+    ? 'приложение не отчиталось о попапе'
+    : `открылся=${popup.opened}, после закрытия в WindowServer=${popup.closedKept}, считается открытым=${popup.closedShown}`,
+  closeOk,
 )
 
 process.exit(failed ? 1 : 0)
