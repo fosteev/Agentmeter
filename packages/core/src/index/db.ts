@@ -7,6 +7,8 @@
  * идёт через интерфейс `Db` — если придётся уйти на `better-sqlite3`,
  * меняется один файл, а не весь пакет.
  */
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from './schema.ts'
 
@@ -74,6 +76,18 @@ class NodeSqliteDb implements Db {
  * который на самом деле «мы стёрли и не перечитали», — худший вид вранья.
  */
 export function openDb(path: string): { db: Db; rebuilt: boolean } {
+  // Каталог под базу заводится здесь, а не у вызывающего. `DatabaseSync` его
+  // не создаёт: на несуществующем каталоге он падает `unable to open database
+  // file` — и это всё, что достаётся человеку.
+  //
+  // На macOS промах не всплывал по совпадению. Electron заводит под свои нужды
+  // `~/Library/Application Support/Agentmeter` (имя бандла), а мы просим
+  // `.../agentmeter` строчными — APFS без учёта регистра отдаёт тот же
+  // каталог. На Windows это два разных места, и `%LOCALAPPDATA%\agentmeter` не
+  // создаёт никто: замер 28 августа, Windows 11 ARM64 в Parallels — свежая
+  // установка не запускалась вовсе, ни одной сборки от первого релиза. То же
+  // самое ждало и Linux (`~/.local/share/agentmeter`).
+  mkdirSync(dirname(path), { recursive: true })
   const raw = new DatabaseSync(path)
   raw.exec('PRAGMA journal_mode = WAL')
   raw.exec('PRAGMA foreign_keys = ON')

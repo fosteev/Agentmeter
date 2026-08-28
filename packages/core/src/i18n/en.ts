@@ -434,6 +434,11 @@ export const en = {
       'caps set by the «{{plan}}» plan were dropped: they are measured by calibration now, not picked',
   },
 
+  startup: {
+    failedTitle: 'Agentmeter did not start',
+    failedBody: 'The app could not open its data and quit.\n\n{{message}}',
+  },
+
   settings: {
     tabSources: 'Data sources',
     tabLimits: 'Limits',

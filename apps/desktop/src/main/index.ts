@@ -411,8 +411,15 @@ function closeRuntime(runtime: Runtime): void {
  */
 async function runSmoke(): Promise<void> {
   assertElectron()
-  const runtime = openRuntime(false)
   const problems: string[] = []
+  /**
+   * Рантайм открывается **внутри** `try`, а закрывается по этой переменной.
+   * Стоял он строкой выше — и отказ на открытии базы уходил мимо всех
+   * проверок: необработанное отклонение промиса, ни строчки в отчёте, ни кода
+   * возврата, процесс живой. Проба, которая на сломанном приложении молчит,
+   * ничем не отличается от отсутствующей.
+   */
+  let openedRuntime: Runtime | undefined
   let snapshot: TraySnapshot | undefined
   let trayReport: unknown
   let windowReport: unknown
@@ -425,6 +432,7 @@ async function runSmoke(): Promise<void> {
   let measured: number | undefined
   let rebuilds = 0
   try {
+    const runtime = (openedRuntime = openRuntime(false))
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
     const handlers = createHandlers(
         () => runtime,
@@ -692,7 +700,7 @@ async function runSmoke(): Promise<void> {
   } catch (error) {
     problems.push(error instanceof Error ? error.message : String(error))
   } finally {
-    closeRuntime(runtime)
+    if (openedRuntime !== undefined) closeRuntime(openedRuntime)
   }
 
   console.log(
@@ -1223,6 +1231,26 @@ function openPopup(window: BrowserWindow, anchor: Rectangle | undefined): void {
   window.show()
   window.focus()
   window.webContents.send('popup:shown', true)
+}
+
+/**
+ * Отказ на старте обязан выглядеть отказом.
+ *
+ * Раньше исключение из `openRuntime` оставалось необработанным отклонением
+ * промиса: процесс жив, окна нет, значка нет, кода возврата нет — приложение
+ * «почему-то не запускается», и сказать почему некому. На Windows так вело
+ * себя **каждое первое** открытие: каталога индекса не существовало (см.
+ * `openDb`), и человек видел ровно ничего. Тем же путём молчало и «индекс
+ * версии N новее» — сообщение, написанное ради человека и не дошедшее до него
+ * ни разу.
+ *
+ * Диалог, а не строка в консоли: приложение запускают из проводника, дока и
+ * автозапуска, где stderr не читает никто.
+ */
+function startupFailed(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error)
+  dialog.showErrorBox(t('startup.failedTitle'), t('startup.failedBody', { message }))
+  app.exit(1)
 }
 
 function main(): void {
@@ -1782,7 +1810,9 @@ function main(): void {
     updater.quitAndInstall()
   }
 
-  void app.whenReady().then(() => {
+  // Промис держится переменной ради `catch` ниже: без него исключение из
+  // `openRuntime` оставалось необработанным отклонением.
+  const ready = app.whenReady().then(() => {
     // Витрина — лист образцов на фикстурах: ни индекса, ни вотчера, ни трея.
     // Открывать ей базу нельзя вдвойне: она запускается **поверх** работающего
     // приложения, и второй проход по тем же файлам той же базы — это ровно то
@@ -1857,6 +1887,7 @@ function main(): void {
     // Последней строкой, а не первой: до неё `activate` — это ещё запуск.
     readyAt = Date.now()
   })
+  void ready.catch(startupFailed)
 
   /**
    * Два жеста «открой уже открытое»: клик по значку в доке и повторный запуск
