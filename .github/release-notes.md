@@ -2,6 +2,17 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **The popup opens on the desktop you are looking at.** On macOS it always
+  claimed every Space — and quietly lost them. Hiding a window unloads it from
+  the window server, which then pins it to the Spaces it remembered; when any of
+  those dies (an app leaving full screen), the hidden popup is moved back to
+  desktop one, and the next click on the menu bar icon opens it there instead of
+  where you are. A popup a day old had one Space out of thirteen while every
+  flag still read “visible on all workspaces”. It now closes by going
+  transparent instead of hiding.
+
+## In 0.4.0
+
 - **An AI brief in the export menu.** A markdown file you can hand to any LLM
   to get token-saving advice: the same numbers the screens show, plus the
   measured reading rules — without them an outside model happily suggests
