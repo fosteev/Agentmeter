@@ -2,6 +2,24 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **Windows: the app now starts at all.** It never did — not in any build since
+  the first release. SQLite does not create the folder its database lives in,
+  and nothing else created it either: on macOS the app got away with it because
+  Electron makes a folder of its own whose name differs only in case, and the
+  filesystem there does not care. On Windows those are two different places, so
+  every first launch failed — and failed invisibly: the process stayed alive
+  with no window, no tray icon and no exit code, which reads as “nothing
+  happened”. The folder is created now, and a start that fails says so in a
+  dialog instead of hanging.
+- **Windows: the popup no longer scrolls inside itself.** A frameless window
+  there hands the page one point less than asked for, and the popup frame was a
+  fixed 400 points wide — one point too many. That was enough to raise both
+  scrollbars: they take up space on Windows, so the horizontal one ate the
+  height and the vertical one appeared under it, leaving 384 points of the 399.
+  The frame now takes its width from the window.
+
+## In 0.4.1
+
 - **The popup opens on the desktop you are looking at.** On macOS it always
   claimed every Space — and quietly lost them. Hiding a window unloads it from
   the window server, which then pins it to the Spaces it remembered; when any of
