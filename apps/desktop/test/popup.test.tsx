@@ -90,7 +90,11 @@ describe('попап на фикстуре', () => {
     // полоса рисуется, а проверка молчит. «Их столько же и они не нули» тоже
     // мало: константа в ширине прошла бы насквозь, а показать чужой процент —
     // ровно то, ради чего затевался 1.8.
-    const fills = [...bothTabs.matchAll(/width:\s*([^;"]+)%/g)].map(([, value]) => Number(value))
+    // Граница слева обязательна: без неё в заливки попадает `max-width` рамы
+    // попапа (она ужимается по окну — Windows отдаёт безрамочному окну на
+    // точку меньше), и проверка падает на двух лишних сотнях, ничего про
+    // проценты лимита не сказав.
+    const fills = [...bothTabs.matchAll(/[;"]width:\s*([^;"]+)%/g)].map(([, value]) => Number(value))
     const known = snapshot.limits
       .map((window) => window.usedPercent)
       .filter((percent): percent is number => percent !== null)
