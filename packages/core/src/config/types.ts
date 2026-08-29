@@ -32,8 +32,24 @@ export interface Config {
     dangerAtPercent: number
     /** Сессия дороже этого числа токенов — уведомление. 0 — не уведомлять. */
     sessionTokenAlert: number
-    /** Уведомлять, когда агент закончил работу или ждёт ответа. */
-    notifyOnIdle: boolean
+    /**
+     * Уведомлять, когда агент закончил ход и ждёт человека.
+     *
+     * Это и есть «ИИ доработал»: ход у человека, а чат жив. Раньше жило вместе
+     * со следующим полем под именем `notifyOnIdle`, и разделено не ради
+     * дробности — поводы разной ценности. Здесь человека зовут к работе.
+     */
+    notifyOnWaiting: boolean
+    /**
+     * Уведомлять, когда сессия завершилась.
+     *
+     * `done` — это не «агент доработал», а «процесса больше нет»: чаще всего
+     * человек сам закрыл чат, и тогда уведомление приходит на его же действие,
+     * через секунду после него. Отсюда выключено по умолчанию. У Codex реестра
+     * процессов нет вовсе (правило 9 в CLAUDE.md), и `done` там означает всего
+     * лишь пять минут тишины в роллауте — повод ещё слабее.
+     */
+    notifyOnDone: boolean
   }
 
   index: {
@@ -252,7 +268,8 @@ export const DEFAULT_CONFIG: Config = {
     warnAtPercent: 75,
     dangerAtPercent: 90,
     sessionTokenAlert: 0,
-    notifyOnIdle: true,
+    notifyOnWaiting: true,
+    notifyOnDone: false,
   },
   index: { watch: true },
   updates: { auto: true },

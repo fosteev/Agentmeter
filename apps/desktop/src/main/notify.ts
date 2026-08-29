@@ -157,11 +157,22 @@ function sessionNotices(snapshot: TraySnapshot, config: Config): Notice[] {
     }))
 }
 
-/** Агент закончил работу или ждёт ответа. */
+/**
+ * Агент ждёт ответа или сессия завершилась — два повода, два тумблера (7.8).
+ *
+ * Разные не по громкости, а по адресату. «Ждёт ответа» — новость: ход перешёл
+ * к человеку, пока он смотрел в другое окно. «Завершился» — почти всегда
+ * следствие его же действия: он закрыл чат, и через секунду ему сообщают об
+ * этом. Один тумблер на оба означал, что за нужное платят ненужным, и
+ * выключали обычно оба.
+ */
 function agentNotices(snapshot: TraySnapshot, config: Config): Notice[] {
-  if (!config.alerts.notifyOnIdle) return []
+  const { notifyOnWaiting, notifyOnDone } = config.alerts
+  if (!notifyOnWaiting && !notifyOnDone) return []
   return snapshot.agents
-    .filter((agent) => agent.state === 'done' || agent.state === 'waiting')
+    .filter((agent) =>
+      agent.state === 'waiting' ? notifyOnWaiting : agent.state === 'done' && notifyOnDone,
+    )
     .map((agent) => ({
       key: `agent:${agent.sessionId}:${agent.state}`,
       kind: 'agent' as const,

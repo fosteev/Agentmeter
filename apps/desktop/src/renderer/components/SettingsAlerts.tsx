@@ -43,19 +43,48 @@ export function SettingsAlerts({ config, onChange }: SettingsAlertsProps) {
           min={warnAtPercent}
           onChange={(value) => onChange({ alerts: { dangerAtPercent: value } })}
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5 }}>
-          <input
-            type="checkbox"
-            data-setting="notifyOnIdle"
-            checked={config.alerts.notifyOnIdle}
-            onChange={(event) =>
-              onChange({ alerts: { notifyOnIdle: event.currentTarget.checked } })
-            }
-          />
-          {t('settings.notifyOnIdle')}
-        </label>
+        <Toggle
+          name="notifyOnWaiting"
+          label={t('settings.notifyOnWaiting')}
+          checked={config.alerts.notifyOnWaiting}
+          onChange={(value) => onChange({ alerts: { notifyOnWaiting: value } })}
+        />
+        <Toggle
+          name="notifyOnDone"
+          label={t('settings.notifyOnDone')}
+          checked={config.alerts.notifyOnDone}
+          onChange={(value) => onChange({ alerts: { notifyOnDone: value } })}
+        />
       </div>
     </div>
+  )
+}
+
+/**
+ * Галочка уведомления. Две подряд, и обе про агентов: «ждёт ответа» — новость,
+ * «завершился» — почти всегда следствие того, что человек сам закрыл чат (7.8).
+ */
+function Toggle({
+  name,
+  label,
+  checked,
+  onChange,
+}: {
+  name: string
+  label: string
+  checked: boolean
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5 }}>
+      <input
+        type="checkbox"
+        data-setting={name}
+        checked={checked}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+      />
+      {label}
+    </label>
   )
 }
 

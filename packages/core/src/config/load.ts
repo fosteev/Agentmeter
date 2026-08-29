@@ -127,7 +127,26 @@ function merge(raw: unknown): LoadResult {
   const config = result as unknown as Config
   crossChecks(config, DEFAULT_CONFIG, problems)
   dropPlanCaps(config, raw, problems)
+  carryNotifyOnIdle(config, raw)
   return { config, problems }
+}
+
+/**
+ * Разовый перенос: `alerts.notifyOnIdle` разъехался надвое (7.8).
+ *
+ * Молча, в отличие от `dropPlanCaps`: там значение отбрасывалось, здесь оно
+ * сохраняется по смыслу. Выключенный тумблер обязан остаться выключенным —
+ * иначе человек, отключивший уведомления об агентах, получит их обратно первым
+ * же обновлением, и виноватым назначит приложение. Включённый переносится
+ * только на `notifyOnWaiting`: уведомление о закрытии чата и есть то, от чего
+ * этап избавлялся, и включать его заново незачем.
+ */
+function carryNotifyOnIdle(config: Config, raw: unknown): void {
+  const alerts = isPlainObject(raw) ? raw['alerts'] : undefined
+  if (!isPlainObject(alerts)) return
+  const old = alerts['notifyOnIdle']
+  if (typeof old !== 'boolean' || alerts['notifyOnWaiting'] !== undefined) return
+  config.alerts.notifyOnWaiting = old
 }
 
 /**

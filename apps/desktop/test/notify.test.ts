@@ -160,9 +160,12 @@ describe('planNotifications', () => {
     ])
   })
 
-  /** Ловит уведомление о простое при выключенной настройке. */
-  it('выключенный тумблер молчит про агентов, но не про лимиты', () => {
-    const quiet = { ...config, alerts: { ...config.alerts, notifyOnIdle: false } }
+  /** Ловит уведомление о простое при выключенных настройках. */
+  it('выключенные тумблеры молчат про агентов, но не про лимиты', () => {
+    const quiet = {
+      ...config,
+      alerts: { ...config.alerts, notifyOnWaiting: false, notifyOnDone: false },
+    }
     planNotifications(state, snap({}), quiet)
     const notices = planNotifications(
       state,
@@ -171,6 +174,50 @@ describe('planNotifications', () => {
     )
 
     expect(notices.map((notice) => notice.kind)).toEqual(['danger'])
+  })
+
+  /**
+   * Ловит уведомление на закрытие чата при заводских настройках (7.8).
+   *
+   * `done` — это исчезнувший процесс, то есть чаще всего человек сам закрыл
+   * чат: уведомление приходило на его же действие через секунду после него.
+   * «Ждёт ответа» при этом обязано остаться — ради него всё и включено.
+   */
+  it('по умолчанию сообщает про ждущего и молчит про завершившегося', () => {
+    planNotifications(state, snap({}), config)
+    const notices = planNotifications(
+      state,
+      snap({
+        agents: [
+          agent({ sessionId: 'a', state: 'waiting' }),
+          agent({ sessionId: 'b', state: 'done' }),
+        ],
+      }),
+      config,
+    )
+
+    expect(notices.map((notice) => notice.sessionId)).toEqual(['a'])
+  })
+
+  /** Ловит тумблеры, перепутанные местами: включён «завершился», молчит «ждёт». */
+  it('тумблер завершения включается отдельно от тумблера ожидания', () => {
+    const ends = {
+      ...config,
+      alerts: { ...config.alerts, notifyOnWaiting: false, notifyOnDone: true },
+    }
+    planNotifications(state, snap({}), ends)
+    const notices = planNotifications(
+      state,
+      snap({
+        agents: [
+          agent({ sessionId: 'a', state: 'waiting' }),
+          agent({ sessionId: 'b', state: 'done' }),
+        ],
+      }),
+      ends,
+    )
+
+    expect(notices.map((notice) => notice.sessionId)).toEqual(['b'])
   })
 
   /**

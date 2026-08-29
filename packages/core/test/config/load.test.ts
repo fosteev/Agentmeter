@@ -189,6 +189,32 @@ describe('конфиг', () => {
     expect(problems).toEqual([])
   })
 
+  /**
+   * Ловит потерю выключенного тумблера при разъезде `notifyOnIdle` надвое (7.8).
+   *
+   * Лишние ключи загрузчик игнорирует молча, а недостающие берёт из дефолта —
+   * то есть без переноса человек, отключивший уведомления об агентах, получил
+   * бы их обратно первым же обновлением.
+   */
+  it('выключенный notifyOnIdle переносится в notifyOnWaiting', () => {
+    writeFileSync(path(), JSON.stringify({ alerts: { notifyOnIdle: false } }))
+    const { config, problems } = loadConfig(path())
+
+    expect(config.alerts.notifyOnWaiting).toBe(false)
+    expect(config.alerts.notifyOnDone).toBe(false)
+    expect(problems).toEqual([])
+  })
+
+  /** Ловит перенос, включающий уведомление о закрытом чате обратно. */
+  it('включённый notifyOnIdle не включает уведомление о завершении', () => {
+    writeFileSync(path(), JSON.stringify({ alerts: { notifyOnIdle: true } }))
+
+    expect(loadConfig(path()).config.alerts).toMatchObject({
+      notifyOnWaiting: true,
+      notifyOnDone: false,
+    })
+  })
+
   it('сохранённый конфиг читается обратно без изменений', () => {
     const cfg = structuredClone(DEFAULT_CONFIG)
     cfg.limits.claude = {
