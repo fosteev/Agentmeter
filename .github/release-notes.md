@@ -2,6 +2,15 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **Two notifications, two checkboxes.** “An agent waits for you” and “a
+  session ended” used to share one switch, and the second one mostly fired on
+  your own action: a session ends when its process is gone, which usually means
+  you just closed the chat. It is off by default now, while “waits for you” —
+  the one worth being interrupted for — stays on. An existing setting carries
+  over, and a switch you had turned off stays off.
+
+## In 0.4.2
+
 - **Windows: the app now starts at all.** It never did — not in any build since
   the first release. SQLite does not create the folder its database lives in,
   and nothing else created it either: on macOS the app got away with it because
