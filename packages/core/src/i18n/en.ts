@@ -290,6 +290,10 @@ export const en = {
     noBranch: 'no branch',
   },
 
+  matrix: {
+    noProject: 'no project',
+  },
+
   history: {
     span7: 'week',
     span30: '30 days',

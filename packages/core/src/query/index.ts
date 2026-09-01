@@ -17,6 +17,7 @@ export { limitsReport, popupWindows } from './limits.ts'
 export type { FreshWindows } from './limits.ts'
 export { loadedCategories } from './loaded.ts'
 export type { LoadedCategory, LoadedName, LoadedSource } from './loaded.ts'
+export { projectRowLabel, spendMatrix } from './matrix.ts'
 export { savings } from './savings.ts'
 export type { Saving } from './savings.ts'
 export { spendSplit } from './split.ts'
@@ -37,6 +38,9 @@ export type {
   LimitForecast,
   LimitReportRow,
   LimitsReport,
+  MatrixCell,
+  MatrixRow,
+  SpendMatrix,
   TaskRow,
   TodayReport,
   TokenBreakdownRow,

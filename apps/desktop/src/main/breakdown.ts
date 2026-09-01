@@ -17,6 +17,7 @@ import {
   hasRequests,
   loadedCategories,
   savings,
+  spendMatrix,
   spendSplit,
   sourceCount,
   t,
@@ -106,6 +107,12 @@ export function buildSpendScreen(db: Db, filter: BreakdownFilter): SpendScreen {
       tokens: measured(Math.round((split.recurring - split.firstRead) / divisor), approximate),
     },
     ...toRebuilds(cacheRebuilds(db, { range, scope }), split.total, approximate, divisor),
+    // Матрица приезжает из ядра как есть и **не делится** переключателем «за
+    // день / за сессию»: он меняет знаменатель у расхода периода, а «на какие
+    // проекты и какой моделью ушёл период» — вопрос про период целиком. Расход
+    // проекта, делённый на число сессий дня, не значит ничего: сессии эти были
+    // в других проектах.
+    matrix: spendMatrix(db, range, scope),
   }
 }
 

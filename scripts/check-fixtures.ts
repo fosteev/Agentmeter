@@ -17,6 +17,7 @@ const PREFIX = join(ROOT, 'fixtures/prefix')
 const LIMITS = join(ROOT, 'fixtures/limits')
 const USAGE = join(ROOT, 'fixtures/usage')
 const OAUTH = join(ROOT, 'fixtures/oauth')
+const MATRIX = join(ROOT, 'fixtures/matrix')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -587,6 +588,96 @@ function codexOauth(): void {
     tokens.every((raw: string) => !raw.includes('eyJhbGciOi')),
     'настоящих токенов в репозитории нет',
   )
+}
+
+// ─── клетка «проект × модель» (8.1) ─────────────────────────────────────────
+//
+// Проверяется не разбор — его проверяет тест, — а то, ради чего фикстура взята:
+// модель, меняющаяся внутри сессии, разрыв цепочки кэша и проект с единственной
+// моделью. Убери любое из трёх — и эталон останется зелёным, перестав проверять
+// главное: группировка по модели сессии сходится с итогом периода до токена и
+// при этом кладёт расход не в ту клетку.
+//
+// Отдельно сверяется арифметика самого `expected.json`: три равенства считаются
+// по нему, а не кодом. Ручной эталон, не сходящийся сам с собой, подтвердит
+// любую реализацию, которая ошибётся так же.
+{
+  const files = ['claude-alpha.jsonl', 'codex-alpha.jsonl', 'claude-beta.jsonl']
+  for (const name of files) {
+    const path = join(MATRIX, name)
+    if (!existsSync(path)) {
+      failures.push(`  ✗ matrix / ${name} — нет файла`)
+      continue
+    }
+    const rows = readJsonl(path)
+    check(`matrix / ${name}`, rows.length > 0, `${rows.length} записей`)
+    const leak = LEAKS.find((re) => re.test(readFileSync(path, 'utf8')))
+    if (leak) failures.push(`  ✗ matrix / ${name} — обезличивание не прошло, найдено ${leak}`)
+  }
+
+  const alpha = requests(readJsonl(join(MATRIX, 'claude-alpha.jsonl')))
+  const alphaModels = assistants(readJsonl(join(MATRIX, 'claude-alpha.jsonl'))).map(
+    (r) => r['message']?.model as string,
+  )
+  check(
+    'matrix / модель меняется внутри сессии',
+    new Set(alphaModels).size === 2 && alphaModels[0] !== alphaModels.at(-1),
+    `${new Set(alphaModels).size} модели, первая ${alphaModels[0]}`,
+  )
+  const gaps = alpha.filter((r, i) => i > 0 && r.cr - (alpha[i - 1]!.cr + alpha[i - 1]!.cw) > 0)
+  check(
+    'matrix / есть разрыв цепочки кэша',
+    gaps.length === 1,
+    `${gaps.length} разрыв — восстановленный запрос унаследует модель соседа`,
+  )
+  const beta = assistants(readJsonl(join(MATRIX, 'claude-beta.jsonl')))
+  const betaRequests = requests(readJsonl(join(MATRIX, 'claude-beta.jsonl')))
+  check(
+    'matrix / проект с единственной моделью',
+    new Set(beta.map((r) => r['message']?.model as string)).size === 1 &&
+      betaRequests.every((r, i) => i === 0 || r.cr === betaRequests[i - 1]!.cr + betaRequests[i - 1]!.cw),
+    'одна модель, цепочка кэша цела',
+  )
+
+  const expectedPath = join(MATRIX, 'expected.json')
+  if (!existsSync(expectedPath)) {
+    failures.push('  ✗ matrix — нет ручного expected.json')
+  } else {
+    const expected = JSON.parse(readFileSync(expectedPath, 'utf8'))
+    const off: string[] = []
+    let inheritedCells = 0
+    for (const entry of expected.cases) {
+      const m = entry.matrix
+      const sum = (list: any[]): number =>
+        list.reduce((acc: number, row: any) => acc + row.totals.total, 0)
+      if (sum(m.rows) !== m.totals.total) off.push(`${entry.name}: строки ${sum(m.rows)}`)
+      if (sum(m.models) !== m.totals.total) off.push(`${entry.name}: модели ${sum(m.models)}`)
+      for (const row of m.rows) {
+        if (sum(row.cells) !== row.totals.total) off.push(`${entry.name}/${row.project}: клетки`)
+        const parts = ['input', 'output', 'cacheWrite', 'cacheRead'] as const
+        const spend = parts.reduce((acc: number, key) => acc + row.totals[key], 0)
+        if (spend !== row.totals.total) off.push(`${entry.name}/${row.project}: сумма видов`)
+      }
+      inheritedCells += m.rows
+        .flatMap((row: any) => row.cells)
+        .filter((cell: any) => cell.inherited > 0).length
+    }
+    check(
+      'matrix / ручной расчёт сходится сам с собой',
+      off.length === 0,
+      off.length === 0 ? `${expected.cases.length} случаев, три равенства сходятся` : off.join('; '),
+    )
+    check(
+      'matrix / есть клетка с восстановленным запросом',
+      inheritedCells > 0,
+      `клеток с наследованными токенами ${inheritedCells} — без них inherited не проверяется`,
+    )
+    check(
+      'matrix / есть случай, где фильтр отсёк всё',
+      expected.cases.some((entry: any) => entry.matrix.emptyScope && !entry.matrix.emptyIndex),
+      'пустота от фильтра отличается от пустого индекса словами, а не пустым списком',
+    )
+  }
 }
 
 // ─── итог ────────────────────────────────────────────────────────────────────

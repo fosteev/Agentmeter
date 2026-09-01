@@ -61,7 +61,7 @@ CSV/JSON и состав статей префикса по наведению. 
 | контракт main↔renderer                      | `packages/ipc/src/index.ts`                                 |
 | трей, окна, проводка IPC                    | `apps/desktop/src/main/`                                    |
 | попап, главное окно, витрина                | `apps/desktop/src/renderer/`                                |
-| эталоны с ручным расчётом                   | `fixtures/{attribution,prefix,limits,popup,window}/`        |
+| эталоны с ручным расчётом                   | `fixtures/{attribution,prefix,limits,matrix,popup,window}/` |
 | замер хвостовых прогревов (долг 1.3)        | `configDir()/lifetimes.jsonl` — **не восстановим из логов** |
 
 Запуск десктопа: `start` — из трея, `dev` — попап обычным окном, `gallery` —
@@ -73,6 +73,7 @@ CSV/JSON и состав статей префикса по наведению. 
 `cli-live.ts` (агрегаты и команды), `live-probe.ts` (живой слой),
 `states-live.ts` (ход, состояния, темп), `task-live.ts` (карточка задачи),
 `split-live.ts` (постоянное против разового), `breakdown-live.ts` (экран и советы),
+`matrix-live.ts` (клетка «проект × модель»),
 `cache-live.ts` (пересборка кэша), `history-live.ts` (история),
 `turn-live.ts` (текущий ход в ленте), `owner-live.ts` (программа-владелец
 живых сессий), `usage-live.ts` (журнал наблюдений

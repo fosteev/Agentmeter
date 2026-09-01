@@ -1,0 +1,234 @@
+{
+  "note": "Посчитано руками, см. README.md. Пересборка выводом реализации запрещена.",
+  "cases": [
+    {
+      "name": "всё время",
+      "from": "2026-08-01T00:00:00.000Z",
+      "to": "2026-09-01T00:00:00.000Z",
+      "scope": {},
+      "matrix": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "totals": { "input": 1660, "output": 1360, "cacheWrite": 2650, "cacheRead": 6600, "total": 12270, "requests": 9 },
+        "rows": [
+          {
+            "project": "alpha",
+            "totals": { "input": 1640, "output": 1250, "cacheWrite": 2100, "cacheRead": 6100, "total": 11090, "requests": 7 },
+            "cells": [
+              {
+                "model": "claude-fable-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+                "inherited": 1800
+              },
+              {
+                "model": "gpt-5.6-sol",
+                "provider": "codex",
+                "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+                "inherited": 0
+              },
+              {
+                "model": "claude-opus-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 300, "cacheWrite": 1100, "cacheRead": 1000, "total": 2420, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          },
+          {
+            "project": "beta",
+            "totals": { "input": 20, "output": 110, "cacheWrite": 550, "cacheRead": 500, "total": 1180, "requests": 2 },
+            "cells": [
+              {
+                "model": "claude-opus-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 110, "cacheWrite": 550, "cacheRead": 500, "total": 1180, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-fable-5",
+            "provider": "claude",
+            "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+            "inherited": 1800
+          },
+          {
+            "model": "claude-opus-5",
+            "provider": "claude",
+            "totals": { "input": 40, "output": 410, "cacheWrite": 1650, "cacheRead": 1500, "total": 3600, "requests": 4 },
+            "inherited": 0
+          },
+          {
+            "model": "gpt-5.6-sol",
+            "provider": "codex",
+            "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+            "inherited": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "только Claude",
+      "from": "2026-08-01T00:00:00.000Z",
+      "to": "2026-09-01T00:00:00.000Z",
+      "scope": { "provider": "claude" },
+      "matrix": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "totals": { "input": 60, "output": 1110, "cacheWrite": 2650, "cacheRead": 5700, "total": 9520, "requests": 7 },
+        "rows": [
+          {
+            "project": "alpha",
+            "totals": { "input": 40, "output": 1000, "cacheWrite": 2100, "cacheRead": 5200, "total": 8340, "requests": 5 },
+            "cells": [
+              {
+                "model": "claude-fable-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+                "inherited": 1800
+              },
+              {
+                "model": "claude-opus-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 300, "cacheWrite": 1100, "cacheRead": 1000, "total": 2420, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          },
+          {
+            "project": "beta",
+            "totals": { "input": 20, "output": 110, "cacheWrite": 550, "cacheRead": 500, "total": 1180, "requests": 2 },
+            "cells": [
+              {
+                "model": "claude-opus-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 110, "cacheWrite": 550, "cacheRead": 500, "total": 1180, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-fable-5",
+            "provider": "claude",
+            "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+            "inherited": 1800
+          },
+          {
+            "model": "claude-opus-5",
+            "provider": "claude",
+            "totals": { "input": 40, "output": 410, "cacheWrite": 1650, "cacheRead": 1500, "total": 3600, "requests": 4 },
+            "inherited": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "только Codex",
+      "from": "2026-08-01T00:00:00.000Z",
+      "to": "2026-09-01T00:00:00.000Z",
+      "scope": { "provider": "codex" },
+      "matrix": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+        "rows": [
+          {
+            "project": "alpha",
+            "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+            "cells": [
+              {
+                "model": "gpt-5.6-sol",
+                "provider": "codex",
+                "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "gpt-5.6-sol",
+            "provider": "codex",
+            "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+            "inherited": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "только проект alpha",
+      "from": "2026-08-01T00:00:00.000Z",
+      "to": "2026-09-01T00:00:00.000Z",
+      "scope": { "project": "alpha" },
+      "matrix": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "totals": { "input": 1640, "output": 1250, "cacheWrite": 2100, "cacheRead": 6100, "total": 11090, "requests": 7 },
+        "rows": [
+          {
+            "project": "alpha",
+            "totals": { "input": 1640, "output": 1250, "cacheWrite": 2100, "cacheRead": 6100, "total": 11090, "requests": 7 },
+            "cells": [
+              {
+                "model": "claude-fable-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+                "inherited": 1800
+              },
+              {
+                "model": "gpt-5.6-sol",
+                "provider": "codex",
+                "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+                "inherited": 0
+              },
+              {
+                "model": "claude-opus-5",
+                "provider": "claude",
+                "totals": { "input": 20, "output": 300, "cacheWrite": 1100, "cacheRead": 1000, "total": 2420, "requests": 2 },
+                "inherited": 0
+              }
+            ]
+          }
+        ],
+        "models": [
+          {
+            "model": "claude-fable-5",
+            "provider": "claude",
+            "totals": { "input": 20, "output": 700, "cacheWrite": 1000, "cacheRead": 4200, "total": 5920, "requests": 3 },
+            "inherited": 1800
+          },
+          {
+            "model": "gpt-5.6-sol",
+            "provider": "codex",
+            "totals": { "input": 1600, "output": 250, "cacheWrite": 0, "cacheRead": 900, "total": 2750, "requests": 2 },
+            "inherited": 0
+          },
+          {
+            "model": "claude-opus-5",
+            "provider": "claude",
+            "totals": { "input": 20, "output": 300, "cacheWrite": 1100, "cacheRead": 1000, "total": 2420, "requests": 2 },
+            "inherited": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "день alpha с фильтром на beta — фильтр отсёк всё",
+      "from": "2026-08-20T00:00:00.000Z",
+      "to": "2026-08-21T00:00:00.000Z",
+      "scope": { "project": "beta" },
+      "matrix": {
+        "emptyIndex": false,
+        "emptyScope": true,
+        "totals": { "input": 0, "output": 0, "cacheWrite": 0, "cacheRead": 0, "total": 0, "requests": 0 },
+        "rows": [],
+        "models": []
+      }
+    }
+  ]
+}
