@@ -2,6 +2,22 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **A new slice in the breakdown: projects × models.** The sixth chip answers
+  a question no screen asked before — which projects the period went to, and
+  by which model. A period strip split by models with a legend; a table of
+  projects where the bar's length is the project's size and its divisions are
+  the models; a row expands into per-model lines; a pivot shows the same
+  numbers by model — same answer, no second query. Colour follows one rule:
+  tone encodes the provider, lightness encodes the model.
+- **Tails fold into a line with its own number** — “2 more projects · 729.1k” —
+  instead of being cut silently. Requests reconstructed from a cache-chain gap
+  borrow their model from a neighbour, so `≈` marks the model rows they touch —
+  never the project total, which stays exact. The service model behind session
+  titles has no row at all: that is missing data, not zero, and the footer says
+  so in words.
+
+## In 0.4.3
+
 - **Two notifications, two checkboxes.** “An agent waits for you” and “a
   session ended” used to share one switch, and the second one mostly fired on
   your own action: a session ends when its process is gone, which usually means
@@ -74,7 +90,8 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
   pinned to the top with what they are working on right now.
 - **Where the spend went** — what sits in the prompt before your first word
   versus what the agent actually called, with advice like “this server was
-  never called across 34 sessions; turning it off returns 194.7k”.
+  never called across 34 sessions; turning it off returns 194.7k” — and a
+  projects × models slice of the same period.
 - **History** — a week, 30 days or all time, with a day × hour heatmap.
 - **Export** — the day's tasks as CSV/JSON, or an AI brief: a markdown file to
   feed an LLM for savings advice grounded in the measured rules.
