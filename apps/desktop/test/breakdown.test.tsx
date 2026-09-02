@@ -6,9 +6,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { dayRange, ingestFile, openDb, type Db, type SourceFile } from '@agentmeter/core'
 import type { SpendCategoryRow, SpendScreen } from '@agentmeter/ipc'
+import type { SpendMatrix } from '@agentmeter/core'
 import { buildSpendScreen, rereadFactor, rereadTimes } from '../src/main/breakdown.ts'
 import { buildDayReport } from '../src/main/day.ts'
+import { toMatrixScreen } from '../src/main/matrix.ts'
+import { BreakdownMatrix } from '../src/renderer/components/BreakdownMatrix.tsx'
 import { BreakdownTab } from '../src/renderer/components/BreakdownTab.tsx'
+import { MatrixProjectRow } from '../src/renderer/components/MatrixProjectRow.tsx'
 import { breakdownArg } from '../src/renderer/window-main.tsx'
 import { SpendCategoryTable } from '../src/renderer/components/SpendCategoryTable.tsx'
 import { formatTokens, setLocale } from '../src/renderer/format.ts'
@@ -608,7 +612,14 @@ describe('BreakdownTab', () => {
     const seen: Array<'day' | 'session'> = []
     const screen = buildSpendScreen(db, ALL)
     const html = renderToStaticMarkup(
-      <BreakdownTab screen={screen} onScopeChange={(scope) => seen.push(scope)} />,
+      <BreakdownTab
+        screen={screen}
+        onScopeChange={(scope) => seen.push(scope)}
+        view="spend"
+        onViewChange={() => undefined}
+        pivot="projects"
+        onPivotChange={() => undefined}
+      />,
     )
 
     expect(html).toContain('data-breakdown-scope="day" aria-pressed="true"')
@@ -737,6 +748,310 @@ describe('состав статьи по наведению (4.9)', () => {
   })
 })
 
+/**
+ * Развёртка «проекты × модели» (8.2) — сборка `toMatrixScreen` и её отрисовка.
+ *
+ * Проверки названы по поломке, которую ловят.
+ */
+describe('проекты × модели (8.2)', () => {
+  /**
+   * Ловит долю, посчитанную от чужого знаменателя: у строки проекта он —
+   * период, у клетки — проект, и подмена одного другим даёт числа, каждое из
+   * которых по себе выглядит настоящим.
+   */
+  it('доля строки — от периода, доля клетки — от своего проекта', () => {
+    const matrix = buildSpendScreen(db, ALL).matrix
+
+    expect(matrix.rows.length).toBeGreaterThan(1)
+    for (const row of matrix.rows) {
+      expect(row.share).toBe(row.tokens / matrix.totals.tokens)
+      const cells = row.cells.reduce((sum, cell) => sum + cell.tokens.value, 0)
+      expect(cells).toBe(row.tokens)
+      expect(row.cells.reduce((sum, cell) => sum + cell.share, 0)).toBeCloseTo(1, 9)
+    }
+  })
+
+  /**
+   * Ловит потерянную при украшении сумму: модели, строки и хвосты обязаны
+   * сходиться с итогом периода до токена — группировка по двум ключам
+   * разъезжается молча (правило M8).
+   */
+  it('модели, строки и хвосты сходятся с итогом до токена', () => {
+    const matrix = buildSpendScreen(db, ALL).matrix
+
+    const models =
+      matrix.models.reduce((sum, line) => sum + line.tokens.value, 0)
+    const rows =
+      matrix.rows.reduce((sum, row) => sum + row.tokens, 0) + (matrix.rowTail?.tokens ?? 0)
+    expect(models).toBe(matrix.totals.tokens)
+    expect(rows).toBe(matrix.totals.tokens)
+  })
+
+  /**
+   * Ловит знак `≈`, уехавший с деления на длину: токены восстановленных
+   * запросов измерены, неточна только модель — поэтому оценкой помечается
+   * строка модели, а итог проекта остаётся числом без знака.
+   */
+  it('≈ стоит на строке модели и не стоит на итоге проекта', () => {
+    const matrix = toMatrixScreen(
+      handMatrix([
+        { project: 'pilot', model: 'opus', total: 900_000, requests: 9, inherited: 2_000 },
+        { project: 'pilot', model: 'fable', total: 100_000, requests: 1, inherited: 0 },
+      ]),
+    )
+    const row = matrix.rows[0]!
+
+    expect(row.cells[0]!.tokens.confidence).toBe('reconstructed')
+    expect(row.cells[1]!.tokens.confidence).toBe('exact')
+    expect(row.inheritedShare).toBe(2_000 / 1_000_000)
+
+    const html = renderToStaticMarkup(
+      <MatrixProjectRow row={row} maxShare={row.share} colors={new Map()} open onToggle={() => undefined} />,
+    )
+    expect(html).toContain(`≈${formatTokens(900_000)}`)
+    expect(html).not.toContain(`≈${formatTokens(1_000_000)}`)
+    // Сноска — единственное место, где правда про деление сказана словами.
+    expect(html).toContain(`data-matrix-note`)
+    expect(html).toContain('0,20%')
+  })
+
+  /**
+   * Ловит молча обрезанный хвост моделей: модель в доли процента обязана
+   * свернуться строкой со своим числом — и сворачивается даже одна, потому что
+   * её сегмента в полосе не видно, а отличимых ступеней светлоты конечное
+   * число.
+   */
+  it('хвост моделей сворачивается и из одной строки, со своим числом', () => {
+    const matrix = toMatrixScreen(
+      handMatrix([
+        { project: 'a', model: 'big', total: 995_000, requests: 10, inherited: 0 },
+        { project: 'a', model: 'tiny', total: 5_000, requests: 2, inherited: 0 },
+      ]),
+    )
+
+    expect(matrix.modelTail).toEqual({
+      count: 1,
+      requests: 2,
+      average: 2_500,
+      tokens: { value: 5_000, confidence: 'exact' },
+      share: 5_000 / 1_000_000,
+    })
+    // Полный список моделей остаётся: цвет модели из хвоста нужен её клетке.
+    expect(matrix.models).toHaveLength(2)
+    // Поворот собирается только для названных: хвост рисуется строкой хвоста.
+    expect(matrix.models[0]!.projects).toBeDefined()
+    expect(matrix.models[1]!.projects).toBeUndefined()
+
+    const html = renderToStaticMarkup(<BreakdownMatrix matrix={matrix} pivot="projects" />)
+    expect(html).toContain('ещё 1 модель')
+    expect(html).toContain(formatTokens(5_000))
+  })
+
+  /**
+   * Ловит хвост проектов, свёрнутый из одной строки (места он не экономит) и
+   * хвост без собственного числа (читается как «там ничего»).
+   */
+  it('хвост проектов — от двух строк и со своим числом', () => {
+    const big = Array.from({ length: 5 }, (_, index) => ({
+      project: `p${index}`,
+      model: 'opus',
+      total: 1_000_000,
+      requests: 10,
+      inherited: 0,
+    }))
+    const tiny = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        project: `t${index}`,
+        model: 'opus',
+        total: 100,
+        requests: 1,
+        inherited: 0,
+      }))
+
+    const folded = toMatrixScreen(handMatrix([...big, ...tiny(3)]))
+    expect(folded.rows).toHaveLength(5)
+    expect(folded.rowTail).toEqual({
+      count: 3,
+      requests: 3,
+      average: 100,
+      tokens: 300,
+      share: 300 / 5_000_300,
+    })
+
+    const single = toMatrixScreen(handMatrix([...big, ...tiny(1)]))
+    expect(single.rows).toHaveLength(6)
+    expect(single.rowTail).toBeUndefined()
+  })
+
+  /**
+   * Ловит поворот, посчитанный вторым запросом или с чужим знаменателем: он
+   * собирается из того же объекта, и сумма долей проектов внутри модели обязана
+   * давать единицу по построению.
+   */
+  it('поворот раскладывает каждую модель по проектам без остатка', () => {
+    const matrix = buildSpendScreen(db, ALL).matrix
+    const named = matrix.models.slice(0, matrix.models.length - (matrix.modelTail?.count ?? 0))
+
+    expect(named.length).toBeGreaterThan(0)
+    for (const line of named) {
+      const sum =
+        (line.projects ?? []).reduce((total, segment) => total + segment.share, 0) +
+        (line.projectTail?.share ?? 0)
+      expect(sum).toBeCloseTo(1, 9)
+    }
+  })
+
+  /**
+   * Ловит шестой чип, не открывающий раздел 12, и пять остальных, не
+   * возвращающих классический экран: разрез — состояние, а не второй запрос.
+   */
+  it('чипы разреза переключают экраны и называют горящий', () => {
+    const screen = buildSpendScreen(db, ALL)
+
+    const spend = render(screen)
+    expect(spend).toContain('data-spend-categories')
+    expect(spend).not.toContain('data-matrix-table')
+    expect(spend).toMatch(/data-breakdown-axis="matrix.axisMatrix" aria-pressed="false"/)
+    expect(spend).toMatch(/data-breakdown-axis="matrix.axisTools" aria-pressed="true"/)
+
+    const matrix = render(screen, 'matrix')
+    expect(matrix).toContain('data-matrix-strip')
+    expect(matrix).toContain('data-matrix-table')
+    expect(matrix).not.toContain('data-spend-categories')
+    expect(matrix).toMatch(/data-breakdown-axis="matrix.axisMatrix" aria-pressed="true"/)
+    // Знаменатель «за день / за сессию» над матрицей не рисуется: он делит
+    // расход периода, а матрица — про период целиком.
+    expect(matrix).not.toContain('data-breakdown-scope')
+    expect(matrix).toContain('data-matrix-pivot-choice')
+  })
+
+  /**
+   * Ловит полосу, у которой длина и деление посчитаны от одного знаменателя:
+   * длина — против самой длинной строки, деление — доли клеток внутри проекта.
+   */
+  it('длина полосы — против самой длинной, деление — по клеткам', () => {
+    const matrix = toMatrixScreen(
+      handMatrix([
+        { project: 'big', model: 'opus', total: 600_000, requests: 6, inherited: 0 },
+        { project: 'big', model: 'fable', total: 200_000, requests: 2, inherited: 0 },
+        { project: 'small', model: 'opus', total: 200_000, requests: 2, inherited: 0 },
+      ]),
+    )
+    const html = renderToStaticMarkup(<BreakdownMatrix matrix={matrix} pivot="projects" />)
+
+    // Длина живёт на дорожке (первый div внутри `data-model-strip="bar"`), и
+    // проверяется именно там: сегмент внутри полосы тоже пишется шириной, и
+    // совпадение с ним делало бы проверку слепой к знаменателю длины.
+    // Самая длинная строка занимает дорожку целиком, вторая — свою долю от неё.
+    expect(html).toMatch(/data-model-strip="bar"[^>]*><div style="width:100%/)
+    expect(html).toMatch(/data-model-strip="bar"[^>]*><div style="width:25%/)
+    // Деление первой строки: 75% и 25% её собственной полосы.
+    expect(html).toContain('width:75%')
+  })
+
+  /**
+   * Ловит поворот, показывающий другие числа: маргиналь модели в легенде
+   * «по проектам» и строка той же модели «по моделям» — одно число из одного
+   * объекта.
+   */
+  it('поворот показывает те же числа из того же объекта', () => {
+    const screen = buildSpendScreen(db, ALL)
+    const line = screen.matrix.models[0]!
+    const value = `${line.tokens.confidence === 'exact' ? '' : '≈'}${formatTokens(line.tokens.value)}`
+
+    expect(render(screen, 'matrix')).toContain(value)
+    expect(render(screen, 'matrix', 'models')).toContain(value)
+  })
+
+  /**
+   * Ловит полосу честности, объясняющую знак, которого на экране нет, — и
+   * молчащую там, где он есть. Первая половина (служебная модель, правило 20)
+   * стоит всегда: её отсутствие — свойство экрана, а не данных.
+   */
+  it('полоса честности говорит про ≈ только там, где есть восстановленные', () => {
+    const clean = toMatrixScreen(
+      handMatrix([{ project: 'a', model: 'opus', total: 1_000, requests: 1, inherited: 0 }]),
+    )
+    const cleanHtml = renderToStaticMarkup(<BreakdownMatrix matrix={clean} pivot="projects" />)
+    expect(cleanHtml).toContain('data-matrix-honesty')
+    expect(cleanHtml).toContain('Служебной модели')
+    expect(cleanHtml).not.toContain('унаследована')
+
+    const inherited = toMatrixScreen(
+      handMatrix([{ project: 'a', model: 'opus', total: 1_000, requests: 1, inherited: 23 }]),
+    )
+    const html = renderToStaticMarkup(<BreakdownMatrix matrix={inherited} pivot="projects" />)
+    expect(html).toContain('унаследована')
+    expect(html).toContain('2,3%')
+  })
+
+  /** Ловит матрицу, нарисованную поверх пустого экрана. */
+  it('пустой период в разрезе матрицы показывает слова, а не таблицу', () => {
+    const empty = buildSpendScreen(db, { ...ALL, from: 0, to: 1 })
+
+    const html = render(empty, 'matrix')
+    expect(html).toContain('data-breakdown-empty')
+    expect(html).not.toContain('data-matrix-table')
+  })
+})
+
+/** Матрица руками — когда нужен ровно этот состав клеток. */
+function handMatrix(
+  cells: Array<{
+    project: string
+    model: string
+    total: number
+    requests: number
+    inherited: number
+  }>,
+): SpendMatrix {
+  const totals = (values: Array<{ total: number; requests: number }>) => ({
+    input: values.reduce((sum, value) => sum + value.total, 0),
+    output: 0,
+    cacheWrite: 0,
+    cacheRead: 0,
+    total: values.reduce((sum, value) => sum + value.total, 0),
+    requests: values.reduce((sum, value) => sum + value.requests, 0),
+  })
+  const projects = [...new Set(cells.map((cell) => cell.project))]
+  const models = [...new Set(cells.map((cell) => cell.model))]
+  const byTotal = <T extends { totals: { total: number } }>(left: T, right: T) =>
+    right.totals.total - left.totals.total
+  return {
+    rows: projects
+      .map((project) => {
+        const own = cells.filter((cell) => cell.project === project)
+        return {
+          project,
+          totals: totals(own),
+          cells: own
+            .map((cell) => ({
+              model: cell.model,
+              provider: 'claude' as const,
+              totals: totals([cell]),
+              inherited: cell.inherited,
+            }))
+            .sort(byTotal),
+        }
+      })
+      .sort(byTotal),
+    models: models
+      .map((model) => {
+        const own = cells.filter((cell) => cell.model === model)
+        return {
+          model,
+          provider: 'claude' as const,
+          totals: totals(own),
+          inherited: own.reduce((sum, cell) => sum + cell.inherited, 0),
+        }
+      })
+      .sort(byTotal),
+    totals: totals(cells),
+    emptyIndex: false,
+    emptyScope: cells.length === 0,
+  }
+}
+
 /** Строка с разрезом по серверам — числа взяты с живых логов (serena). */
 function sourceRow(key: string): SpendCategoryRow {
   return {
@@ -783,8 +1098,21 @@ function categoryRow(names: number, sessions: number, coverage?: number[]): Spen
   }
 }
 
-function render(screen: SpendScreen | null): string {
-  return renderToStaticMarkup(<BreakdownTab screen={screen} onScopeChange={() => undefined} />)
+function render(
+  screen: SpendScreen | null,
+  view: 'spend' | 'matrix' = 'spend',
+  pivot: 'projects' | 'models' = 'projects',
+): string {
+  return renderToStaticMarkup(
+    <BreakdownTab
+      screen={screen}
+      onScopeChange={() => undefined}
+      view={view}
+      onViewChange={() => undefined}
+      pivot={pivot}
+      onPivotChange={() => undefined}
+    />,
+  )
 }
 
 /**

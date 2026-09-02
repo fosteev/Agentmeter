@@ -204,6 +204,12 @@ export function WindowApp() {
   const [taskCard, setTaskCard] = useState<TaskCard | null>(null)
   const [breakdown, setBreakdown] = useState<SpendScreen | null>(null)
   const [breakdownScope, setBreakdownScope] = useState<'day' | 'session'>('day')
+  // Разрез вкладки и поворот матрицы (8.2). Оба — только выбор картинки из
+  // уже приехавшего экрана: в зависимости эффекта загрузки они не входят,
+  // иначе переключение чипа перезапрашивало бы тот же ответ и дало бы два
+  // снимка одного дня.
+  const [breakdownView, setBreakdownView] = useState<'spend' | 'matrix'>('spend')
+  const [matrixPivot, setMatrixPivot] = useState<'projects' | 'models'>('projects')
   // День с «Истории», прикнопленный к развёртке. `null` — период ленты.
   // Живёт только на переходе «история → развёртка этого дня»: любой вход через
   // панель вкладок возвращает сегодняшний день, иначе прилипший вчерашний
@@ -426,6 +432,10 @@ export function WindowApp() {
         <BreakdownTab
           screen={breakdown}
           onScopeChange={setBreakdownScope}
+          view={breakdownView}
+          onViewChange={setBreakdownView}
+          pivot={matrixPivot}
+          onPivotChange={setMatrixPivot}
           {...(breakdownDay === null
             ? {}
             : { day: breakdownDay, onDayReset: () => setBreakdownDay(null) })}

@@ -41,6 +41,9 @@ const VALUES: Record<string, Record<string, string | number>> = {
   'today.turnSpend': { tokens: '≈203.5M' },
   // Худшее из встречающихся: трёхзначный охват. Сессий за день бывает 617.
   'breakdown.detailIn': { count: 617, total: 617 },
+  // Худшее из встречающихся в легенде моделей (8.2): пятизначный счёт запросов
+  // с разделителем, знак оценки у среднего и целый процент.
+  'matrix.legendLine': { percent: '100%', requests: '12 345', average: '≈206.4k' },
 }
 
 describe('потолки длины', () => {

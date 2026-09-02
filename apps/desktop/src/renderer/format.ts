@@ -12,7 +12,11 @@
  * слово рядом с ним переводилось бы по другой. `setLocale` здесь остался точкой
  * входа, потому что рендерер и так зовёт его при монтировании.
  */
-import { formatTokens as format } from '@agentmeter/core/format'
+import {
+  formatCount as count,
+  formatPercent as percent,
+  formatTokens as format,
+} from '@agentmeter/core/format'
 import { locale, setLocale as apply, type LocaleSetting } from '@agentmeter/core/i18n'
 
 export { locale, t } from '@agentmeter/core/i18n'
@@ -25,6 +29,16 @@ export function setLocale(setting: LocaleSetting): void {
 
 export function formatTokens(value: number): string {
   return format(value, locale())
+}
+
+/** Счётчик запросов с разделителем тысяч — «3 024» из макета, не «3k». */
+export function formatCount(value: number): string {
+  return count(value, locale())
+}
+
+/** Доля как процент; число знаков решает место показа (колонка против строки). */
+export function formatPercent(share: number, digits = 1): string {
+  return percent(share, locale(), digits)
 }
 
 /**

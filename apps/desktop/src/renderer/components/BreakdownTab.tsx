@@ -1,16 +1,18 @@
 import type { SpendScreen, TodayFilter } from '@agentmeter/ipc'
+import { BreakdownMatrix } from './BreakdownMatrix.tsx'
 import { CacheRebuilds } from './CacheRebuilds.tsx'
 import { SpendCategoryTable, CATEGORY_GRID, mono } from './SpendCategoryTable.tsx'
 import { formatTokens, t } from '../format.ts'
 import { hatch } from '../paint.ts'
 
 /**
- * Вкладка «Развёртка» — раздел 5 макета (4.2).
+ * Вкладка «Развёртка» — раздел 5 макета (4.2) и раздел 12 (8.2).
  *
- * Экран отвечает на один вопрос: что из сегодняшнего расхода вызвано работой, а
- * что — просто тем, что у вас включено. Поэтому слева и справа не два списка
- * рядом, а две части **одного** итога: полоса наверху делит его пополам, и обе
- * колонки — её раскрытие.
+ * Классический экран отвечает, что из расхода вызвано работой, а что — просто
+ * тем, что у вас включено: слева и справа две части **одного** итога, полоса
+ * наверху делит его пополам. Шестой чип разреза поворачивает тот же период
+ * другим вопросом — «на какие проекты и какой моделью» — тем же ответом
+ * `breakdown:get`, без второго похода в main.
  *
  * Ничего не считается здесь, кроме длины полос внутри своей диаграммы: доли,
  * средние за сессию и множитель перечитывания приезжают посчитанными (правило
@@ -19,6 +21,16 @@ import { hatch } from '../paint.ts'
 export interface BreakdownTabProps {
   screen: SpendScreen | null
   onScopeChange: (scope: 'day' | 'session') => void
+  /**
+   * Какой разрез открыт: классическая развёртка или «проекты × модели».
+   * Состояние живёт у владельца окна и запрос не перезапускает: обе картинки —
+   * один и тот же приехавший экран.
+   */
+  view: 'spend' | 'matrix'
+  onViewChange: (view: 'spend' | 'matrix') => void
+  /** Поворот раздела 12 — то же состояние из того же объекта, не второй запрос. */
+  pivot: 'projects' | 'models'
+  onPivotChange: (pivot: 'projects' | 'models') => void
   /**
    * Сужение, унаследованное от ленты. Экран обязан его назвать: молча суженная
    * развёртка читается как весь день. Отсюда же слова пустоты — «фильтр отсёк
@@ -54,7 +66,18 @@ function emptyMessage(
   return filtered ? t('breakdown.emptyFilter') : t('breakdown.emptyScope')
 }
 
-export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }: BreakdownTabProps) {
+export function BreakdownTab({
+  screen,
+  onScopeChange,
+  view,
+  onViewChange,
+  pivot,
+  onPivotChange,
+  filter,
+  day,
+  onDayReset,
+}: BreakdownTabProps) {
+  const matrixView = view === 'matrix'
   const filterParts = [
     filter?.provider === undefined ? null : PROVIDER_NAMES[filter.provider],
     filter?.project,
@@ -127,7 +150,7 @@ export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }:
     >
       <div
         style={{
-          padding: '22px 24px',
+          padding: matrixView ? '22px 24px 18px' : '22px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: 16,
@@ -136,11 +159,13 @@ export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }:
       >
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{t('breakdown.title')}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>
+              {t(matrixView ? 'matrix.title' : 'breakdown.title')}
+            </div>
             <div
               style={{ fontSize: 12.5, color: 'var(--tx2)', maxWidth: 640, lineHeight: 1.5 }}
             >
-              {t('breakdown.lead')}
+              {t(matrixView ? 'matrix.lead' : 'breakdown.lead')}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -153,33 +178,95 @@ export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }:
                 {t('breakdown.filterNote', { value: filterParts.join(' · ') })}
               </span>
             )}
+            {/* У матрицы вместо знаменателя — поворот: «за день / за сессию»
+                делит расход периода, а матрица — про период целиком, и мёртвый
+                переключатель над ней врал бы, что что-то делит. */}
             <div
               style={{ display: 'flex', gap: 2, padding: 2, background: 'var(--s1)', borderRadius: 6 }}
             >
-              {(['day', 'session'] as const).map((scope) => (
-                <button
-                  key={scope}
-                  type="button"
-                  data-breakdown-scope={scope}
-                  aria-pressed={screen.scope === scope}
-                  onClick={() => onScopeChange(scope)}
-                  style={{
-                    padding: '5px 11px',
-                    fontSize: 11.5,
-                    borderRadius: 4,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: screen.scope === scope ? 'var(--s2)' : 'transparent',
-                    color: screen.scope === scope ? 'var(--tx)' : 'var(--tx2)',
-                  }}
-                >
-                  {t(scope === 'day' ? 'breakdown.scopeDay' : 'breakdown.scopeSession')}
-                </button>
-              ))}
+              {matrixView
+                ? (['projects', 'models'] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      data-matrix-pivot-choice={value}
+                      aria-pressed={pivot === value}
+                      onClick={() => onPivotChange(value)}
+                      style={{
+                        padding: '5px 11px',
+                        fontSize: 11.5,
+                        borderRadius: 4,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: pivot === value ? 'var(--s2)' : 'transparent',
+                        color: pivot === value ? 'var(--tx)' : 'var(--tx2)',
+                      }}
+                    >
+                      {t(value === 'projects' ? 'matrix.byProjects' : 'matrix.byModels')}
+                    </button>
+                  ))
+                : (['day', 'session'] as const).map((scope) => (
+                    <button
+                      key={scope}
+                      type="button"
+                      data-breakdown-scope={scope}
+                      aria-pressed={screen.scope === scope}
+                      onClick={() => onScopeChange(scope)}
+                      style={{
+                        padding: '5px 11px',
+                        fontSize: 11.5,
+                        borderRadius: 4,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: screen.scope === scope ? 'var(--s2)' : 'transparent',
+                        color: screen.scope === scope ? 'var(--tx)' : 'var(--tx2)',
+                      }}
+                    >
+                      {t(scope === 'day' ? 'breakdown.scopeDay' : 'breakdown.scopeSession')}
+                    </button>
+                  ))}
             </div>
           </div>
         </div>
 
+        {/*
+          Чипы разреза (строки 2090–2098 макета). Пять плоских разрезов живут
+          на классическом экране одновременно — инструменты правой колонкой,
+          остальные строками левой, — поэтому при открытом классическом экране
+          горят все пять: подсветка называет то, что видно сейчас, а не одну
+          строку из пяти. Шестой чип открывает «проекты × модели».
+        */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              ...mono(10),
+              letterSpacing: '.12em',
+              textTransform: 'uppercase',
+              color: 'var(--tx3)',
+              marginRight: 4,
+            }}
+          >
+            {t('matrix.axisLabel')}
+          </span>
+          {FLAT_AXES.map((axis) => (
+            <AxisChip
+              key={axis}
+              id={axis}
+              label={t(axis)}
+              pressed={!matrixView}
+              onClick={() => onViewChange('spend')}
+            />
+          ))}
+          <AxisChip
+            id="matrix.axisMatrix"
+            label={t('matrix.axisMatrix')}
+            pressed={matrixView}
+            onClick={() => onViewChange('matrix')}
+          />
+        </div>
+
+        {matrixView ? null : (
+        <>
         {/*
           Подписи и полоса — две сетки, а не одна на две строки.
 
@@ -272,8 +359,14 @@ export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }:
             })}
           </div>
         </div>
+        </>
+        )}
       </div>
 
+      {matrixView ? (
+        <BreakdownMatrix matrix={screen.matrix} pivot={pivot} />
+      ) : (
+      <>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 0 }}>
         <div
           style={{
@@ -426,7 +519,52 @@ export function BreakdownTab({ screen, onScopeChange, filter, day, onDayReset }:
       >
         {t('breakdown.footer')}
       </div>
+      </>
+      )}
     </div>
+  )
+}
+
+/** Пять плоских разрезов — все живут на классическом экране (см. чипы выше). */
+const FLAT_AXES = [
+  'matrix.axisTools',
+  'matrix.axisServers',
+  'matrix.axisSkills',
+  'matrix.axisAgents',
+  'matrix.axisPrefix',
+] as const
+
+/** Чип разреза — строки 2092–2097 макета: рамка у спящего, заливка у горящего. */
+function AxisChip({
+  id,
+  label,
+  pressed,
+  onClick,
+}: {
+  id: string
+  label: string
+  pressed: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      data-breakdown-axis={id}
+      aria-pressed={pressed}
+      onClick={onClick}
+      style={{
+        fontSize: 11.5,
+        padding: '5px 11px',
+        border: `1px solid ${pressed ? 'var(--tx3)' : 'var(--line)'}`,
+        borderRadius: 5,
+        background: pressed ? 'var(--s2)' : 'transparent',
+        color: pressed ? 'var(--tx)' : 'var(--tx2)',
+        fontWeight: pressed ? 500 : undefined,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
   )
 }
 

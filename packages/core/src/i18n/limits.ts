@@ -84,6 +84,15 @@ export const LIMITS = {
   'split.recurring': 23,
   'split.marginal': 23,
   'split.value': 16,
+  // Развёртка «проекты × модели» (8.2). Колонки таблицы — 84/74/92/52 px под
+  // mono 10 с разрядкой .08em, то есть ≈6.8 px на знак. Легенда моделей делит
+  // ширину на четыре: ≈235 px на колонку при mono 11 (6.6 px) — 35 знаков,
+  // взято 32 с запасом; в той же строке живут три подставленных числа.
+  'matrix.columnRequests': 12,
+  'matrix.columnAverage': 10,
+  'matrix.columnTotal': 13,
+  'matrix.columnShare': 7,
+  'matrix.legendLine': 32,
 } as const
 
 export type LimitedKey = keyof typeof LIMITS

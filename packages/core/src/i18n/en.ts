@@ -292,6 +292,39 @@ export const en = {
 
   matrix: {
     noProject: 'no project',
+    title: 'Where the day went: by project and by model',
+    lead: 'Bar length is how many tokens a project took. Its split is which models. Both come from one index query, so the rows add up to the total above them.',
+    axisLabel: 'Slice',
+    axisTools: 'Tools',
+    axisServers: 'MCP servers',
+    axisSkills: 'Skills',
+    axisAgents: 'Subagents',
+    axisPrefix: 'Prefix categories',
+    axisMatrix: 'Projects × models',
+    byProjects: 'by project',
+    byModels: 'by model',
+    stripTitle: 'Whole period by model',
+    legendLine: '{{percent}} · {{requests}} req · avg {{average}}',
+    columnProject: 'Project',
+    columnSpend: 'Spend and models',
+    columnRequests: 'Requests',
+    columnAverage: 'Avg req',
+    columnTotal: 'Total',
+    columnShare: 'Share',
+    rowTail_one: '{{count}} more project',
+    rowTail_other: '{{count}} more projects',
+    modelTail_one: '{{count}} more model',
+    modelTail_other: '{{count}} more models',
+    total: 'Day total',
+    pivotValue: '{{tokens}} · {{percent}}',
+    pivotTail: 'tail {{percent}}',
+    inheritedNote:
+      'The bar length is exact, its split is not: {{percent}} of the project’s tokens came from requests reconstructed from a cache-chain gap, and their model is borrowed from a neighbour — the log has none. The tokens themselves are measured, so “≈” sits on model rows, not on the project total.',
+    honestyMissing:
+      'The service model behind session titles and summaries has no row here: it works outside the transcript, and there is nothing to count it from. That is missing data, not zero — there will be no zero row.',
+    honestyInherited:
+      'The sign marks a model row when the project includes requests reconstructed from a cache-chain gap: their tokens are measured, but the model is inherited from a neighbour. Over this period that is {{range}} of a row.',
+    inheritedCaveat: 'reconstructed requests borrow the neighbouring model — the log has none, stage 1.3',
   },
 
   history: {

@@ -36,3 +36,25 @@ export function formatTokens(value: number, locale: string): string {
   }
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value)
 }
+
+/**
+ * Счётчик событий — запросы, вызовы — целиком, с разделителем тысяч из локали
+ * (`3 024` в макете). Не `formatTokens`: счётчик — точное целое, и «3k» на его
+ * месте значило бы округлить измерение, которое округлять незачем.
+ */
+export function formatCount(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value)
+}
+
+/**
+ * Доля как процент: `0.502` → `50.2%`. Число знаков фиксируется вызывающим —
+ * колонка «Доля» держит один знак, строка модели внутри проекта целые, — а
+ * разделитель дробной части приходит из локали, как у `formatTokens`.
+ */
+export function formatPercent(share: number, locale: string, digits = 1): string {
+  const value = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(share * 100)
+  return `${value}%`
+}
