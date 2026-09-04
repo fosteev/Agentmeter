@@ -38,6 +38,9 @@ const GROUPS = [
     kinds: [
       { kind: 'fiveHour', key: 'limit.fiveHour' },
       { kind: 'weekly', key: 'limit.weekly' },
+      // Окно по модели названо здесь без модели: список постоянный, а какая
+      // модель окажется в ответе провайдера, до ответа неизвестно (7.9).
+      { kind: 'weeklyModel', key: 'limit.weeklyModelAny' },
     ],
   },
   {

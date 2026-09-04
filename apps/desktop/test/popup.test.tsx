@@ -381,6 +381,41 @@ describe('табы провайдеров в лимитах', () => {
     }
   })
 
+  /**
+   * Недельное окно по модели (7.9).
+   *
+   * Ловит подпись, взятую по виду окна: до 7.9 таблица «вид → слово» лежала
+   * копией в каждом месте показа, и забытая копия назвала бы модельное окно
+   * «окном лимита» — двумя строками ниже недельного, с другим процентом и без
+   * единого слова о том, чей он.
+   */
+  it('окно по модели подписано моделью, а не видом', () => {
+    const withModel: TraySnapshot = {
+      ...snapshot,
+      limits: [
+        ...snapshot.limits.filter((window) => window.provider === 'claude'),
+        {
+          provider: 'claude',
+          kind: 'weeklyModel',
+          scope: 'Fable',
+          windowMinutes: 10_080,
+          startsAt: snapshot.at - 10_080 * 60_000,
+          resetsAt: snapshot.at + 3_600_000,
+          usedPercent: 20,
+          observedAt: snapshot.at,
+          exact: true,
+          unavailableReason: null,
+          forecast: null,
+        },
+      ],
+    }
+    const withModelHtml = html(withModel)
+    expect(withModelHtml).toContain('Fable · неделя')
+    expect(withModelHtml).toContain('20%')
+    // Соседнее недельное окно на месте и своей подписи не потеряло.
+    expect(withModelHtml).toContain('недельное окно')
+  })
+
   /** Ловит таб, нарисованный картинкой: нажимать его должно быть можно. */
   it('нажатие на таб называет выбранного провайдера', () => {
     const chosen: Provider[] = []

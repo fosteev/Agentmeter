@@ -1,6 +1,6 @@
 import type { Entrypoint, LimitReportRow, Provider } from '@agentmeter/core'
 import { isWorking, type LiveAgent, type TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, t } from '../format.ts'
+import { formatTokens, t, windowTitle } from '../format.ts'
 import type { RefreshState } from '../refresh.ts'
 import { ago, span } from '../time.ts'
 import { AGENT_STATUS, AgentRow } from './AgentRow.tsx'
@@ -62,14 +62,6 @@ export interface PopupProps {
   limitTab?: Provider | undefined
   onLimitTab?: ((provider: Provider) => void) | undefined
 }
-
-/** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
-const KIND_KEY = {
-  fiveHour: 'limit.fiveHour',
-  weekly: 'limit.weekly',
-  monthly: 'limit.monthly',
-  other: 'limit.other',
-} as const satisfies Record<LimitReportRow['kind'], string>
 
 // Точка входа коротким словом — как в макете («Opus 5 · VS Code», «· term»).
 // `unknown` не показывается вовсе: пустое место честнее слова «неизвестно»,
@@ -255,8 +247,10 @@ export function Popup({
           >
             {shown.map((window) => (
               <PopupLimit
-                key={`${window.provider}-${window.kind}-${window.startsAt}`}
-                title={t(KIND_KEY[window.kind])}
+                // Модель — часть ключа: недельных окон по модели в ответе
+                // бывает несколько, и у них совпадают и вид, и начало.
+                key={`${window.provider}-${window.kind}-${window.scope ?? ''}-${window.startsAt}`}
+                title={windowTitle(window)}
                 percent={window.usedPercent}
                 approximate={!window.exact}
                 caption={caption(window, at)}

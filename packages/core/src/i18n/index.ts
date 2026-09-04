@@ -20,6 +20,7 @@ import i18next, { type i18n as I18n } from 'i18next'
 // Импорт ради самой проверки: полнота каталогов держится присваиванием типов
 // внутри `check.ts`, и без ссылки на модуль он в сборку не попадёт.
 import './check.ts'
+import type { LimitWindowKind } from '../sources/types.ts'
 import { en } from './en.ts'
 import { resolveLocale, type Locale, type LocaleSetting } from './locale.ts'
 import { ru } from './ru.ts'
@@ -86,4 +87,35 @@ export function setLocale(setting: LocaleSetting): Locale {
 /** Текущий язык. */
 export function locale(): Locale {
   return instance.language as Locale
+}
+
+/** Вид окна → ключ каталога. Ключи, а не слова: `t()` на верхнем уровне застыл
+ *  бы на языке загрузки. */
+const WINDOW_KEY = {
+  fiveHour: 'limit.fiveHour',
+  weekly: 'limit.weekly',
+  monthly: 'limit.monthly',
+  other: 'limit.other',
+  weeklyModel: 'limit.weeklyModel',
+} as const satisfies Record<LimitWindowKind, string>
+
+/**
+ * Имя окна лимита — одной функцией на попап, экран паузы и уведомления (7.9).
+ *
+ * До 7.9 у каждого из трёх лежала своя копия таблицы «вид → ключ», и это
+ * работало ровно пока видов было четыре и все безымянные. С модельным окном
+ * копии стали разными: имя ему даёт не вид, а модель из ответа провайдера, и
+ * забытая копия показала бы «окно лимита» там, где написано «Fable · неделя».
+ *
+ * Тип `LimitWindowKind` приходит из ядра **типом**: импорт стирается сборкой, и
+ * модуль по-прежнему не тянет за собой `node:sqlite` (шапка файла).
+ */
+export function windowTitle(window: { kind: LimitWindowKind; scope?: string | undefined }): string {
+  if (window.kind !== 'weeklyModel') return t(WINDOW_KEY[window.kind])
+  // Модельное окно без имени модели в ответе не встречается: разбор без имени
+  // его не пропускает (`limits/oauth.ts`). Но если такое приедет, общее имя
+  // честнее пустого места — и оно отличается от «недельного окна» соседа.
+  return window.scope === undefined
+    ? t('limit.weeklyModelAny')
+    : t('limit.weeklyModel', { model: window.scope })
 }

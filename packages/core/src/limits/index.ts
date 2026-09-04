@@ -34,6 +34,7 @@ export type {
   CalibrationBlocker,
   DroppedWindow,
   Fit,
+  UsageModelSample,
   UsagePoint,
   UsageSnapshot,
   UsageWindowKind,

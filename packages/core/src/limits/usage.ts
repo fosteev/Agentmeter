@@ -64,6 +64,23 @@ export interface UsageSnapshot {
   contextWindowSize?: number
   fiveHour?: UsageWindowSample
   weekly?: UsageWindowSample
+  /**
+   * Недельные окна, привязанные к модели (`weekly_scoped`, 7.9). Список, а не
+   * поле: в ответе их бывает несколько — на замеренном аккаунте Opus и Fable
+   * рядом, — и «модельное окно» в единственном числе выбросило бы одно из них.
+   *
+   * В калибровку они не входят и входить не могут: уравнение 1.9 решается
+   * относительно потолка окна, а у модельного окна потолок свой и расход в него
+   * идёт не весь. Здесь они лежат ради попапа, а в журнал попадают попутно —
+   * это тот же объект.
+   */
+  models?: UsageModelSample[]
+}
+
+/** Окно, привязанное к модели: то же, что `UsageWindowSample`, плюс её имя. */
+export interface UsageModelSample extends UsageWindowSample {
+  /** Имя модели словом провайдера (`display_name`): `id` в ответе `null`. */
+  model: string
 }
 
 /**
@@ -166,6 +183,8 @@ function parseJournalLine(line: string): UsageSnapshot | undefined {
       const sample = journalSample(raw[kind])
       if (sample) snapshot[kind] = sample
     }
+    const models = journalModels(raw['models'])
+    if (models.length > 0) snapshot.models = models
     return snapshot
   } catch {
     // Оборванная строка — потеря одного наблюдения. Ронять из-за неё журнал,
@@ -181,6 +200,27 @@ function journalSample(raw: unknown): UsageWindowSample | undefined {
   const resetsAt = finite(raw['resetsAt'])
   if (pct === undefined || pct < 0 || resetsAt === undefined || resetsAt <= 0) return undefined
   return { pct, resetsAt }
+}
+
+/**
+ * Модельные окна журнальной строки.
+ *
+ * Дедуп (`usageKeys`) их не видит намеренно: журнал копится ради калибровки, а
+ * она считает потолок окна `weekly_all`. Пиши сюда ключ модельного окна — и
+ * одно и то же наблюдение аккаунта легло бы в журнал дважды, потому что у
+ * соседнего окна сменился процент, а уравнений от этого стало бы два
+ * одинаковых.
+ */
+function journalModels(raw: unknown): UsageModelSample[] {
+  if (!Array.isArray(raw)) return []
+  const out: UsageModelSample[] = []
+  for (const entry of raw) {
+    if (!isObject(entry)) continue
+    const sample = journalSample(entry)
+    const model = text(entry['model'])
+    if (sample && model !== undefined) out.push({ ...sample, model })
+  }
+  return out
 }
 
 /**

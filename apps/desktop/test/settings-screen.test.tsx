@@ -290,13 +290,16 @@ describe('что показывать в попапе', () => {
   it('окна перечислены все, включая те, которых сейчас нет', () => {
     const html = renderToStaticMarkup(tree())
     expect(html).toContain('месячное окно')
+    // Окно по модели приезжает только со вторым источником (6.3), выключенным
+    // по умолчанию, — галочка ему всё равно нужна заранее (7.9).
+    expect(html).toContain('недельное по модели')
     expect(html.split('5-часовое окно').length - 1).toBe(2)
   })
 
   /** Ловит настройку, спрятавшую что-нибудь сама: умолчание — показывать всё. */
   it('по умолчанию отмечено всё', () => {
     const html = renderToStaticMarkup(tree())
-    expect(html.split('checked=""').length - 1).toBe(6)
+    expect(html.split('checked=""').length - 1).toBe(7)
   })
 
   /**

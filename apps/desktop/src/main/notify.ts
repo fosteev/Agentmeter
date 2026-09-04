@@ -40,7 +40,7 @@
  * принадлежит аккаунту, а не сессии, и открывать по нему чужой редактор не за
  * что.
  */
-import { formatTokens, t, type Config } from '@agentmeter/core'
+import { formatTokens, t, windowTitle, type Config } from '@agentmeter/core'
 import { locale } from '@agentmeter/core/i18n'
 import { isWorking, type TraySnapshot } from '@agentmeter/ipc'
 
@@ -123,7 +123,7 @@ function limitNotices(snapshot: TraySnapshot, config: Config): Notice[] {
       title: t('notify.limitTitle', {
         provider: PROVIDER[row.provider],
         percent: shown,
-        window: t(WINDOW_KEY[row.kind] ?? 'limit.other'),
+        window: windowTitle(row),
       }),
       body: t('notify.limitBody', {
         reset: new Date(row.resetsAt).toLocaleString(locale(), {
@@ -190,9 +190,4 @@ function agentNotices(snapshot: TraySnapshot, config: Config): Notice[] {
 
 const PROVIDER = { claude: 'Claude Code', codex: 'Codex' } as const
 
-const WINDOW_KEY: Record<string, 'limit.fiveHour' | 'limit.weekly' | 'limit.monthly' | 'limit.other'> = {
-  fiveHour: 'limit.fiveHour',
-  weekly: 'limit.weekly',
-  monthly: 'limit.monthly',
-  other: 'limit.other',
-}
+

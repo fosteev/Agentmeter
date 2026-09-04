@@ -49,14 +49,36 @@ describe('разбор ответа', () => {
     expect(Number.isInteger(snapshot.weekly!.pct)).toBe(true)
   })
 
-  it('модельные окна пропускаются, а не роняют ответ', () => {
+  it('модельное окно не подменяет собой недельное', () => {
     const snapshot = parseOauthUsage(models, 1000)!
     // В фикстуре кроме `session` и `weekly_all` лежат `weekly_scoped` на Opus
-    // (73%, активное) и на Fable (без `resets_at`). Ни одно не должно подменить
-    // собой недельное окно: 41 — это `weekly_all`.
+    // (73%, активное) и на Fable (без `resets_at`). 41 — это `weekly_all`, и
+    // подмени его модельное окно, человек увидел бы недельный лимит вдвое
+    // выше настоящего.
     expect(snapshot.fiveHour?.pct).toBe(64)
     expect(snapshot.weekly?.pct).toBe(41)
-    expect(Object.keys(snapshot).sort()).toEqual(['fiveHour', 'sessionId', 'source', 'ts', 'weekly'])
+  })
+
+  it('активное модельное окно берётся, неактивное — нет (7.9)', () => {
+    const snapshot = parseOauthUsage(models, 1000)!
+    // Отличает их `resets_at`: у неактивного он `null`, и окно без границы не
+    // проходит тем же правилом, что и остальные. Отдельного условия на
+    // `is_active` для этого не нужно.
+    expect(snapshot.models).toEqual([
+      { model: 'Opus', pct: 73, resetsAt: Date.parse('2026-08-16T05:00:00.668875+00:00') },
+    ])
+  })
+
+  it('модельное окно без имени модели не берётся', () => {
+    // Строка «· неделя» не говорит, чьё это окно, а назвать его своим словом
+    // значит придумать данные.
+    const body = {
+      limits: [
+        { kind: 'weekly_all', percent: 19, resets_at: '2026-08-16T05:00:00Z' },
+        { kind: 'weekly_scoped', percent: 44, resets_at: '2026-08-16T05:00:00Z', scope: null },
+      ],
+    }
+    expect(parseOauthUsage(body, 1)!.models).toBeUndefined()
   })
 
   it('окно без границы не берётся: калибровать по нему нечего', () => {

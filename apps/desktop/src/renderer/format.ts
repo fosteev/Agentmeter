@@ -19,7 +19,7 @@ import {
 } from '@agentmeter/core/format'
 import { locale, setLocale as apply, type LocaleSetting } from '@agentmeter/core/i18n'
 
-export { locale, t } from '@agentmeter/core/i18n'
+export { locale, t, windowTitle } from '@agentmeter/core/i18n'
 
 /** Поставить язык на весь рендерер: и переводы, и числа с датами. */
 export function setLocale(setting: LocaleSetting): void {

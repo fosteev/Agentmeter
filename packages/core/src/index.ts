@@ -53,6 +53,7 @@ export type {
   CalibrationBlocker,
   DroppedWindow,
   Fit,
+  UsageModelSample,
   UsagePoint,
   UsageSnapshot,
   UsageWindowKind,
@@ -144,5 +145,5 @@ export { formatTokens } from './format/tokens.ts'
  * Тексты интерфейса. Здесь — для main и CLI; рендерер берёт их подпутём
  * `@agentmeter/core/i18n` по той же причине, что форматтер.
  */
-export { locale, setLocale, t, LOCALES, resolveLocale } from './i18n/index.ts'
+export { locale, setLocale, t, windowTitle, LOCALES, resolveLocale } from './i18n/index.ts'
 export type { Locale, LocaleSetting } from './i18n/locale.ts'

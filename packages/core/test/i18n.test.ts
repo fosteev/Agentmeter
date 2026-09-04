@@ -30,6 +30,9 @@ const VALUES: Record<string, Record<string, string | number>> = {
   'limit.resetsIn': { span: '4 ч 37 мин' },
   // Худшее из встречающихся: самое длинное имя окна рядом с именем провайдера.
   'limit.ofProvider': { provider: 'Claude', window: 'недельное окно' },
+  // Худшее из встречающихся: имя модели словом провайдера — «Sonnet» длиннее
+  // «Fable» и «Opus», а таблицы имён у нас нет, они приезжают из ответа.
+  'limit.weeklyModel': { model: 'Sonnet' },
   'limit.untilCap': { reset: 'сброс через 4 ч', span: '52 мин' },
   'limit.idleWindow': { span: '4 ч 37 мин' },
   'card.files': { count: 128 },

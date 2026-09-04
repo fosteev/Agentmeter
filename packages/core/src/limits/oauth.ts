@@ -23,7 +23,7 @@
  * увести потолок и заблокировать всю калибровку (эталон —
  * `fixtures/usage/expected-oauth.json`).
  */
-import type { UsageSnapshot, UsageWindowSample } from './usage.ts'
+import type { UsageModelSample, UsageSnapshot, UsageWindowSample } from './usage.ts'
 
 /** Куда ходим. Заголовок беты обязателен, без него эндпоинт отвечает 401. */
 export const OAUTH_USAGE_URL = 'https://api.anthropic.com/api/oauth/usage'
@@ -103,6 +103,14 @@ export function throttled(throttle: Throttle | undefined, now: number): boolean 
  * говорит, что это за окно, и незнакомое имя пропускается молча вместо того,
  * чтобы ронять разбор.
  *
+ * Окон здесь три вида, а не два (7.9). `weekly_scoped` — недельный лимит,
+ * привязанный к модели, и в 6.3 он пропускался как «на замеренном аккаунте
+ * всегда неактивный». Замер 4 сентября это опроверг: `session` 18%,
+ * `weekly_all` 16%, `weekly_scoped` (Fable) **20%** — то есть выброшенным
+ * оказалось окно, в которое упрёшься первым. Отличать активное от неактивного
+ * ничего нового не требует: у неактивного `resets_at: null`, а окно без границы
+ * `windowSample` не пропускает и так.
+ *
  * `null` означает «записывать нечего»: ни одного окна с границей в ответе не
  * нашлось. Это не ошибка — так выглядит ответ аккаунту без активных лимитов.
  */
@@ -112,18 +120,42 @@ export function parseOauthUsage(raw: unknown, ts: number): UsageSnapshot | null 
   if (!Array.isArray(limits)) return null
 
   const snapshot: UsageSnapshot = { ts, sessionId: '', source: 'oauth' }
+  const models: UsageModelSample[] = []
   for (const entry of limits) {
     if (!isObject(entry)) continue
-    // `weekly_scoped` (модельное окно) сюда не попадает намеренно: `UsageWindowKind`
-    // — часть контракта 1.9, и расширять его ради окна, которое на замеренном
-    // аккаунте всегда неактивно, значит менять контракт под догадку.
+    if (entry['kind'] === 'weekly_scoped') {
+      const model = modelName(entry['scope'])
+      const sample = windowSample(entry['percent'], entry['resets_at'])
+      // Модель без имени пропускается: строка «недельное окно · » ничего не
+      // говорит, а назвать её своим словом значит придумать, чьё это окно.
+      if (model !== undefined && sample && !models.some((known) => known.model === model)) {
+        models.push({ ...sample, model })
+      }
+      continue
+    }
     const kind = entry['kind'] === 'session' ? 'fiveHour' : entry['kind'] === 'weekly_all' ? 'weekly' : undefined
     if (kind === undefined || snapshot[kind] !== undefined) continue
     const sample = windowSample(entry['percent'], entry['resets_at'])
     if (sample) snapshot[kind] = sample
   }
+  if (models.length > 0) snapshot.models = models
 
-  return snapshot.fiveHour || snapshot.weekly ? snapshot : null
+  return snapshot.fiveHour || snapshot.weekly || snapshot.models ? snapshot : null
+}
+
+/**
+ * `scope` записи → имя модели.
+ *
+ * Берётся `display_name`, потому что `id` в ответе `null` (замер 4 сентября:
+ * `{ "model": { "id": null, "display_name": "Fable" } }`). Записи с `scope: null`
+ * сюда не попадают вовсе — это окна на весь аккаунт.
+ */
+function modelName(raw: unknown): string | undefined {
+  if (!isObject(raw)) return undefined
+  const model = raw['model']
+  if (!isObject(model)) return undefined
+  const name = model['display_name']
+  return typeof name === 'string' && name.trim() !== '' ? name.trim() : undefined
 }
 
 /**

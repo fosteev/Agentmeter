@@ -254,6 +254,53 @@ describe('query reports', () => {
   })
 
   /**
+   * Недельный лимит по модели (7.9).
+   *
+   * Ловит две поломки, каждая из которых показывает неверное число молча.
+   * Первая — модельное окно, положенное видом `weekly`: оно вытеснило бы окно
+   * на весь аккаунт (у `replaceProvider` вид — ключ), и 20% по Fable читались
+   * бы как 20% всего недельного лимита. Вторая — окно без `scope`: подписать
+   * его нечем, а рядом стоит второе такое же.
+   */
+  it('окно по модели встаёт рядом с недельным, а не вместо него', () => {
+    ingestFixtures()
+    const config = structuredClone(DEFAULT_CONFIG)
+    ensureLimitWindows(db, config.limits.claude)
+    const at = Date.parse('2026-07-28T13:00:00.000Z')
+    const resetsAt = Date.parse('2026-08-01T05:00:00.000Z')
+
+    const report = limitsReport(db, at, config.limits.claude, undefined, {
+      claude: {
+        ts: at,
+        sessionId: '',
+        source: 'oauth',
+        weekly: { pct: 16, resetsAt },
+        models: [
+          { model: 'Fable', pct: 20, resetsAt },
+          { model: 'Opus', pct: 73, resetsAt },
+        ],
+      },
+    })
+    const claude = report.windows.filter((window) => window.provider === 'claude')
+
+    expect(claude.filter((window) => window.kind === 'weekly')).toHaveLength(1)
+    expect(claude.find((window) => window.kind === 'weekly')?.usedPercent).toBe(16)
+    expect(claude.filter((window) => window.kind === 'weeklyModel')).toMatchObject([
+      { scope: 'Fable', usedPercent: 20, exact: true, resetsAt, startsAt: resetsAt - 10_080 * 60_000 },
+      { scope: 'Opus', usedPercent: 73, exact: true, resetsAt },
+    ])
+
+    // И снимается оно своей галочкой, а не заодно с недельным.
+    const hidden = structuredClone(config.limits.popup)
+    hidden.claude.weeklyModel = false
+    const shown = popupWindows(report.windows, hidden)
+    expect(shown.some((window) => window.kind === 'weeklyModel')).toBe(false)
+    expect(shown.some((window) => window.provider === 'claude' && window.kind === 'weekly')).toBe(
+      true,
+    )
+  })
+
+  /**
    * Ответ провайдера сильнее и у Codex (6.4), хотя процент в логах у него есть
    * и он точный. Довод другой: в логе процент написан **в момент запроса**, и
    * после дня без Codex он про позавчерашнее окно. Проверка ловит «у Codex и

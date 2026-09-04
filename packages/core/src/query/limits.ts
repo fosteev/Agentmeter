@@ -126,6 +126,10 @@ function replaceProvider(
  * Снимок Claude → окна. Отдельно от `replaceProvider`, потому что у Claude
  * ответ приходит не окнами: в нём процент и момент сброса, а длина окна известна
  * из его вида — `session` пятичасовое, `weekly_all` недельное.
+ *
+ * Модельные окна (7.9) идут третьим видом и той же недельной длины: у них своя
+ * граница и свой потолок, а `weekly` уже занято окном на весь аккаунт. Отдай их
+ * тем же видом — и `replaceProvider` оставил бы одно из двух, молча.
  */
 function claudeWindows(provider: UsageSnapshot | undefined): LimitWindow[] {
   if (provider === undefined) return []
@@ -136,20 +140,36 @@ function claudeWindows(provider: UsageSnapshot | undefined): LimitWindow[] {
   ] as const) {
     const sample = provider[kind]
     if (!sample) continue
+    windows.push(claudeWindow(kind, minutes, sample.pct, sample.resetsAt, provider.ts))
+  }
+  for (const model of provider.models ?? []) {
     windows.push({
-      provider: 'claude',
-      kind,
-      windowMinutes: minutes,
-      startsAt: sample.resetsAt - minutes * MINUTE_MS,
-      resetsAt: sample.resetsAt,
-      usedPercent: sample.pct,
-      // Момент **наблюдения**, а не последнего запроса: процент снят тогда, и
-      // возраст снимка человек видит рядом с кнопкой «спросить».
-      observedAt: provider.ts,
-      exact: true,
+      ...claudeWindow('weeklyModel', 10_080, model.pct, model.resetsAt, provider.ts),
+      scope: model.model,
     })
   }
   return windows
+}
+
+function claudeWindow(
+  kind: LimitWindow['kind'],
+  minutes: number,
+  pct: number,
+  resetsAt: number,
+  observedAt: number,
+): LimitWindow {
+  return {
+    provider: 'claude',
+    kind,
+    windowMinutes: minutes,
+    startsAt: resetsAt - minutes * MINUTE_MS,
+    resetsAt,
+    usedPercent: pct,
+    // Момент **наблюдения**, а не последнего запроса: процент снят тогда, и
+    // возраст снимка человек видит рядом с кнопкой «спросить».
+    observedAt,
+    exact: true,
+  }
 }
 
 /**

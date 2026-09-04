@@ -170,6 +170,11 @@ function describe(snapshot: UsageSnapshot): string {
   const parts: string[] = []
   if (snapshot.fiveHour) parts.push(`5 ч ${snapshot.fiveHour.pct}% до ${when(snapshot.fiveHour.resetsAt)}`)
   if (snapshot.weekly) parts.push(`7 дней ${snapshot.weekly.pct}% до ${when(snapshot.weekly.resetsAt)}`)
+  // Модельные окна (7.9) печатаются рядом: ради них проба и ходит в сеть —
+  // именно они на замеренном аккаунте оказались выше обоих общих.
+  for (const model of snapshot.models ?? []) {
+    parts.push(`${model.model} ${model.pct}% до ${when(model.resetsAt)}`)
+  }
   return parts.join(' · ')
 }
 

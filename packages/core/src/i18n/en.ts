@@ -34,6 +34,8 @@ export const en = {
     weekly: 'weekly window',
     monthly: 'monthly window',
     other: 'limit window',
+    weeklyModel: '{{model}} weekly',
+    weeklyModelAny: 'per-model weekly',
     ofProvider: '{{provider}}, {{window}}',
     unknownPercent: 'percent unavailable',
     resetsIn: 'resets in {{span}}',

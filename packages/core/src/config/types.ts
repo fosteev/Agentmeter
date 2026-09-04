@@ -239,7 +239,13 @@ export interface CodexLimits {
  *    попросил; молчаливо спрятанный лимит — это не тишина, а недосказанность.
  */
 export interface PopupWindows {
-  claude: { fiveHour: boolean; weekly: boolean }
+  /**
+   * `weeklyModel` — недельное окно, привязанное к модели (7.9). Галочка стоит
+   * рядом с двумя другими, хотя окно приезжает только со вторым источником
+   * (6.3): список окон в настройках **постоянный**, иначе первое такое окно
+   * попало бы в попап без спроса.
+   */
+  claude: { fiveHour: boolean; weekly: boolean; weeklyModel: boolean }
   /**
    * У Codex видов окна четыре: до CLI 0.145.0 недельное окно приезжало
    * пятичасовым слотом, а `other` — это длина, которой мы не знаем имени
@@ -260,7 +266,7 @@ export const DEFAULT_CONFIG: Config = {
     },
     codex: { enabled: true, api: { enabled: false } },
     popup: {
-      claude: { fiveHour: true, weekly: true },
+      claude: { fiveHour: true, weekly: true, weeklyModel: true },
       codex: { fiveHour: true, weekly: true, monthly: true, other: true },
     },
   },

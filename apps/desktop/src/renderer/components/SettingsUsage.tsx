@@ -1,6 +1,6 @@
 import type { Provider } from '@agentmeter/core'
 import type { CodexApiStatus, UsageApiStatus } from '@agentmeter/ipc'
-import { t } from '../format.ts'
+import { t, windowTitle } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { SectionTitle } from './SectionTitle.tsx'
 import { Switch } from './Switch.tsx'
@@ -168,14 +168,6 @@ const CODEX_CREDENTIALS = {
   missing: 'settings.codexApiCredsMissing',
 } as const satisfies Record<CodexApiStatus['credentials'], string>
 
-/** Названия видов окон — те же, что в попапе: одно окно, одно слово. */
-const KIND_KEY = {
-  fiveHour: 'limit.fiveHour',
-  weekly: 'limit.weekly',
-  monthly: 'limit.monthly',
-  other: 'limit.other',
-} as const satisfies Record<NonNullable<CodexApiStatus['windows']>[number]['kind'], string>
-
 /**
  * Что показать про последний ответ OpenAI.
  *
@@ -195,7 +187,7 @@ function codexFetched(api: CodexApiStatus, now: number): string {
   return t('settings.codexApiFetched', {
     ago: when,
     windows: windows
-      .map((window) => `${t(KIND_KEY[window.kind])} — ${window.pct}%`)
+      .map((window) => `${windowTitle(window)} — ${window.pct}%`)
       .join(', '),
   })
 }

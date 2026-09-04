@@ -42,6 +42,9 @@ export const LIMITS = {
   'limit.ofProvider': 28,
   'limit.fiveHour': 20,
   'limit.weekly': 20,
+  // Имя модели приезжает от провайдера («Fable», «Opus»), и потолок мерится
+  // вместе с ним — за край вылезает готовая фраза, а не шаблон.
+  'limit.weeklyModel': 20,
   'limit.monthly': 20,
   'limit.other': 20,
   // Заголовки вкладок главного окна: четыре штуки в 420 px, кегль 12.5 px.

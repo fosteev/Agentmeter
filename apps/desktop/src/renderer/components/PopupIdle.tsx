@@ -1,6 +1,6 @@
 import type { LimitReportRow, Provider } from '@agentmeter/core'
 import type { TraySnapshot } from '@agentmeter/ipc'
-import { formatTokens, t } from '../format.ts'
+import { formatTokens, t, windowTitle } from '../format.ts'
 import { ago, span } from '../time.ts'
 import { PopupFooter } from './PopupFooter.tsx'
 import { PopupHeader } from './PopupHeader.tsx'
@@ -28,14 +28,6 @@ const PROVIDER: Record<Provider, string> = {
   claude: 'Claude',
   codex: 'Codex',
 }
-
-/** Ключи, а не слова: длина названия окна проверяется потолком (3.8). */
-const KIND_KEY = {
-  fiveHour: 'limit.fiveHour',
-  weekly: 'limit.weekly',
-  monthly: 'limit.monthly',
-  other: 'limit.other',
-} as const satisfies Record<LimitReportRow['kind'], string>
 
 function caption(window: LimitReportRow, at: number): string {
   if (window.usedPercent === null) return window.unavailableReason ?? t('limit.unknownPercent')
@@ -102,7 +94,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow, refresh }: PopupIdlePro
       >
         {limits.map((window) => (
           <PopupLimit
-            key={`${window.provider}-${window.kind}-${window.startsAt}`}
+            key={`${window.provider}-${window.kind}-${window.scope ?? ''}-${window.startsAt}`}
             // Провайдер здесь стоит в самом имени окна — «Claude, 5-часовое
             // окно», строка 1297 макета. Табов над этим списком нет: в паузе
             // ничего не работает вовсе, разводить подробности по вкладкам
@@ -110,7 +102,7 @@ export function PopupIdle({ snapshot, now, onOpenWindow, refresh }: PopupIdlePro
             // который их различал, с 7.1 больше нет.
             title={t('limit.ofProvider', {
               provider: PROVIDER[window.provider],
-              window: t(KIND_KEY[window.kind]),
+              window: windowTitle(window),
             })}
             percent={window.usedPercent}
             approximate={!window.exact}
