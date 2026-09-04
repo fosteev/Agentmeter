@@ -2,6 +2,19 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **The window you hit first was missing: Claude's per-model weekly limit.**
+  Next to the 5-hour and weekly windows an account can carry a weekly limit
+  scoped to a single model. The app dropped it: when that code was written the
+  window sat at zero and marked inactive, and the measurement was taken for a
+  rule. On the same account today it reads 24% against a 19% weekly and a 10%
+  five-hour — the highest of the three. It now shows in the popup under the
+  model's own name (“Fable weekly”), colours the tray icon and raises
+  notifications like any other window, and has its own checkbox in Limits. It
+  needs “ask Anthropic for limits” turned on: this percentage exists nowhere in
+  the logs.
+
+## In 0.5.0
+
 - **A new slice in the breakdown: projects × models.** The sixth chip answers
   a question no screen asked before — which projects the period went to, and
   by which model. A period strip split by models with a legend; a table of
@@ -81,8 +94,8 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 - **Who is working right now** — agent, project, pace in tokens per minute, and
   how much of the context window is left. Only agents actually working: chats
   waiting for you sit in the day's feed, not in that list.
-- **Limits** — the 5-hour, weekly and monthly windows, split into provider tabs;
-  the popup opens on the most alarming one. Codex reports exact percentages;
+- **Limits** — the 5-hour, weekly, per-model weekly and monthly windows, split
+  into provider tabs; the popup opens on the most alarming one. Codex reports exact percentages;
   Claude's are marked `≈` until calibration has enough observations, unless you
   let the app ask Anthropic directly (off by default, see below).
 - **The whole day** — a feed of tasks with an expandable card: request
