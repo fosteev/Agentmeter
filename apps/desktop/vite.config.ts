@@ -39,12 +39,15 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL('./dist/web', import.meta.url)),
     emptyOutDir: true,
-    // Витрина и главное окно — отдельные страницы того же рендерера.
+    // Витрина, главное окно и мастер — отдельные страницы того же рендерера.
     rollupOptions: {
       input: {
         index: `${renderer}/index.html`,
         gallery: `${renderer}/gallery.html`,
         window: `${renderer}/window.html`,
+        // Окно первичной настройки (7.3) — в сборку приложения, в отличие от
+        // витрины: `electron-builder.yml` исключает только `gallery.html`.
+        setup: `${renderer}/setup.html`,
       },
     },
   },

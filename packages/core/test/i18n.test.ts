@@ -62,6 +62,11 @@ const VALUES: Record<string, Record<string, string | number>> = {
   'workflow.windowsBack': { count: 48 },
   'workflow.tipEdits': { count: 128 },
   'workflow.tipWindow': { from: 100, to: 102, value: '100.0%', num: 1234, den: 1234 },
+  // Мастер (7.3): худшие числа — «шаг 3 из 3», «+99» и сто процентов с самым
+  // длинным ожиданием, какое рисует `span`.
+  'setup.stepOf': { n: 3, total: 3 },
+  'setup.modelsMore': { count: 99 },
+  'setup.nextReading': { percent: 100, eta: '≈ 12 ч 30 мин' },
 }
 
 describe('потолки длины', () => {

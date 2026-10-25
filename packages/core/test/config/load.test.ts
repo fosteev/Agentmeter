@@ -53,7 +53,7 @@ describe('конфиг', () => {
   it('битый JSON не роняет загрузку, но и не замалчивается', () => {
     writeFileSync(path(), '{ это не json')
     const { config, problems } = loadConfig(path())
-    expect(config).toEqual(DEFAULT_CONFIG)
+    expect(config).toEqual({ ...DEFAULT_CONFIG, setup: { completed: true } })
     expect(problems).toHaveLength(1)
     expect(problems[0]).toContain('не разбирается как JSON')
   })
@@ -213,6 +213,61 @@ describe('конфиг', () => {
       notifyOnWaiting: true,
       notifyOnDone: false,
     })
+  })
+
+  /**
+   * Ловит показ мастера (7.3) каждому, кто обновился: ключа `setup` в старом
+   * файле нет, дефолт `false` показал бы окно первичной настройки человеку,
+   * который давно пользуется приложением.
+   */
+  it('существующий конфиг без setup считается прошедшим мастер', () => {
+    writeFileSync(path(), JSON.stringify({ alerts: { warnAtPercent: 50 } }))
+    const { config, problems } = loadConfig(path())
+
+    expect(config.setup.completed).toBe(true)
+    expect(problems).toEqual([])
+  })
+
+  it('пустой существующий конфиг тоже считается прошедшим мастер', () => {
+    writeFileSync(path(), '{}')
+    expect(loadConfig(path()).config.setup.completed).toBe(true)
+  })
+
+  /** Ловит обратную поломку: миграция не должна перебивать явное `false`. */
+  it('явное setup.completed: false не перебивается миграцией', () => {
+    writeFileSync(path(), JSON.stringify({ setup: { completed: false } }))
+    expect(loadConfig(path()).config.setup.completed).toBe(false)
+  })
+
+  it('без файла мастер ещё не пройден', () => {
+    expect(loadConfig(path()).config.setup.completed).toBe(false)
+    expect(DEFAULT_CONFIG.setup.completed).toBe(false)
+  })
+
+  /**
+   * Ловит «первый запуск» у файла с ошибкой: мастер показался бы давнему
+   * пользователю, а «Пропустить» записало бы поверх его файла дефолты.
+   */
+  it('setup.completed не того типа попадает в проблемы, но мастер не показывает', () => {
+    writeFileSync(path(), JSON.stringify({ setup: { completed: 'да' } }))
+    const { config, problems } = loadConfig(path())
+
+    expect(config.setup.completed).toBe(true)
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain('setup.completed')
+  })
+
+  it('setup не объектом тоже не делает запуск первым', () => {
+    writeFileSync(path(), JSON.stringify({ setup: 5 }))
+    expect(loadConfig(path()).config.setup.completed).toBe(true)
+  })
+
+  it('битый JSON — не первый запуск: файл есть, мастер не показывается', () => {
+    writeFileSync(path(), '{ "alerts": { ')
+    const { config, problems } = loadConfig(path())
+
+    expect(config.setup.completed).toBe(true)
+    expect(problems).toHaveLength(1)
   })
 
   it('сохранённый конфиг читается обратно без изменений', () => {

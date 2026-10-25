@@ -12,7 +12,7 @@
  */
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import {
   BrowserWindow,
   Menu,
@@ -33,12 +33,14 @@ import {
   codexHome,
   configPath,
   createLiveLayer,
+  DEFAULT_CONFIG,
   defaultIndexPath,
   ingestAll,
   ingestSteps,
   lifetimesPath,
   limitsReport,
   loadConfig,
+  saveConfig,
   setLocale,
   t,
   openDb,
@@ -67,10 +69,21 @@ import type {
   IndexProgress,
   IpcEventName,
   IpcEvents,
+  SetupFinish,
+  SetupScan,
   TraySnapshot,
   WindowTab,
 } from '@agentmeter/ipc'
 import { configReport, setConfig, setOauth, setStartup } from './config.ts'
+import {
+  createSetupFlow,
+  createSetupWindow,
+  finishSetup,
+  scanSetup,
+  settleFirstRun,
+  setupDue,
+  type SetupFlow,
+} from './setup.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildWorkflowScreen } from './workflow.ts'
 import { createWorkflowSignals, type WorkflowSignalsCache } from './workflow-alerts.ts'
@@ -434,6 +447,7 @@ async function runSmoke(): Promise<void> {
   let snapshot: TraySnapshot | undefined
   let trayReport: unknown
   let windowReport: unknown
+  let wizardReport: unknown
   let settingsReport: unknown
   let updaterReport: unknown
   let popupReport: unknown
@@ -442,6 +456,7 @@ async function runSmoke(): Promise<void> {
   let popup: BrowserWindow | undefined
   let measured: number | undefined
   let rebuilds = 0
+  let wizardFlow: SetupFlow | undefined
   try {
     const runtime = (openedRuntime = openRuntime(false))
     snapshot = buildSnapshot(runtime.db, runtime.live, runtime.config, { issues: runtime.issues })
@@ -467,6 +482,14 @@ async function runSmoke(): Promise<void> {
         (height) => {
           measured = height
           if (popup !== undefined && !popup.isDestroyed()) fitPopup(popup, height)
+        },
+        // Мастер (7.3): найденное читается по-настоящему (только чтение логов),
+        // а порядок показа и конец — настоящий `SetupFlow`, который смоук собирает
+        // ниже. Запись в файл он делает только под `AGENTMETER_HOME`.
+        {
+          scan: () => scanSetup(runtime.db, runtime.config),
+          open: () => wizardFlow?.open(),
+          finish: (arg) => wizardFlow?.finish(arg) ?? configReport(runtime),
         },
       )
     // Главное окно смоук поднимает сам, ниже и явно: канал здесь заглушен,
@@ -670,6 +693,161 @@ async function runSmoke(): Promise<void> {
     }
     main.destroy()
 
+    // Окно первичной настройки (7.3). Та же причина, что у главного окна выше:
+    // четвёртый вход бандлера могли забыть, `setup.html` могло не доехать в
+    // сборку, а юнит-тесты рендерят шаги в строку и страницы не знают. Заодно
+    // проверяется канал `setup:scan` целиком — карточки провайдеров рисует
+    // сама страница по его ответу, и без неё они не появятся.
+    // Порядок показа — настоящий `SetupFlow`: окно поднимается им, а «Пропустить»
+    // ниже щёлкается в самой странице и идёт каналом `setup:finish` до конца.
+    // Запись в файл — только под подменённым `AGENTMETER_HOME`: иначе проверка
+    // затёрла бы настройки того, кто её запустил.
+    const created: BrowserWindow[] = []
+    let firstRunDone = 0
+    const wasDue = setupDue(runtime.config)
+    wizardFlow = createSetupFlow({
+      due: () => setupDue(runtime.config),
+      quitting: () => false,
+      create: () => {
+        const one = createSetupWindow(BrowserWindow, { web: WEB, preload: PRELOAD })
+        created.push(one)
+        return one
+      },
+      finish: (arg) =>
+        process.env['AGENTMETER_HOME']
+          ? finishSetup(
+              {
+                config: () => runtime.config,
+                startupEnabled: () => false,
+                changeConfig: (patch) => setConfig(runtime, patch),
+                changeOauth: () => configReport(runtime),
+                changeStartup: () => configReport(runtime),
+              },
+              arg,
+            )
+          : configReport(runtime),
+      afterFirstRun: () => {
+        firstRunDone += 1
+      },
+    })
+    wizardFlow.open()
+    const wizard = created[0]!
+    wizard.webContents.on('preload-error', (_event, path, error) => {
+      problems.push(`preload мастера не загрузился (${path}): ${error.message}`)
+    })
+    wizard.webContents.on('did-fail-load', (_event, code, description) => {
+      problems.push(`мастер не загрузился: ${description} (${code})`)
+    })
+    wizard.webContents.on('console-message', (details) => {
+      if (details.level === 'error') problems.push(`ошибка в окне мастера: ${details.message}`)
+    })
+    await new Promise<void>((resolve) => {
+      wizard.webContents.once('did-finish-load', () => resolve())
+      setTimeout(resolve, 15_000)
+    })
+    for (let waited = 0; waited < 5_000; waited += 100) {
+      const drawn = await wizard.webContents.executeJavaScript(
+        'document.querySelectorAll("[data-setup-provider]").length',
+      )
+      if (drawn === 2) break
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    }
+    const wizardPage = (await wizard.webContents.executeJavaScript(
+      `({
+        providers: document.querySelectorAll("[data-setup-provider]").length,
+        step: document.querySelector("[data-setup-step]")?.getAttribute("data-setup-step") ?? null,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+      })`,
+    )) as {
+      providers: number
+      step: string | null
+      scrollWidth: number
+      scrollHeight: number
+      innerWidth: number
+      innerHeight: number
+    }
+    const [wizardWidth, wizardHeight] = wizard.getContentSize()
+    // Тело каждого шага обязано помещаться в окно: у шагов `overflow: hidden` или
+    // нет прокрутки вовсе, и не поместившееся обрезается молча — снизу уезжает
+    // карточка или подпись, а страница в целом «не прокручивается». Поэтому
+    // меряется тело шага, а не документ. Листаются кнопкой «Далее», как человек.
+    const stepFit = (await wizard.webContents.executeJavaScript(
+      `(async () => {
+        const out = []
+        for (let i = 0; i < 3; i += 1) {
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+          const body = document.querySelector('[data-setup-step]')
+          out.push({
+            step: body.getAttribute('data-setup-step'),
+            client: body.clientHeight,
+            scroll: body.scrollHeight,
+            clientWidth: body.clientWidth,
+            scrollWidth: body.scrollWidth,
+          })
+          document.querySelector('[data-setup-action="next"]')?.click()
+        }
+        return out
+      })()`,
+    )) as Array<{ step: string; client: number; scroll: number; clientWidth: number; scrollWidth: number }>
+    const pageUrl = wizard.webContents.getURL()
+    // «Пропустить» щёлкается в самой странице: кнопка → `setup:finish` → поток →
+    // закрытое окно. Юнит-тесты держат каждое звено порознь; склейка звеньев —
+    // IPC, мост, `BrowserWindow.close` — проверяется только здесь.
+    await wizard.webContents.executeJavaScript(
+      'document.querySelector(\'[data-setup-action="skip"]\').click()',
+    )
+    for (let waited = 0; !wizard.isDestroyed() && waited < 3_000; waited += 100) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100))
+    }
+    const skipClosed = wizard.isDestroyed()
+    if (!skipClosed) wizard.destroy()
+    const saved = process.env['AGENTMETER_HOME'] ? loadConfig(configPath()).config : undefined
+    const skipSaved =
+      saved === undefined
+        ? null
+        : JSON.stringify(saved) ===
+          JSON.stringify({ ...DEFAULT_CONFIG, setup: { completed: true } })
+    wizardReport = {
+      page: new URL(pageUrl).pathname.split('/').at(-1),
+      ...wizardPage,
+      contentSize: `${wizardWidth}×${wizardHeight}`,
+      steps: stepFit,
+      skipClosed,
+      skipSaved,
+      popupAfter: firstRunDone,
+      wasDue,
+    }
+    if (!skipClosed) problems.push('«Пропустить» не закрыло окно мастера: setup:finish не дошёл до конца')
+    if (firstRunDone !== (wasDue ? 1 : 0)) {
+      problems.push(`после «Пропустить» попап открывался ${firstRunDone} раз при первом запуске=${wasDue}`)
+    }
+    if (skipSaved === false) problems.push('«Пропустить» записало не дефолты конфига с setup.completed')
+    for (const fit of stepFit) {
+      if (fit.scroll > fit.client || fit.scrollWidth > fit.clientWidth) {
+        problems.push(
+          `шаг ${fit.step} мастера не помещается: содержимое ${fit.scrollWidth}×${fit.scroll} в теле ${fit.clientWidth}×${fit.client}`,
+        )
+      }
+    }
+    if (stepFit.map((fit) => fit.step).join() !== '1,2,3') {
+      problems.push(`мастер листается не по порядку: ${stepFit.map((fit) => fit.step).join()}`)
+    }
+    if (wizardPage.step !== '1') problems.push(`мастер открылся на шаге ${String(wizardPage.step)} вместо 1`)
+    if (wizardPage.providers !== 2) {
+      problems.push(`мастер нарисовал ${wizardPage.providers} карточек провайдеров вместо 2: канал setup:scan не доехал`)
+    }
+    if (wizardWidth !== 640 || wizardHeight !== 620) {
+      problems.push(`окно мастера ${wizardWidth}×${wizardHeight} вместо 640×620`)
+    }
+    if (wizardPage.scrollWidth > wizardPage.innerWidth || wizardPage.scrollHeight > wizardPage.innerHeight) {
+      problems.push(
+        `мастер прокручивается сам: ${wizardPage.scrollWidth}×${wizardPage.scrollHeight} в окне ${wizardPage.innerWidth}×${wizardPage.innerHeight}`,
+      )
+    }
+
     // Настройки (3.6) — только под `AGENTMETER_HOME`. Проверка пишет конфиг и
     // поднимает окно запомненного размера; без подменённого каталога она
     // затирала бы настройки того, кто её запустил.
@@ -722,6 +900,7 @@ async function runSmoke(): Promise<void> {
       problems,
       tray: trayReport,
       window: windowReport,
+      wizard: wizardReport,
       popup: popupReport,
       settings: settingsReport,
       // Автозапуск (5.3) только читается: включить его в проверке значило бы
@@ -734,6 +913,13 @@ async function runSmoke(): Promise<void> {
     }),
   )
   app.exit(problems.length === 0 ? 0 : 1)
+}
+
+/** Три канала мастера (7.3) одним параметром: `createHandlers` и так длинный. */
+interface SetupHandlers {
+  scan: () => SetupScan
+  open: () => void
+  finish: (arg: SetupFinish) => ConfigReport
 }
 
 /**
@@ -754,6 +940,7 @@ function createHandlers(
   checkUpdate: () => ConfigReport,
   installUpdate: () => void,
   resizePopup: (height: number) => void,
+  setup: SetupHandlers,
 ): IpcHandlers {
   return {
     'snapshot:get': () =>
@@ -786,6 +973,13 @@ function createHandlers(
     // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
     // знать незачем: ответ тот же отчёт, и рассылается он так же.
     'startup:set': ({ enabled }) => changeStartup(enabled),
+    // Окно первичной настройки (7.3): найденное на диске, повторное открытие и
+    // конец мастера. Запись идёт теми же входами, что у настроек.
+    'setup:scan': () => setup.scan(),
+    'setup:open': () => {
+      setup.open()
+    },
+    'setup:finish': (arg) => setup.finish(arg),
     // Второй источник лимитов — тоже только кнопкой: канал включает согласие на
     // сетевой вызов, и звать его чем-то, кроме явного действия, нельзя.
     'oauth:set': ({ provider, enabled }) => changeOauth(provider, enabled),
@@ -1295,6 +1489,8 @@ function main(): void {
   let runtime: Runtime | undefined
   let window: BrowserWindow | undefined
   let main: BrowserWindow | undefined
+  /** Окно первичной настройки (7.3). Порядок его показа — в `setupFlow`. */
+  let setupWindow: BrowserWindow | undefined
   let tray: Tray | undefined
   /**
    * Нативный значок на macOS. Живёт вместо `tray`, а не рядом: два пункта в
@@ -1327,6 +1523,9 @@ function main(): void {
     const targets: BrowserWindow[] = []
     if (visible()) targets.push(window!)
     if (main !== undefined && !main.isDestroyed()) targets.push(main)
+    // Окно мастера (7.3) слушает ход прохода: «сегодня готов через …» в нём —
+    // живая строка, а не снимок на момент открытия.
+    if (setupWindow !== undefined && !setupWindow.isDestroyed()) targets.push(setupWindow)
     return targets
   }
 
@@ -1368,10 +1567,62 @@ function main(): void {
     main.on('closed', () => {
       main = undefined
       // Иконка в доке нужна ровно пока есть окно: приложение живёт в трее.
-      if (process.platform === 'darwin' && !windowed) app.dock?.hide()
+      // Открытый мастер (7.3) — тоже окно: без дока он пропал бы из ⌘Tab.
+      if (process.platform === 'darwin' && !windowed && !setupFlow.isOpen()) app.dock?.hide()
     })
     if (process.platform === 'darwin') void app.dock?.show()
   }
+
+  /**
+   * Мастер первичной настройки (7.3).
+   *
+   * Показ, повторное открытие и «крестик = Пропустить» живут в `setup.ts` и
+   * проверяются без Electron; здесь только то, чему нужен сам Electron: окно,
+   * док и попап. Запись идёт через `changeConfig`/`changeOauth`/`changeStartup`
+   * ниже — теми же входами, что у разделов настроек, а не отдельной дорожкой.
+   */
+  const setupFlow = createSetupFlow({
+    due: () => runtime !== undefined && setupDue(runtime.config),
+    quitting: () => quitting,
+    create: () => {
+      const wizard = createSetupWindow(BrowserWindow, { web: WEB, preload: PRELOAD })
+      setupWindow = wizard
+      wizard.once('ready-to-show', () => {
+        wizard.show()
+        wizard.focus()
+        // Как у главного окна: снимок сразу, а не через секунду. Строка про ход
+        // индексации иначе первую секунду говорит «оцениваем…» над готовым прогрессом.
+        if (runtime !== undefined) wizard.webContents.send('live:update', snapshot())
+      })
+      wizard.once('closed', () => {
+        setupWindow = undefined
+        if (process.platform === 'darwin' && !windowed && (main === undefined || main.isDestroyed())) {
+          app.dock?.hide()
+        }
+      })
+      if (process.platform === 'darwin') void app.dock?.show()
+      return wizard
+    },
+    finish: (arg) =>
+      finishSetup(
+        {
+          config: () => runtime!.config,
+          startupEnabled: () => readStartup(runtime!.startup).enabled,
+          changeConfig,
+          changeOauth,
+          changeStartup,
+        },
+        arg,
+      ),
+    // «Начать» уводит окно в трей и открывает попап: он сам покажет
+    // `PopupIndexing`, если проход не кончился.
+    afterFirstRun: () => {
+      if (window === undefined || window.isDestroyed()) return
+      // Как у щелчка по значку: закрытый попап снимков не получал.
+      emit('live:update', snapshot())
+      openPopup(window, anchor())
+    },
+  })
 
   const snapshot = (): TraySnapshot =>
     rememberLive(
@@ -1827,6 +2078,9 @@ function main(): void {
 
   const installUpdate = (): void => {
     if (runtime?.update.phase !== 'ready' || updater === undefined) return
+    // `quitAndInstall` закрывает окна раньше, чем придёт `before-quit`: без флага
+    // открытый мастер (7.3) засчитал бы установку обновления как «Пропустить».
+    quitting = true
     updater.quitAndInstall()
   }
 
@@ -1845,7 +2099,11 @@ function main(): void {
       return
     }
 
+    // Что лежало на диске до этого запуска — для мастера (7.3): индекс заводит
+    // сам `openRuntime`, после него «был ли индекс» уже не спросить.
+    const existed = { config: existsSync(configPath()), index: existsSync(defaultIndexPath()) }
     runtime = openRuntime(true, true)
+    settleFirstRun(runtime.config, existed, (config) => saveConfig(config, configPath()))
     runtime.startedIngestAt = Date.now()
     // Тема окна следует конфигу: при `system` Electron сам отдаёт рендереру
     // системный `prefers-color-scheme`, поэтому отдельного канала темы не нужно
@@ -1864,6 +2122,13 @@ function main(): void {
         () => checkUpdate(),
         installUpdate,
         resizePopup,
+        {
+          scan: () => scanSetup(runtime!.db, runtime!.config),
+          open: () => {
+            setupFlow.open()
+          },
+          finish: (arg) => setupFlow.finish(arg),
+        },
       ),
     )
 
@@ -1893,6 +2158,12 @@ function main(): void {
       emit('index:progress', progress)
       if (listeners().length > 0) emit('live:update', snapshot())
     })
+
+    // Мастер (7.3) — строго **после** `driveIngest`: проход уже запущен и идёт,
+    // пока человек читает три шага. Поставь показ раньше, и закрытое окно
+    // стоило бы ему полчаса потерянной индексации, а мастер выглядел бы как
+    // причина, по которой трей молчит.
+    setupFlow.showIfDue()
 
     timer = setInterval(poll, runtime.config.live.pollMs)
 
@@ -1928,6 +2199,12 @@ function main(): void {
    */
   const reopen = (): void => {
     if (runtime === undefined || gallery) return
+    // Пока открыт мастер, главное окно поверх него — путаница: цифры в нём
+    // собираются, а человек ещё выбирает пороги. Поднимаем мастер.
+    if (setupFlow.isOpen()) {
+      setupFlow.open()
+      return
+    }
     openMainWindow('today')
   }
   app.on('second-instance', reopen)

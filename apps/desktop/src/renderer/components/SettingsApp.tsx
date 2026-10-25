@@ -29,6 +29,17 @@ export interface SettingsAppProps {
   onToggleStartup: (enabled: boolean) => void
   onCheckUpdate: () => void
   onInstallUpdate: () => void
+  /**
+   * Открыть мастер первичной настройки (7.3). Не обязателен: по умолчанию
+   * зовёт `setup:open` напрямую. Так кнопка живёт в одном файле раздела, а
+   * `SettingsTab` её не пробрасывает — мастер не относится к тому, что
+   * настраивается, он лишь перечитывает те же поля.
+   */
+  onOpenSetup?: () => void
+}
+
+function openSetup(): void {
+  void window.agentmeter['setup:open']()
 }
 
 export function SettingsApp({
@@ -39,6 +50,7 @@ export function SettingsApp({
   onToggleStartup,
   onCheckUpdate,
   onInstallUpdate,
+  onOpenSetup = openSetup,
 }: SettingsAppProps) {
   const busy = update.phase === 'checking' || update.phase === 'downloading'
   return (
@@ -100,6 +112,13 @@ export function SettingsApp({
             {t('settings.updateCheck')}
           </button>
         )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 12.5 }}>{t('settings.setupTitle')}</span>
+        <button type="button" data-setup-action="open" onClick={onOpenSetup} style={CHIP}>
+          {t('settings.setupOpen')}
+        </button>
       </div>
     </div>
   )

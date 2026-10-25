@@ -8,10 +8,16 @@
  * в нём работает. Зелёный `npm run check` про приложение не говорит ничего: там
  * ни одного запуска Electron нет.
  *
- * Одиннадцать проверок, каждая названа по поломке, которую обязана поймать.
+ * Тринадцать проверок, каждая названа по поломке, которую обязана поймать.
+ *
+ * Индекс и настройки — во временном каталоге, если `AGENTMETER_INDEX` и
+ * `AGENTMETER_HOME` не заданы явно: приложение под `--smoke` открывает индекс,
+ * мигрирует его схему и дописывает журнал времён жизни, и прогон без подмены
+ * молча переписывал живой индекс того, кто проверку запустил (так и случилось
+ * 25 октября: схема 11 → 13 на живой машине).
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +30,14 @@ const mainJs = join(desktop, 'dist/main/index.js')
 const preloadCjs = join(desktop, 'dist/preload/index.cjs')
 
 let failed = false
+
+const sandbox = mkdtempSync(join(tmpdir(), 'agentmeter-smoke-'))
+mkdirSync(join(sandbox, 'home'))
+process.on('exit', () => rmSync(sandbox, { recursive: true, force: true }))
+const sandboxEnv: Record<string, string> = {
+  AGENTMETER_HOME: join(sandbox, 'home'),
+  AGENTMETER_INDEX: join(sandbox, 'index.sqlite'),
+}
 
 function report(index: number, name: string, detail: string, ok: boolean): void {
   console.log(`${ok ? '✓' : '✗'} ${index}. ${name}: ${detail}`)
@@ -47,7 +61,7 @@ function runElectron(extraEnv: Record<string, string>): {
   stderr: string
 } {
   const electron = require('electron') as string
-  const env = { ...process.env, ...extraEnv }
+  const env = { ...sandboxEnv, ...process.env, ...extraEnv }
   if (extraEnv['ELECTRON_RUN_AS_NODE'] === undefined) delete env['ELECTRON_RUN_AS_NODE']
   const result = spawnSync(electron, [desktop, '--smoke'], {
     encoding: 'utf8',
@@ -322,6 +336,50 @@ report(
     ? 'приложение не отчиталось о попапе'
     : `открылся=${popup.opened}, после закрытия в WindowServer=${popup.closedKept}, считается открытым=${popup.closedShown}`,
   closeOk,
+)
+
+// 13. Ловит: окно первичной настройки (7.3), которого нет в сборке, которое
+//     грузится с ошибкой консоли или не получает ответа `setup:scan`. Юнит-тесты
+//     рендерят шаги в строку и страницы не знают: четвёртый вход бандлера могли
+//     забыть, `setup.html` могло не доехать в `dist/web`. Карточки провайдеров
+//     рисует сама страница по ответу канала, поэтому две карточки в DOM — это
+//     и есть «канал доехал». Затем «Пропустить» щёлкается в самой странице: кнопка
+//     → `setup:finish` → поток → закрытое окно, а под подменённым `AGENTMETER_HOME`
+//     файл обязан стать дефолтным с одним `setup.completed: true`. Каждый шаг при этом обязан помещаться в тело окна:
+//     не поместившееся обрезается молча, а страница целиком не прокручивается.
+const wizard = payload.wizard as
+  | {
+      page?: string
+      providers?: number
+      step?: string | null
+      contentSize?: string
+      steps?: Array<{ step: string; client: number; scroll: number }>
+      skipClosed?: boolean
+      skipSaved?: boolean | null
+      popupAfter?: number
+      wasDue?: boolean
+    }
+  | undefined
+const wizardOk =
+  wizard !== undefined &&
+  wizard.page === 'setup.html' &&
+  wizard.providers === 2 &&
+  wizard.step === '1' &&
+  wizard.contentSize === '640×620' &&
+  wizard.steps?.length === 3 &&
+  wizard.steps.every((fit) => fit.scroll <= fit.client) &&
+  wizard.skipClosed === true &&
+  wizard.skipSaved !== false &&
+  wizard.popupAfter === (wizard.wasDue ? 1 : 0)
+report(
+  13,
+  'окно мастера поднимается, получает найденное и каждый шаг в него помещается',
+  wizard === undefined
+    ? 'приложение не отчиталось о мастере'
+    : `страница ${wizard.page}, карточек ${wizard.providers}, окно ${wizard.contentSize}, шаги ${wizard.steps
+        ?.map((fit) => `${fit.step}: ${fit.scroll}/${fit.client}`)
+        .join(' · ')}; «Пропустить» закрыло окно=${wizard.skipClosed}, файл=${wizard.skipSaved === null ? 'не проверялся' : wizard.skipSaved ? 'дефолты+completed' : 'не дефолты'}, попап=${wizard.popupAfter}`,
+  wizardOk,
 )
 
 process.exit(failed ? 1 : 0)

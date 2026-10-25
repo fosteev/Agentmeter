@@ -154,6 +154,24 @@ export const LIMITS = {
   'workflow.setAlertRework': 28,
   'workflow.setAlertErrors': 28,
   'workflow.setAlertOverhead': 28,
+  // Окно первичной настройки (7.3), раздел 11 макета. Шапка делит строку с
+  // логотипом: «пропустить настройку» — mono 10.5 (≈6.3 px на знак), и 24 знака
+  // — это 150 px из свободных ≈500. Кнопки подвала — 12.5 px с полями 14–16:
+  // слово длиннее десяти знаков раздвигает пару «Назад / Далее» и сдвигает
+  // счётчик шагов. Строка прогресса стоит в карточке шириной 568 px под mono
+  // 11.5 (≈6.9 px): 82 знака, взято 60. Чипы моделей и «+N» — mono 11 внутри
+  // строки в 568 px, пустая строка «модели появятся…» — mono 10.5.
+  'setup.skip': 24,
+  'setup.stepOf': 16,
+  'setup.back': 10,
+  'setup.next': 10,
+  'setup.start': 10,
+  'setup.estimating': 16,
+  'setup.modelsEmpty': 48,
+  'setup.modelsMore': 6,
+  'setup.nextReading': 60,
+  // Кнопка в разделе «Приложение» — чип mono 11, рядом с подписью.
+  'settings.setupOpen': 18,
 } as const
 
 export type LimitedKey = keyof typeof LIMITS
