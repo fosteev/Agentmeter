@@ -636,8 +636,30 @@ export const ru = {
     typeNumber: 'число',
     typeString: 'строка',
     typeBoolean: 'да/нет',
+    typeObject: 'объект',
+    expectedInteger: 'целое {{from}}..{{to}}',
+    expectedNumberOrNull: 'число {{from}}..{{to}} или null',
+    expectedRegex: 'регулярное выражение до {{max}} знаков: компилируется и не совпадает с пустой строкой',
+    badRoleRule:
+      '{{path}}: ожидалось {"match": "шаблон", "role": executor | reviewer | planner | explore}, пришло {{got}} — правило пропущено',
     planDropped:
       'потолки, заданные планом «{{plan}}», сброшены: теперь они измеряются калибровкой, а не выбираются',
+  },
+
+  /**
+   * Роли и вердикты экрана Workflow (9.2). Экран и уведомления берут подписи
+   * отсюда по ключу роли и вердикта, а не держат свои.
+   */
+  workflow: {
+    roleExecutor: 'Исполнитель',
+    roleReviewer: 'Ревьюер',
+    rolePlanner: 'Планировщик',
+    roleExplore: 'Разведка',
+    roleUnknown: 'Роль не определена',
+    verdictAccepted: 'Принято',
+    verdictNotes: 'С оговорками',
+    verdictRejected: 'Не принято',
+    verdictNone: 'Вердикта нет',
   },
 
   /**

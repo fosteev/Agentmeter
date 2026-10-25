@@ -130,7 +130,18 @@ export {
   usagePath,
 } from './config/load.ts'
 export { DEFAULT_CONFIG } from './config/types.ts'
-export type { ClaudeLimits, Config, PopupWindows, WindowBounds } from './config/types.ts'
+export type {
+  AssignableRole,
+  ClaudeLimits,
+  Config,
+  PopupWindows,
+  Verdict,
+  WindowBounds,
+  WorkflowConfig,
+  WorkflowRole,
+  WorkflowRule,
+} from './config/types.ts'
+export { ROLE_LABEL_KEYS, VERDICT_LABEL_KEYS, roleLabel, roleOf, verdictLabel, verdictOf } from './workflow/roles.ts'
 export type { LoadResult } from './config/load.ts'
 export { RULES, rulePathsInDefaults } from './config/validate.ts'
 export * from './query/index.ts'

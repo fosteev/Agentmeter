@@ -52,6 +52,9 @@ export interface Config {
     notifyOnDone: boolean
   }
 
+  /** Экран Workflow: кто в цикле кем был, как выглядит вердикт, где цель (9.2). */
+  workflow: WorkflowConfig
+
   index: {
     /**
      * Следить за логами и дочитывать на лету.
@@ -151,6 +154,60 @@ export interface Config {
      */
     window: WindowBounds
   }
+}
+
+/**
+ * Роль субагента в цикле «план → исполнитель → приёмка» (9.2).
+ *
+ * `unknown` — не четвёртая роль, а честное «правило не нашлось». Субагент без
+ * правила не становится исполнителем: доля переделки считается от записей
+ * исполнителя, и приписать ему чужие значило бы выдумать знаменатель.
+ */
+export type WorkflowRole = 'executor' | 'reviewer' | 'planner' | 'explore' | 'unknown'
+
+/** Роли, которые можно назначить правилом. `unknown` назначить нельзя — он остаток. */
+export type AssignableRole = Exclude<WorkflowRole, 'unknown'>
+
+/** Вердикт приёмки по голове ответа ревьюера. `none` — ничего не совпало или текста нет. */
+export type Verdict = 'accepted' | 'notes' | 'rejected' | 'none'
+
+export interface WorkflowRule {
+  /** Шаблон `agentType`: только `*` (любая подстрока), регистр учитывается. */
+  match: string
+  role: AssignableRole
+}
+
+/**
+ * Настройки экрана Workflow.
+ *
+ * **Доли — доли, не проценты.** `target.rework: 0.2` — это 20%, `alerts.overhead:
+ * 3` — «втрое». Те же единицы, в которых `workflowReport` (9.3) отдаёт
+ * показатели: порог сравнивается с `latest` напрямую, без ×100 и без
+ * округления, которое сдвинуло бы срабатывание на границе. Проценты выводит
+ * экран (9.5), как и везде в продукте, где число показывается долей.
+ */
+export interface WorkflowConfig {
+  /** Вкладка и уведомления — только при `true`. Выключено по умолчанию: это функция для тех, кто так работает. */
+  enabled: boolean
+  /**
+   * Кем считать `agentType`. Правила проверяются по порядку, побеждает первое
+   * совпадение, ничего не совпало — `unknown`. Промты субагентов не читаются:
+   * роль, угаданная по тексту, — эвристика, которую нечем честно пометить.
+   */
+  roles: WorkflowRule[]
+  /**
+   * Регулярки вердикта, флаг `i`, поиск по подстроке (без `^`): голова ответа
+   * хранится как написана, с разметкой (`**Принят с оговорками.**`) и ведущими
+   * пробелами. Порядок проверки — `rejected → notes → accepted`: «не принят»
+   * содержит «принят».
+   */
+  verdicts: { rejected: string; notes: string; accepted: string }
+  /** Размер окна: последние N циклов и последние N сессий (для доли ошибок). */
+  window: { cycles: number; sessions: number }
+  /** Цель по доле переделки, 0..1. `null` — цели нет, и экран показывает долю без неё. */
+  target: { rework: number | null }
+  /** Пороги «пора в /retro». `null` — показатель не уведомляет. */
+  alerts: { rework: number | null; errorRate: number | null; overhead: number | null }
 }
 
 export interface WindowBounds {
@@ -276,6 +333,26 @@ export const DEFAULT_CONFIG: Config = {
     sessionTokenAlert: 0,
     notifyOnWaiting: true,
     notifyOnDone: false,
+  },
+  workflow: {
+    enabled: false,
+    roles: [
+      { match: 'exec-*', role: 'executor' },
+      { match: 'review-*', role: 'reviewer' },
+      { match: 'plan-*', role: 'planner' },
+      { match: 'Explore', role: 'explore' },
+    ],
+    // Подстрока, не начало строки (9.1), и два языка: русский для автора,
+    // английский для остальных. `\s+`, а не пробел: в живых головах между
+    // словами бывают двойные пробелы и переносы.
+    verdicts: {
+      rejected: 'не\\s+принят|not\\s+accepted|rejected',
+      notes: 'с\\s+оговорками|with\\s+notes',
+      accepted: 'принят|accepted',
+    },
+    window: { cycles: 10, sessions: 20 },
+    target: { rework: null },
+    alerts: { rework: null, errorRate: null, overhead: null },
   },
   index: { watch: true },
   updates: { auto: true },

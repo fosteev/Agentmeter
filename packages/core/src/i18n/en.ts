@@ -476,8 +476,26 @@ export const en = {
     typeNumber: 'a number',
     typeString: 'a string',
     typeBoolean: 'a boolean',
+    typeObject: 'an object',
+    expectedInteger: 'an integer {{from}}..{{to}}',
+    expectedNumberOrNull: 'a number {{from}}..{{to}} or null',
+    expectedRegex: 'a regular expression up to {{max}} characters: it compiles and does not match the empty string',
+    badRoleRule:
+      '{{path}}: expected {"match": "pattern", "role": executor | reviewer | planner | explore}, got {{got}} — rule skipped',
     planDropped:
       'caps set by the «{{plan}}» plan were dropped: they are measured by calibration now, not picked',
+  },
+
+  workflow: {
+    roleExecutor: 'Executor',
+    roleReviewer: 'Reviewer',
+    rolePlanner: 'Planner',
+    roleExplore: 'Explore',
+    roleUnknown: 'Role not determined',
+    verdictAccepted: 'Accepted',
+    verdictNotes: 'With notes',
+    verdictRejected: 'Not accepted',
+    verdictNone: 'No verdict',
   },
 
   startup: {
