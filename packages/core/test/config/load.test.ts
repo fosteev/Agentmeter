@@ -227,3 +227,188 @@ describe('конфиг', () => {
     expect(loadConfig(path()).config).toEqual(cfg)
   })
 })
+
+/**
+ * Раздел `workflow` (9.2).
+ *
+ * Роли — список объектов, а не скаляров: форма, которой обход конфига раньше не
+ * знал. Проверки названы по поломке, которую ловят.
+ */
+describe('конфиг: workflow', () => {
+  const write = (workflow: unknown) => writeFileSync(path(), JSON.stringify({ workflow }))
+
+  it('по умолчанию выключен, роли и регулярки — из брифа, цели и пороги не заданы', () => {
+    const { config, problems } = loadConfig(path())
+    expect(problems).toEqual([])
+    const w = config.workflow
+    expect(w.enabled).toBe(false)
+    expect(w.roles).toEqual([
+      { match: 'exec-*', role: 'executor' },
+      { match: 'review-*', role: 'reviewer' },
+      { match: 'plan-*', role: 'planner' },
+      { match: 'Explore', role: 'explore' },
+    ])
+    expect(w.window).toEqual({ cycles: 10, sessions: 20 })
+    expect(w.target).toEqual({ rework: null })
+    expect(w.alerts).toEqual({ rework: null, errorRate: null, overhead: null })
+  })
+
+  it('дефолтные регулярки компилируются и не совпадают с пустой строкой', () => {
+    for (const source of Object.values(DEFAULT_CONFIG.workflow.verdicts)) {
+      expect(() => new RegExp(source, 'i')).not.toThrow()
+      expect(new RegExp(source, 'i').test('')).toBe(false)
+    }
+  })
+
+  it('битая регулярка отклоняется с путём ключа, остальные принимаются, main не падает', () => {
+    write({ verdicts: { rejected: '(не закрыта', accepted: 'ОК' }, enabled: true })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.verdicts.rejected).toBe(DEFAULT_CONFIG.workflow.verdicts.rejected)
+    expect(config.workflow.verdicts.accepted).toBe('ОК')
+    expect(config.workflow.enabled).toBe(true)
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain('workflow.verdicts.rejected')
+    expect(problems[0]).toContain('"(не закрыта"')
+  })
+
+  it.each([[''], ['a*'], ['(?:)'], ['x'.repeat(201)]])('регулярка %j отклоняется', (bad) => {
+    write({ verdicts: { notes: bad } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.verdicts.notes).toBe(DEFAULT_CONFIG.workflow.verdicts.notes)
+    expect(problems.join('\n')).toContain('workflow.verdicts.notes')
+  })
+
+  it('регулярка не строкой отклоняется по типу', () => {
+    write({ verdicts: { accepted: 5 } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.verdicts.accepted).toBe(DEFAULT_CONFIG.workflow.verdicts.accepted)
+    expect(problems).toEqual(['workflow.verdicts.accepted: ожидалось строка, пришло число — взят дефолт'])
+  })
+
+  it('свои роли заменяют дефолтные целиком и сохраняют порядок', () => {
+    const roles = [
+      { match: 'general-purpose', role: 'executor' },
+      { match: 'exec-*', role: 'reviewer' },
+    ]
+    write({ roles })
+    const { config, problems } = loadConfig(path())
+    expect(problems).toEqual([])
+    expect(config.workflow.roles).toEqual(roles)
+  })
+
+  it('пустой список ролей — законное «ролей нет», а не откат к дефолту', () => {
+    write({ roles: [] })
+    const { config, problems } = loadConfig(path())
+    expect(problems).toEqual([])
+    expect(config.workflow.roles).toEqual([])
+  })
+
+  it('негодное правило роли пропускается по одному, остальные и их порядок целы', () => {
+    write({
+      roles: [
+        { match: 'a-*', role: 'planner' },
+        { match: 'b-*', role: 'unknown' },
+        { match: '', role: 'executor' },
+        { match: 'c-*', role: 'wizard' },
+        'строка',
+        null,
+        { match: 'd-*', role: 'explore', extra: 1 },
+      ],
+    })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.roles).toEqual([
+      { match: 'a-*', role: 'planner' },
+      { match: 'd-*', role: 'explore' },
+    ])
+    expect(problems.map((p) => p.split(':')[0])).toEqual([
+      'workflow.roles[1]',
+      'workflow.roles[2]',
+      'workflow.roles[3]',
+      'workflow.roles[4]',
+      'workflow.roles[5]',
+    ])
+  })
+
+  it('роли не списком — дефолт и замечание', () => {
+    write({ roles: { match: 'x', role: 'executor' } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.roles).toEqual(DEFAULT_CONFIG.workflow.roles)
+    expect(problems).toEqual(['workflow.roles: ожидалось список, пришло объект — взят дефолт'])
+  })
+
+  it('окно: целые в диапазоне, дробные и нули отклоняются', () => {
+    write({ window: { cycles: 0, sessions: 2.5 } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.window).toEqual(DEFAULT_CONFIG.workflow.window)
+    expect(problems).toHaveLength(2)
+    write({ window: { cycles: 1, sessions: 50 } })
+    expect(loadConfig(path()).config.workflow.window).toEqual({ cycles: 1, sessions: 50 })
+  })
+
+  it('цель и пороги — доли; null выключает, вне диапазона отклоняется', () => {
+    write({ target: { rework: 0.2 }, alerts: { rework: 0.3, errorRate: 20, overhead: 3 } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.target.rework).toBe(0.2)
+    expect(config.workflow.alerts).toEqual({ rework: 0.3, errorRate: null, overhead: 3 })
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain('workflow.alerts.errorRate')
+    write({ target: { rework: null } })
+    expect(loadConfig(path()).config.workflow.target.rework).toBeNull()
+  })
+
+  // Проценты вместо долей — самая вероятная ошибка человека: «20» вместо 0.2.
+  // Принять её значило бы цель в 2000%, то есть цель, которой никогда не достичь
+  // и не нарушить.
+  it('цель переделки 20 (проценты вместо доли) отклоняется, а не принимается молча', () => {
+    write({ target: { rework: 20 }, alerts: { rework: 1.5, overhead: 5000 } })
+    const { config, problems } = loadConfig(path())
+    expect(config.workflow.target.rework).toBeNull()
+    expect(config.workflow.alerts.rework).toBeNull()
+    expect(config.workflow.alerts.overhead).toBeNull()
+    expect(problems).toHaveLength(3)
+  })
+
+  it('applyPatch: битая регулярка откатывается к текущей, а не к заводской', () => {
+    const current = structuredClone(DEFAULT_CONFIG)
+    current.workflow.verdicts.accepted = 'ОК'
+    const { config, problems } = applyPatch(current, { workflow: { verdicts: { accepted: '(' } } })
+    expect(config.workflow.verdicts.accepted).toBe('ОК')
+    expect(problems.join('\n')).toContain('workflow.verdicts.accepted')
+  })
+
+  it('applyPatch: правка ролей заменяет список, соседние настройки целы', () => {
+    const current = structuredClone(DEFAULT_CONFIG)
+    current.workflow.window.cycles = 7
+    const { config, problems } = applyPatch(current, {
+      workflow: { roles: [{ match: 'x', role: 'executor' }] },
+    })
+    expect(problems).toEqual([])
+    expect(config.workflow.roles).toEqual([{ match: 'x', role: 'executor' }])
+    expect(config.workflow.window.cycles).toBe(7)
+  })
+
+  it('сохранённый раздел читается обратно без изменений', () => {
+    const cfg = structuredClone(DEFAULT_CONFIG)
+    cfg.workflow.enabled = true
+    cfg.workflow.roles = [{ match: 'x-*', role: 'reviewer' }]
+    cfg.workflow.target.rework = 0.25
+    cfg.workflow.alerts.overhead = 2.5
+    saveConfig(cfg, path())
+    const { config, problems } = loadConfig(path())
+    expect(problems).toEqual([])
+    expect(config).toEqual(cfg)
+  })
+
+  it('замечания переведены на английский', () => {
+    setLocale('en')
+    // Окно и пороги — тоже: «целое 1..1000» было литералом и уезжало кириллицей.
+    write({ verdicts: { rejected: '(' }, roles: [1], window: { cycles: 0 }, alerts: { rework: 20 } })
+    const { problems } = loadConfig(path())
+    expect(problems).toHaveLength(4)
+    expect(problems.join('\n')).toContain('an integer 1..1000')
+    expect(problems.join('\n')).toContain('a number 0..1 or null')
+    expect(problems.join('\n')).toContain('regular expression')
+    expect(problems.join('\n')).toContain('rule skipped')
+    expect(problems.join('\n')).not.toMatch(/[а-яё]/i)
+  })
+})

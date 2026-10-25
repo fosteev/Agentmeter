@@ -11,7 +11,7 @@ import { homedir, platform } from 'node:os'
 import { dirname, join } from 'node:path'
 import { t } from '../i18n/index.ts'
 import { DEFAULT_CONFIG, type Config } from './types.ts'
-import { RULES } from './validate.ts'
+import { expectedText, RULES, SHAPES } from './validate.ts'
 
 /** Каталог настроек приложения. `AGENTMETER_HOME` перекрывает всё — нужен тестам. */
 export function configDir(): string {
@@ -214,6 +214,16 @@ function walk(
       out[key] = structuredClone(def)
       continue
     }
+    const shape = SHAPES[here]
+    if (shape !== undefined) {
+      if (Array.isArray(got)) {
+        out[key] = shape(got, here, problems)
+      } else {
+        problems.push(t('config.badType', { path: here, expected: describe(def), got: describe(got) }))
+        out[key] = structuredClone(def)
+      }
+      continue
+    }
     if (!typeMatches(def, got)) {
       problems.push(t('config.badType', { path: here, expected: describe(def), got: describe(got) }))
       out[key] = structuredClone(def)
@@ -223,7 +233,7 @@ function walk(
     // и `"locale": "de"` проходили молча: обе строки — строки (3.6).
     const rule = RULES[here]
     if (rule !== undefined && !rule.ok(got)) {
-      problems.push(t('config.badValue', { path: here, expected: rule.expected, got: show(got) }))
+      problems.push(t('config.badValue', { path: here, expected: expectedText(rule), got: show(got) }))
       out[key] = structuredClone(def)
       continue
     }
@@ -249,6 +259,7 @@ function describe(v: unknown): string {
   if (typeof v === 'number') return t('config.typeNumber')
   if (typeof v === 'string') return t('config.typeString')
   if (typeof v === 'boolean') return t('config.typeBoolean')
+  if (typeof v === 'object') return t('config.typeObject')
   return typeof v
 }
 
