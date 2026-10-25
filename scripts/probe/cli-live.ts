@@ -6,7 +6,13 @@
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import {
+  aiBrief,
+  breakdownReport,
+  modelSpeeds,
+  spendMatrix,
+  speedKey,
   DEFAULT_CONFIG,
   buildCodexWindows,
   defaultClaudeHome,
@@ -151,6 +157,84 @@ try {
     `claudeWindows=${claudeUnknown.length} numeric=${numeric} jsonUnknown=${jsonUnknown} jsonZeros=${jsonZeros}`,
     claudeUnknown.length > 0 && numeric === 0 && jsonUnknown > 0 && jsonZeros === 0,
   )
+
+  // 8.3: CLI и бриф берут разрез «проект × модель» и скорость у тех же функций,
+  // что окно. Период — 30 суток до сегодня по местному времени; сверка не с
+  // таблицей из брифа этапа (числа уедут вместе с днём), а со `spendMatrix` на
+  // этом же индексе.
+  const todayRange = dayRange(Date.now(), DEFAULT_CONFIG.ui.dayStartsAtHour)
+  const period = {
+    from: dayRange(todayRange.from, DEFAULT_CONFIG.ui.dayStartsAtHour, -29).from,
+    to: todayRange.to,
+  }
+  const day = localDate(todayRange.from)
+  const periodArgs = ['--day', day, '--days', '30']
+  const missingConfig = join(temp, 'missing-config.json')
+  const matrix = spendMatrix(db, period)
+  const roundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
+  const projectModel = captureJson<Record<string, unknown>>([
+    'breakdown', '--by', 'project-model', ...periodArgs, '--json',
+    '--no-ingest', '--index', indexPath, '--config', missingConfig,
+  ])
+  const { by: projectModelBy, ...projectModelMatrix } = projectModel
+  const cellSum = matrix.rows.reduce(
+    (sum, row) => sum + row.cells.reduce((inner, cell) => inner + cell.totals.total, 0),
+    0,
+  )
+  const rowSum = matrix.rows.reduce((sum, row) => sum + row.totals.total, 0)
+  const marginalSum = matrix.models.reduce((sum, cell) => sum + cell.totals.total, 0)
+  report(
+    7,
+    'breakdown --by project-model равен spendMatrix, клетки = строки = маргиналь = итог',
+    `rows=${matrix.rows.length} cells=${matrix.rows.reduce((sum, row) => sum + row.cells.length, 0)} total=${matrix.totals.total}`,
+    matrix.totals.total > 0 &&
+      projectModelBy === 'project-model' &&
+      isDeepStrictEqual(projectModelMatrix, roundTrip(matrix)) &&
+      cellSum === matrix.totals.total &&
+      rowSum === matrix.totals.total &&
+      marginalSum === matrix.totals.total,
+  )
+
+  const byModel = captureJson<{
+    by: string
+    models: Array<{ model: string; provider: 'claude' | 'codex'; speed?: unknown }>
+    model: Array<{ totals: { total: number } }>
+  }>([
+    'breakdown', '--by', 'model', ...periodArgs, '--json',
+    '--no-ingest', '--index', indexPath, '--config', missingConfig,
+  ])
+  const speeds = modelSpeeds(db, period)
+  let speedMismatches = 0
+  for (const model of byModel.models) {
+    const expectedSpeed = speeds.get(speedKey(model.provider, model.model))
+    if (!isDeepStrictEqual(model.speed, expectedSpeed === undefined ? undefined : roundTrip(expectedSpeed))) {
+      speedMismatches += 1
+    }
+  }
+  const legacySum = byModel.model.reduce((sum, row) => sum + row.totals.total, 0)
+  const breakdown = breakdownReport(db, { range: period })
+  report(
+    8,
+    'breakdown --by model: models = маргиналь, speed = modelSpeeds, Σ models = Σ model',
+    `models=${byModel.models.length} withSpeed=${byModel.models.filter((m) => m.speed !== undefined).length} speedMismatches=${speedMismatches} legacySum=${legacySum}`,
+    byModel.by === 'model' &&
+      byModel.models.length > 0 &&
+      isDeepStrictEqual(byModel.models, roundTrip(matrix.models)) &&
+      speedMismatches === 0 &&
+      legacySum === marginalSum &&
+      legacySum === (breakdown.totals?.total ?? 0),
+  )
+
+  const brief = aiBrief(db, period)
+  report(
+    9,
+    'aiBrief.models и .projects равны маргинали и строкам той же матрицы',
+    `models=${brief.models.length} projects=${brief.projects.length}`,
+    brief.models.length > 0 &&
+      isDeepStrictEqual(roundTrip(brief.models), roundTrip(matrix.models)) &&
+      isDeepStrictEqual(roundTrip(brief.projects), roundTrip(matrix.rows)),
+  )
 } finally {
   db.close()
   rmSync(temp, { recursive: true, force: true })
@@ -270,6 +354,29 @@ function captureLimitsJson(
   return JSON.parse(captured) as {
     windows: Array<{ provider: string; usedPercent: number | null }>
   }
+}
+
+/** Любая команда CLI с `--json`: stdout разбирается как объект. */
+function captureJson<T>(args: string[]): T {
+  let captured = ''
+  const original = console.log
+  console.log = (value: unknown) => {
+    captured = String(value)
+  }
+  try {
+    const code = run(args)
+    if (code !== 0) throw new Error(`${args.join(' ')} завершился с кодом ${code}`)
+  } finally {
+    console.log = original
+  }
+  return JSON.parse(captured) as T
+}
+
+/** `YYYY-MM-DD` по местному времени — так `--day` читает `rangeFor`. */
+function localDate(at: number): string {
+  const date = new Date(at)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function report(index: number, name: string, detail: string, ok: boolean): void {

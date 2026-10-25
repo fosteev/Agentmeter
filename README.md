@@ -172,6 +172,8 @@ The same numbers without the graphics, on top of the same core:
 agentmeter today                     # day total, breakdowns, limits
 agentmeter tasks --day 2026-08-10    # task feed
 agentmeter breakdown --by server     # breakdown: tools, MCP, skills
+agentmeter breakdown --by project-model --days 30   # project × model cells, same as the window
+agentmeter breakdown --by model --days 30           # models with response time and pace
 agentmeter limits                    # limit windows
 agentmeter doctor                    # what was read, what was not understood
 agentmeter export --grain task       # export to CSV or JSON

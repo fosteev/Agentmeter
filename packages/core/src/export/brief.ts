@@ -28,10 +28,12 @@ import type { Db } from '../index/db.ts'
 import { categoryLabel, toolBreakdownRows, toolRowLabel } from '../query/breakdown.ts'
 import { cacheRebuilds, type RebuildEvent, type RebuildGroup } from '../query/cache.ts'
 import { loadedCategories, type LoadedCategory } from '../query/loaded.ts'
+import { projectRowLabel, spendMatrix } from '../query/matrix.ts'
 import { savings, type Saving } from '../query/savings.ts'
+import { SPEED } from '../query/speed.ts'
 import { spendSplit } from '../query/split.ts'
 import { todayReport } from '../query/today.ts'
-import type { DayRange, Totals } from '../query/types.ts'
+import type { DayRange, MatrixCell, MatrixRow, Totals } from '../query/types.ts'
 import { isoDate } from './index.ts'
 
 export interface BriefTool {
@@ -65,6 +67,14 @@ export interface AiBrief {
   advice: Saving[]
   /** По убыванию расхода — порядок задаёт `toolBreakdownRows`. */
   tools: BriefTool[]
+  /**
+   * Маргиналь `spendMatrix` как есть (8.3): модели со скоростью, по убыванию
+   * расхода. Тип ядра, а не копия — второй сбор «почти как в окне» разошёлся бы
+   * с ним молча.
+   */
+  models: MatrixCell[]
+  /** Строки `spendMatrix` как есть: проект, его итог и все клетки. */
+  projects: MatrixRow[]
   cache: BriefCache
 }
 
@@ -72,6 +82,9 @@ export function aiBrief(db: Db, range: DayRange): AiBrief {
   const report = todayReport(db, range)
   const split = spendSplit(db, range)
   const cache = cacheRebuilds(db, { range })
+  // Один вызов на оба поля: две отдельные матрицы за один бриф — это два
+  // снимка двух моментов, а не один.
+  const matrix = spendMatrix(db, range)
   return {
     range,
     approximate: report.approximate,
@@ -90,6 +103,8 @@ export function aiBrief(db: Db, range: DayRange): AiBrief {
       calls: row.calls.measured + row.calls.split + row.calls.unknown,
       tokens: row.tokens.measured + row.tokens.split + row.tokens.unknown,
     })),
+    models: matrix.models,
+    projects: matrix.rows,
     cache: {
       measurable: cache.measurable,
       ttlMs: cache.ttlMs,
@@ -108,6 +123,14 @@ export function aiBrief(db: Db, range: DayRange): AiBrief {
  * и суммой. Молчаливое усечение читалось бы как «это весь список».
  */
 const TOOL_LIMIT = 15
+
+/**
+ * Моделей и проектов в печати не больше стольких (8.3); остальные — одной
+ * строкой с числом и суммой, как инструменты. Клетки проекта печатаются все:
+ * на живой машине их у проекта максимум семь. В `--json` едут все строки.
+ */
+const MODEL_LIMIT = 10
+const PROJECT_LIMIT = 10
 
 export function briefMarkdown(brief: AiBrief): string {
   const lines: string[] = [
@@ -128,6 +151,8 @@ export function briefMarkdown(brief: AiBrief): string {
     'ruleMarginal',
     'ruleDeferred',
     'ruleCache',
+    'ruleModels',
+    'ruleSpeed',
     'ruleApprox',
   ] as const) {
     lines.push(`- ${t(`brief.${rule}`)}`)
@@ -229,6 +254,8 @@ export function briefMarkdown(brief: AiBrief): string {
     }
   }
 
+  if (brief.models.length > 0) lines.push(...modelsSection(brief))
+
   lines.push('', t('brief.cacheTitle'), '')
   if (!brief.cache.measurable) {
     lines.push(t('brief.cacheNone'))
@@ -271,4 +298,89 @@ function categoryUsage(row: LoadedCategory): string {
   if (row.loaded === null) return ''
   if (row.used === null) return t('brief.categoryUsageUnknown')
   return t('brief.categoryUsage', { loaded: row.loaded, used: row.used })
+}
+
+/**
+ * Раздел «Модели и проекты» (8.3).
+ *
+ * Числа — сырые, как остальные токены файла; доли — в процентах до десятых от
+ * итога периода (у модели) и от итога проекта (у клетки внутри проекта).
+ * Секунды — `Math.round(ms / 100) / 10`. Восстановленные запросы названы
+ * словами, а не знаком `≈`: файл читает модель, а не глаз, и слово несёт
+ * причину.
+ */
+function modelsSection(brief: AiBrief): string[] {
+  const period = brief.totals?.total ?? 0
+  const lines = ['', t('brief.modelsTitle'), '']
+  for (const cell of brief.models.slice(0, MODEL_LIMIT)) {
+    lines.push(
+      t('brief.modelLine', {
+        name: cell.model,
+        provider: cell.provider,
+        tokens: cell.totals.total,
+        percent: percent(cell.totals.total, period),
+        requests: cell.totals.requests,
+        inherited:
+          cell.inherited > 0 ? t('brief.modelInherited', { tokens: cell.inherited }) : '',
+        speed:
+          cell.speed === undefined
+            ? t('brief.modelSpeedFew', { min: SPEED.minRequests })
+            : t('brief.modelSpeed', {
+                p50: seconds(cell.speed.p50Ms),
+                p90: seconds(cell.speed.p90Ms),
+                pace: cell.speed.tokensPerSecond,
+                count: cell.speed.requests,
+              }),
+      }),
+    )
+  }
+  const modelsRest = brief.models.slice(MODEL_LIMIT)
+  if (modelsRest.length > 0) {
+    lines.push(
+      t('brief.modelsRest', {
+        count: modelsRest.length,
+        tokens: modelsRest.reduce((sum, cell) => sum + cell.totals.total, 0),
+      }),
+    )
+  }
+
+  if (brief.projects.length === 0) return lines
+  lines.push('', t('brief.projectsTitle'), '')
+  for (const row of brief.projects.slice(0, PROJECT_LIMIT)) {
+    lines.push(
+      t('brief.projectLine', {
+        name: projectRowLabel(row.project),
+        tokens: row.totals.total,
+        percent: percent(row.totals.total, period),
+        requests: row.totals.requests,
+        models: row.cells
+          .map((cell) =>
+            t('brief.projectModel', {
+              model: cell.model,
+              percent: percent(cell.totals.total, row.totals.total),
+            }),
+          )
+          .join(', '),
+      }),
+    )
+  }
+  const projectsRest = brief.projects.slice(PROJECT_LIMIT)
+  if (projectsRest.length > 0) {
+    lines.push(
+      t('brief.projectsRest', {
+        count: projectsRest.length,
+        tokens: projectsRest.reduce((sum, row) => sum + row.totals.total, 0),
+      }),
+    )
+  }
+  return lines
+}
+
+function percent(value: number, total: number): string {
+  return total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+}
+
+/** Секунды до десятых из миллисекунд. */
+function seconds(ms: number): number {
+  return Math.round(ms / 100) / 10
 }
