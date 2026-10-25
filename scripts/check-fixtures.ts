@@ -160,6 +160,76 @@ check(
   )
 }
 
+// 9.1: статус вызова и голова ответа сабагента. Ради них в `sidechain` лежит
+// сабагент, написанный руками, — формально фикстура зелёная и без него, а
+// разбор `is_error` и обрезки по кодпоинтам остался бы без единого случая.
+{
+  const dir = join(CLAUDE, 'sidechain.subagents')
+  const subagents = existsSync(dir)
+    ? readdirSync(dir)
+        .filter((f) => f.endsWith('.jsonl'))
+        .sort()
+    : []
+  const logs = [
+    { name: 'sidechain.jsonl', rows: parsed.get('sidechain') ?? [] },
+    ...subagents.map((f) => ({ name: f, rows: readJsonl(join(dir, f)) })),
+  ]
+
+  const flags = { true: 0, false: 0, absent: 0, other: 0 }
+  let unanswered = 0
+  for (const { rows } of logs) {
+    const answered = new Set<string>()
+    for (const r of rows) {
+      if (r['type'] !== 'user' || !Array.isArray(r['message']?.content)) continue
+      for (const b of r['message'].content) {
+        if (b?.type !== 'tool_result') continue
+        answered.add(b.tool_use_id)
+        if (!('is_error' in b)) flags.absent++
+        else if (b.is_error === true) flags.true++
+        else if (b.is_error === false) flags.false++
+        else flags.other++
+      }
+    }
+    for (const r of assistants(rows))
+      for (const b of r['message']?.content ?? [])
+        if (b?.type === 'tool_use' && !answered.has(b.id)) unanswered++
+  }
+  check(
+    'sidechain / is_error: true, false и ключа нет',
+    flags.true > 0 && flags.false > 0 && flags.absent > 0,
+    `true ${flags.true}, false ${flags.false}, без ключа ${flags.absent}`,
+  )
+  check(
+    'sidechain / is_error не булево и вызов без результата',
+    flags.other > 0 && unanswered > 0,
+    `не булево ${flags.other}, без результата ${unanswered}`,
+  )
+
+  // Сабагент с несколькими текстовыми блоками, где последний в файле длиннее
+  // 200 кодпоинтов, двухсотый из них вне BMP, а метка у него раньше, чем у
+  // предыдущего блока (порядок записей не хронологический).
+  const found = subagents.filter((f) => {
+    const blocks = assistants(logs.find((l) => l.name === f)?.rows ?? []).flatMap((r) =>
+      (r['message']?.content ?? [])
+        .filter((b: Record<string, any>) => b?.type === 'text' && String(b.text).trim() !== '')
+        .map((b: Record<string, any>) => ({
+          text: String(b.text),
+          ts: Date.parse(r['timestamp']),
+        })),
+    )
+    const last = blocks.at(-1)
+    const before = blocks.at(-2)
+    if (!last || !before) return false
+    const points = Array.from(last.text)
+    return points.length > 200 && points[199]!.length === 2 && last.ts < before.ts
+  })
+  check(
+    'sidechain / голова: два блока, обрезка на суррогатной паре, порядок не хронологический',
+    found.length > 0,
+    found.join(', ') || 'нет такого сабагента',
+  )
+}
+
 {
   const names = [...toolUsesByRequest(parsed.get('mcp') ?? []).values()].flat()
   const mcp = names.filter((n) => n.startsWith('mcp__'))

@@ -103,8 +103,8 @@ function insertSession(db: Db, session: Session): void {
     `INSERT INTO sessions (
        id, provider, source_path, cwd, project, branch, model, entrypoint, cli_version,
        title, first_prompt, started_at, ended_at, parent_session_id, parent_tool_use_id,
-       agent_type, is_sidechain, prefix_tokens, tools_deferred
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       agent_type, is_sidechain, prefix_tokens, tools_deferred, last_text_head
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     session.id,
     session.provider,
     session.sourcePath,
@@ -124,6 +124,7 @@ function insertSession(db: Db, session: Session): void {
     session.isSidechain ? 1 : 0,
     session.prefixTokens,
     session.toolsDeferred ? 1 : 0,
+    session.lastTextHead ?? null,
   )
 }
 
@@ -204,8 +205,8 @@ function insertToolCall(db: Db, request: Request, tool: ToolCall, index: number)
   db.run(
     `INSERT INTO tool_calls (
        session_id, seq, idx, tool_use_id, name, kind, server, result_bytes, marginal_tokens,
-       marginal_basis, has_image
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       marginal_basis, has_image, is_error
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     request.sessionId,
     request.seq,
     index,
@@ -217,6 +218,8 @@ function insertToolCall(db: Db, request: Request, tool: ToolCall, index: number)
     tool.marginalTokens,
     tool.marginalBasis,
     tool.hasImage ? 1 : 0,
+    // `NULL`, а не 0, когда статуса нет: ноль значил бы «ошибки не было».
+    tool.isError === undefined ? null : tool.isError ? 1 : 0,
   )
 
   // `OR IGNORE`, а не `OR REPLACE`: тот же путь в том же вызове — это один

@@ -17,7 +17,7 @@
  *    и снос базы их не трогает.
  */
 
-export const SCHEMA_VERSION = 12
+export const SCHEMA_VERSION = 13
 
 /**
  * `sources` — что уже прочитано. Ключ дочитывания это тройка
@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS sources (
   vanished_at INTEGER
 ) STRICT;
 
+-- sessions.last_text_head (9.1) — первые 200 кодпоинтов последнего текстового
+-- блока сабагента, сырой текст: вердикт из него считается при запросе. NULL у
+-- корневых сессий, у Codex, у сабагента без текста и у сессий, чей лог пропал
+-- раньше, чем его успели перечитать версией 13: «не знаем», а не пустая строка.
+-- Описание стоит здесь, а не внутри таблицы, нарочно: кириллический комментарий
+-- перед последним столбцом ломает SQLite DROP COLUMN на части текстов
+-- («incomplete input»), а тесты миграций собирают старый индекс именно им.
 CREATE TABLE IF NOT EXISTS sessions (
   id                 TEXT PRIMARY KEY,
   provider           TEXT    NOT NULL,
@@ -73,7 +80,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   prefix_tokens      INTEGER NOT NULL DEFAULT 0,
   -- В наборе был ToolSearch. Без этого признака совет «отключи сервер» врёт
   -- на порядок: схемы MCP в отложенном режиме в префикс не едут вовсе.
-  tools_deferred     INTEGER NOT NULL DEFAULT 0
+  tools_deferred     INTEGER NOT NULL DEFAULT 0,
+  last_text_head     TEXT
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS sessions_started ON sessions (started_at);
@@ -125,6 +133,11 @@ CREATE TABLE IF NOT EXISTS tool_calls (
   marginal_tokens INTEGER NOT NULL DEFAULT 0,
   marginal_basis  TEXT    NOT NULL DEFAULT 'unknown',
   has_image       INTEGER NOT NULL DEFAULT 0,
+  -- Результат вызова — ошибка (9.1): 1 — is_error true, 0 — false или ключа
+  -- нет (в API он по умолчанию ложен; явный false Claude Code пишет только у
+  -- Bash, правило 30), NULL — не знаем: результата нет, ключ не булев, Codex.
+  -- Доля ошибок делится на вызовы с известным статусом, count(is_error).
+  is_error        INTEGER,
   PRIMARY KEY (session_id, seq, idx),
   FOREIGN KEY (session_id, seq) REFERENCES requests (session_id, seq) ON DELETE CASCADE
 ) STRICT;
@@ -409,6 +422,25 @@ ALTER TABLE requests ADD COLUMN interjected_bytes INTEGER NOT NULL DEFAULT 0;`,
     // без времени навсегда, хотя мерить есть чем.
     version: 12,
     sql: `ALTER TABLE requests ADD COLUMN duration_ms INTEGER;
+UPDATE sources SET offset = 0;`,
+  },
+  {
+    // Статус вызова и голова последнего ответа сабагента (9.1) — вторая
+    // миграция, что **дочитывает без сноса**, тем же способом, что 12. Значения
+    // лежат только в логах, и `rebuild` стёр бы сессии пропавших логов
+    // (правило 19), поэтому два столбца добавляются ALTER-ом, а источникам
+    // сбрасывается `offset`: проход видит несовпадение четвёрки и перечитывает
+    // файл, `putSession` заменяет его сессию целиком. Пропавшие остаются как
+    // были, с `NULL` в обеих колонках, — и это правда: логов нет, мерить нечем.
+    //
+    // Сброс — у **всех** источников, как в 12, а не у `vanished_at IS NULL`:
+    // помеченные пропавшими, но лежащие на диске файлы (на копии живого индекса
+    // их 197 из 809) проход пропускает по совпавшей четвёрке, и без сброса они
+    // остались бы без статусов и головы навсегда. Индекс версии 11 проходит обе
+    // миграции подряд — сброс стоит дважды и ничему не мешает.
+    version: 13,
+    sql: `ALTER TABLE tool_calls ADD COLUMN is_error INTEGER;
+ALTER TABLE sessions ADD COLUMN last_text_head TEXT;
 UPDATE sources SET offset = 0;`,
   },
 ]
