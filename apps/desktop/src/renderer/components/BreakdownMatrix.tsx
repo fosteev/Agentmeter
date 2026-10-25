@@ -1,5 +1,6 @@
 /**
- * Развёртка «проекты × модели» (8.2) — раздел 12 макета, строки 2101–2384.
+ * Развёртка «проекты × модели» (8.2) — раздел 12 макета, строки 2101–2384;
+ * скорость модели в повороте (8.4) — раздел 12б, строки 2427–2548.
  *
  * Три части: полоса периода с легендой моделей, таблица проектов с делением
  * полосы и полоса честности внизу; поворот «по моделям» — те же числа из того
@@ -22,8 +23,15 @@ import type { MatrixModelLine, MatrixScreen } from '@agentmeter/ipc'
 import { MATRIX_GRID, MatrixProjectRow } from './MatrixProjectRow.tsx'
 import { ModelStrip, type StripSegment } from './ModelStrip.tsx'
 import { mono } from './SpendCategoryTable.tsx'
-import { formatCount, formatPercent, formatTokens, t } from '../format.ts'
+import { formatCount, formatPercent, formatRate, formatSeconds, formatTokens, t } from '../format.ts'
 import { modelTone } from '../paint.ts'
+
+/**
+ * Строка поворота (8.4, строки 2427–2531): модель, ответ, темп, расход. Столбцы
+ * скорости — фиксированной ширины, чтобы числа соседних моделей стояли
+ * разряд под разрядом; расход — справа, как в повороте 8.2.
+ */
+const PIVOT_GRID = 'minmax(0,1fr) 72px 48px 132px'
 
 export interface BreakdownMatrixProps {
   matrix: MatrixScreen
@@ -203,16 +211,44 @@ export function BreakdownMatrix({ matrix, pivot }: BreakdownMatrixProps) {
           data-matrix-pivot
           style={{ padding: '16px 20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}
         >
+          <div
+            data-matrix-pivot-head
+            style={{
+              display: 'grid',
+              gridTemplateColumns: PIVOT_GRID,
+              gap: 12,
+              ...mono(10),
+              letterSpacing: '.08em',
+              textTransform: 'uppercase',
+              color: 'var(--tx3)',
+              paddingBottom: 2,
+              borderBottom: '1px solid var(--line)',
+            }}
+          >
+            <span />
+            <span style={{ textAlign: 'right' }}>{t('matrix.columnResponse')}</span>
+            <span style={{ textAlign: 'right' }}>{t('matrix.columnPace')}</span>
+            <span />
+          </div>
           {named.map((line) => (
-            <div key={`${line.provider} ${line.model}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div
+              key={`${line.provider} ${line.model}`}
+              data-matrix-pivot-model={line.model}
+              style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+            >
               <div
-                style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}
+                style={{ display: 'grid', gridTemplateColumns: PIVOT_GRID, gap: 12, alignItems: 'start' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: 2, background: color(line) }} />
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, paddingTop: 1 }}
+                >
+                  <div
+                    style={{ width: 7, height: 7, borderRadius: 2, background: color(line), flexShrink: 0 }}
+                  />
                   <span style={{ ...mono(11.5) }}>{line.model}</span>
                 </div>
-                <span style={{ ...mono(12), fontWeight: 600 }} title={line.tokens.caveat}>
+                <SpeedCells speed={line.speed} />
+                <span style={{ ...mono(12, 'right'), fontWeight: 600 }} title={line.tokens.caveat}>
                   {t('matrix.pivotValue', {
                     tokens: `${line.tokens.confidence === 'exact' ? '' : '≈'}${formatTokens(line.tokens.value)}`,
                     percent: formatPercent(line.share),
@@ -230,7 +266,13 @@ export function BreakdownMatrix({ matrix, pivot }: BreakdownMatrixProps) {
           {matrix.modelTail === undefined ? null : (
             <div
               data-matrix-pivot-tail
-              style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, opacity: 0.72 }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: PIVOT_GRID,
+                gap: 12,
+                alignItems: 'baseline',
+                opacity: 0.72,
+              }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <div style={{ width: 7, height: 7, borderRadius: 2, background: 'var(--tx3)' }} />
@@ -238,7 +280,11 @@ export function BreakdownMatrix({ matrix, pivot }: BreakdownMatrixProps) {
                   {t('matrix.modelTail', { count: matrix.modelTail.count })}
                 </span>
               </div>
-              <span style={{ ...mono(12), fontWeight: 600 }} title={matrix.modelTail.tokens.caveat}>
+              {/* У хвоста одной модели нет — и скорости тоже: медиана по смеси
+                  моделей не была бы скоростью ни одной из них. */}
+              <span />
+              <span />
+              <span style={{ ...mono(12, 'right'), fontWeight: 600 }} title={matrix.modelTail.tokens.caveat}>
                 {t('matrix.pivotValue', {
                   tokens: `${matrix.modelTail.tokens.confidence === 'exact' ? '' : '≈'}${formatTokens(matrix.modelTail.tokens.value)}`,
                   percent: formatPercent(matrix.modelTail.share),
@@ -246,10 +292,57 @@ export function BreakdownMatrix({ matrix, pivot }: BreakdownMatrixProps) {
               </span>
             </div>
           )}
+          <div
+            data-matrix-speed-note
+            style={{
+              borderTop: '1px solid var(--line)',
+              paddingTop: 12,
+              fontSize: 11.5,
+              color: 'var(--tx2)',
+              lineHeight: 1.55,
+            }}
+          >
+            {t('matrix.speedNote')}
+          </div>
         </div>
       )}
 
       <HonestyStrip rows={matrix.rows} />
+    </>
+  )
+}
+
+/**
+ * Два столбца скорости (8.4): медиана ответа с p90 мелко под ней и темп. Ниже
+ * порога — одни слова на оба столбца: пустая ячейка читалась бы как «не
+ * посчиталось», а медиана из двух запросов — как типичное.
+ */
+function SpeedCells({ speed }: { speed: MatrixModelLine['speed'] }) {
+  if (speed === undefined)
+    return (
+      <span
+        data-matrix-speed-few
+        style={{ gridColumn: 'span 2', ...mono(11, 'right'), color: 'var(--tx3)' }}
+      >
+        {t('matrix.speedFew')}
+      </span>
+    )
+  return (
+    <>
+      <div
+        data-matrix-speed
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}
+      >
+        <span style={{ ...mono(12) }}>
+          {t('matrix.speedSeconds', { value: formatSeconds(speed.p50Ms) })}
+        </span>
+        <span style={{ ...mono(10), color: 'var(--tx3)' }}>
+          {t('matrix.speedP90', { value: formatSeconds(speed.p90Ms) })}
+        </span>
+      </div>
+      <span data-matrix-pace style={{ ...mono(12, 'right'), color: 'var(--tx2)' }}>
+        {formatRate(speed.tokensPerSecond)}
+      </span>
     </>
   )
 }

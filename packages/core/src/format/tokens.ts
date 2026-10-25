@@ -58,3 +58,18 @@ export function formatPercent(share: number, locale: string, digits = 1): string
   }).format(share * 100)
   return `${value}%`
 }
+
+/**
+ * Число с одним знаком после запятой — время ответа в секундах и темп в
+ * токенах в секунду (8.4): `5265 мс` → `5.3`, `78.25` → `78.3`. Единица живёт
+ * в каталоге словом («с», «s»), а не здесь: она переводится, число — нет.
+ *
+ * Знак ровно один и всегда один: `32.0`, а не `32`, — иначе в столбце темпа
+ * соседние строки выровнялись бы по разным разрядам.
+ */
+export function formatDecimal(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value)
+}

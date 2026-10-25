@@ -168,8 +168,8 @@ function insertRequest(db: Db, request: Request): void {
     `INSERT INTO requests (
        session_id, seq, request_id, ts, model, input, output, cache_write, cache_read,
        reasoning, cache_write_5m, cache_write_1h, context_tokens, context_window,
-       skill, is_sidechain, compacted, synthetic, interjected_bytes, origin
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       skill, is_sidechain, compacted, synthetic, interjected_bytes, origin, duration_ms
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     request.sessionId,
     request.seq,
     request.requestId,
@@ -190,6 +190,7 @@ function insertRequest(db: Db, request: Request): void {
     request.synthetic ? 1 : 0,
     request.interjectedBytes,
     request.origin,
+    request.durationMs ?? null,
   )
 
   for (let index = 0; index < request.tools.length; index += 1) {

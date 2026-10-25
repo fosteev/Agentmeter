@@ -2402,6 +2402,171 @@
       </div>
     </div>
 
+    <!-- ============ 12б · СКОРОСТЬ МОДЕЛИ В ПОВОРОТЕ (8.4) ============ -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">12б · Развёртка — скорость модели в повороте «по моделям»</div>
+
+      <div style="display:flex;gap:24px;max-width:1180px">
+        <div style="font-size:12.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty;flex:1">Тот же поворот раздела 12, к которому справа добавлены два столбца: <span style="color:var(--tx)">сколько ждали ответ</span> (медиана, под ней мелко 90-й процентиль) и <span style="color:var(--tx)">темп</span> в токенах в секунду. Отвечает на вопрос, который задают при выборе модели: эта думает дольше или просто пишет больше?</div>
+        <div style="font-size:12.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty;flex:1">Оба числа стоят рядом, и вывода экран не делает: модель, которую ждут втрое дольше при том же темпе, пишет втрое длиннее, а не работает медленнее. Скорость есть только у строки модели — у хвоста легенды и у клетки проекта её нет.</div>
+      </div>
+
+      <div style="display:flex;gap:24px;align-items:flex-start">
+        <div style="width:700px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:16px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:var(--s1)">
+            <span style="font-size:13px;font-weight:600">Весь период по 24 октября, повёрнутый: по моделям</span>
+            <div style="display:flex;gap:2px;padding:2px;background:var(--s2);border-radius:6px">
+              <span style="padding:4px 10px;font-size:11px;border-radius:4px;color:var(--tx2)">по проектам</span>
+              <span style="padding:4px 10px;font-size:11px;border-radius:4px;background:var(--bg)">по моделям</span>
+            </div>
+          </div>
+
+          <div style="padding:16px 20px 18px;display:flex;flex-direction:column;gap:14px">
+            <!-- шапка столбцов: подписи только у новых -->
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding-bottom:2px;border-bottom:1px solid var(--line)">
+              <span></span>
+              <span style="text-align:right">Ответ</span>
+              <span style="text-align:right">тк/с</span>
+              <span></span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:var(--claude);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">claude-opus-5-5</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">5.3 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 17.3 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">78.3</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">≈3.9B · 57.4%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:100%;height:100%;display:flex;gap:1px"><div style="width:38.0%;background:var(--claude)"></div><div style="width:29.3%;background:var(--claude)"></div><div style="width:4.6%;background:var(--claude)"></div><div style="width:4.5%;background:var(--claude)"></div><div style="width:3.2%;background:var(--claude)"></div><div style="width:20.3%;background:var(--claude)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">pilot 38% · Agentura 29% · at 5% · jiraffe 4% · gitsprout 3% · хвост 20%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--claude) 78%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">claude-sonnet-5-5</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">4.5 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 17.2 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">73.8</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">≈1.4B · 20.4%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:35.5%;height:100%;display:flex;gap:1px"><div style="width:31.4%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div><div style="width:9.0%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div><div style="width:8.9%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div><div style="width:7.9%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div><div style="width:7.4%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div><div style="width:35.4%;background:color-mix(in oklch, var(--claude) 78%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Agentura 31% · pilot 9% · can-scheme-parser 9% · аренда-сочи-страница 8% · life 7% · хвост 35%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:var(--codex);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">gpt-5.3-codex</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">6.6 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 24.0 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">35.5</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">381.2M · 5.6%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:9.8%;height:100%;display:flex;gap:1px"><div style="width:31.4%;background:var(--codex)"></div><div style="width:18.1%;background:var(--codex)"></div><div style="width:14.9%;background:var(--codex)"></div><div style="width:10.7%;background:var(--codex)"></div><div style="width:7.4%;background:var(--codex)"></div><div style="width:17.6%;background:var(--codex)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">troy 31% · flutter-pulse-mobile 18% · Pilot7 15% · troy-flutter 11% · smart_eq_monitor 7% · хвост 18%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--codex) 78%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">gpt-5.5</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">8.3 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 19.7 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">36.4</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">365.1M · 5.3%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:9.2%;height:100%;display:flex;gap:1px"><div style="width:39.4%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div><div style="width:21.1%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div><div style="width:11.9%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div><div style="width:6.5%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div><div style="width:6.3%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div><div style="width:14.8%;background:color-mix(in oklch, var(--codex) 78%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">pilot 39% · cpgu 21% · troy 12% · mfc_portal 6% · flutter-pulse-mobile 6% · хвост 15%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--codex) 52%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">gpt-5.4</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">8.8 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 28.1 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">38.5</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">201.4M · 2.9%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:5.1%;height:100%;display:flex;gap:1px"><div style="width:54.8%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div><div style="width:8.6%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div><div style="width:7.4%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div><div style="width:5.5%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div><div style="width:4.0%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div><div style="width:19.6%;background:color-mix(in oklch, var(--codex) 52%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Pilot7 55% · pilot 9% · mfc_portal 7% · flutter-pulse-mobile 5% · yakutia-mfc 4% · хвост 20%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--claude) 52%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">claude-sonnet-5</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">3.6 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 11.3 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">83.2</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">195.7M · 2.9%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:5.0%;height:100%;display:flex;gap:1px"><div style="width:33.1%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div><div style="width:32.6%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div><div style="width:16.4%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div><div style="width:8.8%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div><div style="width:4.6%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div><div style="width:4.6%;background:color-mix(in oklch, var(--claude) 52%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">flutter-pulse-mobile 33% · Wayfork 33% · at 16% · troy-backend 9% · pilot 5% · хвост 5%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--claude) 34%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">claude-fable-5-1</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">8.1 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 40.4 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">72.9</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">≈184.2M · 2.7%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:4.7%;height:100%;display:flex;gap:1px"><div style="width:49.2%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div><div style="width:13.1%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div><div style="width:8.0%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div><div style="width:7.7%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div><div style="width:7.6%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div><div style="width:14.4%;background:color-mix(in oklch, var(--claude) 34%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">pilot 49% · Agentura 13% · life 8% · Admin 8% · flutter-pulse-mobile 8% · хвост 14%</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:start">
+                <div style="display:flex;align-items:center;gap:7px;min-width:0;padding-top:1px"><div style="width:7px;height:7px;border-radius:2px;background:color-mix(in oklch, var(--codex) 34%, transparent);flex-shrink:0"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">gpt-5.6-sol</span></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">8.3 с</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums">p90 48.1 с</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">32.0</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">105.7M · 1.5%</span>
+              </div>
+              <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:2.6%;height:100%;display:flex;gap:1px"><div style="width:51.6%;background:color-mix(in oklch, var(--codex) 34%, transparent)"></div><div style="width:44.6%;background:color-mix(in oklch, var(--codex) 34%, transparent)"></div><div style="width:1.8%;background:color-mix(in oklch, var(--codex) 34%, transparent)"></div><div style="width:1.6%;background:color-mix(in oklch, var(--codex) 34%, transparent)"></div><div style="width:0.4%;background:color-mix(in oklch, var(--codex) 34%, transparent)"></div></div></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Wayfork 52% · Agentmeter 45% · cpgu-frontend 2% · Admin 2% · at 0%</div>
+            </div>
+
+            <!-- хвост легенды: скорости нет, одной модели у него нет -->
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:baseline;opacity:.72">
+              <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:2px;background:var(--tx3)"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--tx2)">ещё 8 моделей</span></div>
+              <span></span>
+              <span></span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">≈86.8M · 1.3%</span>
+            </div>
+
+            <!-- сноска -->
+            <div style="border-top:1px solid var(--line);padding-top:12px;font-size:11.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty"><span style="color:var(--tx)">Ответ</span> — от отправки запроса до последней записанной части ответа: сеть, очередь, повторы и размышление вместе, это не скорость генерации. Под ним — 90-й процентиль. <span style="color:var(--tx)">Темп</span> — медиана output / время по запросам, а не сумма на сумму: хвост долгих ожиданий утягивает ту к числу, которого не было ни на одном запросе. У запросов, восстановленных по разрыву цепочки кэша, времени нет — в выборку они не входят.</div>
+          </div>
+        </div>
+
+        <!-- модель ниже порога -->
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:12px 20px;border-bottom:1px solid var(--line);background:var(--s1);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12.5px;font-weight:600">26 сентября: модель ниже порога</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">3 запроса · порог 5</span>
+          </div>
+          <div style="padding:14px 20px 16px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 48px 132px;gap:12px;align-items:baseline">
+              <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:2px;background:var(--claude)"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">claude-opus-5-5</span></div>
+              <span style="grid-column:span 2;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:right;color:var(--tx3)">мало данных</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">782.1k · 100%</span>
+            </div>
+            <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:100%;height:100%;background:var(--claude)"></div></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Wayfork 100%</div>
+          </div>
+        </div>
+        </div>
+
+        <div style="width:456px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Почему «ответ», а не «генерация»</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Первая строка ответа Claude пишется по завершении блока, а не по началу стриминга, — время до первого токена от генерации отделить нечем. У Codex запись с usage ложится <span style="color:var(--tx)">после того, как отработал инструмент</span>: у 1 572 запросов из 12 932 позже ответа на полсекунды и больше. Конец — последний элемент ответа, иначе модели приписалось бы время <span style="font-family:'IBM Plex Mono',monospace">shell</span>.</div>
+          </div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Почему медиана</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Темп считается на каждом запросе, и берётся медиана темпов. Сумма на сумму у <span style="font-family:'IBM Plex Mono',monospace">gpt-5.3-codex</span> дала бы 15.6 тк/с против медианы 35.5: хвост повторов и перегрузки делает «типичным» число, которого не было <span style="color:var(--tx)">ни на одном запросе</span>. Модель с меньше чем пятью измеренными запросами скорости не получает — «мало данных», а не медиана из двух.</div>
+          </div>
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Откуда числа макета</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Индекс живой машины, все логи по 24 октября: 58 359 запросов, 16 моделей. Выше 1% периода — восемь, они названы; восемь в хвосте, и среди них локальная <span style="font-family:'IBM Plex Mono',monospace">qwen3.5-27b-32k</span>: ответ 38.6 с, p90 205.1 с, 3.1 тк/с. Сверка — <span style="font-family:'IBM Plex Mono',monospace">speed-live.ts</span>, индекс против сырых логов, расхождений ноль.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 

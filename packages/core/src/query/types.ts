@@ -1,3 +1,4 @@
+import type { ModelSpeed } from './speed.ts'
 import type { LimitWindow, MarginalBasis, Provider } from '../sources/types.ts'
 
 export interface DayRange {
@@ -130,6 +131,13 @@ export interface MatrixCell {
    * посчитанная в ядре, была бы долей от чужого целого.
    */
   inherited: number
+  /**
+   * Скорость модели за период (8.4) — только у маргинали `SpendMatrix.models`,
+   * и только у модели с измеренными запросами не ниже `SPEED.minRequests`.
+   * У клетки проекта её нет: выборка клетки в разы меньше, и порог отсёк бы
+   * половину таблицы.
+   */
+  speed?: ModelSpeed
 }
 
 /** Строка таблицы проектов: итог проекта и его клетки по убыванию расхода. */

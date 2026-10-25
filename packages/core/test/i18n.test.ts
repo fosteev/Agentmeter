@@ -23,6 +23,9 @@ import { ru } from '../src/i18n/ru.ts'
  * каждый день.
  */
 const VALUES: Record<string, Record<string, string | number>> = {
+  // Самое длинное из живых: p90 локальной модели — 205.1 с (8.4).
+  'matrix.speedSeconds': { value: '205.1' },
+  'matrix.speedP90': { value: '205.1' },
   'state.finishedAgo': { ago: '18 мин назад' },
   // Худшее из встречающихся: попап на спящей машине показывает сутки, а не
   // секунды, и «обновлено 18 мин назад» короче «обновлено 12 дней назад».

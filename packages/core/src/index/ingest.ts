@@ -59,6 +59,7 @@ interface SourceRow {
   size: number
   mtime: number
   offset: number
+  vanished_at: number | null
 }
 
 interface FileIngestResult {
@@ -188,7 +189,7 @@ function ingestOne(db: Db, file: SourceFile, memory: MemoryOptions): FileIngestR
 
   const current = { inode: fileId(stat.ino), size: stat.size, mtime: Math.round(stat.mtimeMs) }
   const row = db.get<SourceRow>(
-    'SELECT inode, size, mtime, offset FROM sources WHERE path = ?',
+    'SELECT inode, size, mtime, offset, vanished_at FROM sources WHERE path = ?',
     file.path,
   )
   if (
@@ -198,6 +199,14 @@ function ingestOne(db: Db, file: SourceFile, memory: MemoryOptions): FileIngestR
     row.mtime === current.mtime &&
     row.offset === current.size
   ) {
+    // Файл на месте и не менялся, а строка помечена пропавшей: его не было в
+    // каком-то проходе и он вернулся тем же (8.4 — на копии живого индекса
+    // таких 197 из 809). Пометку снимает только `putSource`, то есть
+    // перечитывание, и без этой строки файл до следующей своей правки числился
+    // бы пропавшим — в счётчике doctor и в выборе, кого 12-я миграция
+    // перечитывает.
+    if (row.vanished_at !== null)
+      db.run('UPDATE sources SET vanished_at = NULL WHERE path = ?', file.path)
     return { parsed: false, requests: 0, failed: false }
   }
 

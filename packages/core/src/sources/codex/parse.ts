@@ -67,6 +67,14 @@ interface ParseState {
   prefixBlocks: PrefixBlock[]
   prefixMessages: Array<{ role: 'user'; bytes: number }>
   limits: LimitObservation[]
+  /** Метка последней границы — записи, отдавшей модели промпт (8.4). */
+  lastBoundaryTs?: number
+  /** Запрос уже начал отвечать: видели элемент ответа после прошлого `token_count`. */
+  answering: boolean
+  /** Старт текущего запроса — граница перед его **первым** элементом ответа. */
+  answerStartTs?: number
+  /** Метка последнего элемента ответа текущего запроса. */
+  answerEndTs?: number
 }
 
 /**
@@ -122,6 +130,7 @@ function parseLines(path: string, lines: string[]): ParseResult {
     emittedTools: new Map(),
     pendingOrder: 0,
     compactedPending: false,
+    answering: false,
     requests: [],
     prefixBlocks: [],
     prefixMessages: [],
@@ -155,6 +164,7 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
 
   const ts = parseTimestamp(record)
   if (ts !== undefined) state.endedAt = ts
+  noteTiming(state, type, payload, ts)
 
   switch (type) {
     case 'session_meta':
@@ -177,6 +187,81 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
     default:
       return
   }
+}
+
+/**
+ * Границы запроса по времени (8.4) — отдельно от учёта токенов.
+ *
+ * Запрос у Codex заканчивается записью `token_count`, но время по ней брать
+ * нельзя: она пишется **после** того, как отработал инструмент, — на живой
+ * машине у 1 572 запросов из 12 932 позже последнего элемента ответа на 0.5 с
+ * и больше, медиана разрыва 1.2 с. Это работал `shell`, а не модель. Поэтому
+ * конец — последний элемент ответа.
+ *
+ * Старт — последняя граница перед **первым** элементом ответа, а не
+ * последняя граница вообще: результат инструмента этого же хода пишется
+ * раньше `token_count`, и «последняя граница» оказалась бы позже конца.
+ * Границы, после которых ответа нет (их ноль из 12 932 на живой машине),
+ * старт не дают и не нужны.
+ */
+function noteTiming(
+  state: ParseState,
+  type: string | undefined,
+  payload: JsonObject | undefined,
+  ts: number | undefined,
+): void {
+  // Ход кончился или начался новый, а начатый ответ `token_count` так и не
+  // получил (прерванный ход, ход с последним `web_search_call`): без сброса его
+  // старт доставался следующему запросу — через голову нового сообщения
+  // человека. Приёмка 8.4: 21 запрос из 12 989, простой до 1 155 минут внутри
+  // «ответа». Ни разу на живых логах `token_count` не пришёл после такого
+  // события к начатому ответу, так что сброс измеренного не теряет.
+  if (type === 'event_msg' && payload && TURN_EDGES.has(stringField(payload, 'type') ?? '')) {
+    state.answering = false
+    delete state.answerStartTs
+    delete state.answerEndTs
+  }
+  if (isBoundary(type, payload)) {
+    if (ts !== undefined) state.lastBoundaryTs = ts
+    return
+  }
+  if (type !== 'response_item' || !payload || !isAnswerItem(payload)) return
+  if (!state.answering) {
+    state.answering = true
+    if (state.lastBoundaryTs === undefined) delete state.answerStartTs
+    else state.answerStartTs = state.lastBoundaryTs
+  }
+  if (ts !== undefined) state.answerEndTs = Math.max(state.answerEndTs ?? ts, ts)
+}
+
+/** События хода, после которых начатый, но не закрытый ответ — сирота (8.4). */
+const TURN_EDGES = new Set(['turn_aborted', 'task_complete', 'task_started', 'user_message'])
+
+/**
+ * Что отдаёт модели промпт: результат инструмента (`*_output`, включая
+ * `tool_search_output`), сообщение человека, начало хода и компакт.
+ */
+function isBoundary(type: string | undefined, payload: JsonObject | undefined): boolean {
+  if (type === 'compacted') return true
+  if (!payload) return false
+  const kind = stringField(payload, 'type') ?? ''
+  if (type === 'event_msg')
+    return kind === 'user_message' || kind === 'task_started' || kind === 'context_compacted'
+  if (type !== 'response_item') return false
+  if (kind.endsWith('_output')) return true
+  return kind === 'message' && stringField(payload, 'role') === 'user'
+}
+
+/**
+ * Элемент ответа модели: всё, что приходит из API, — рассуждение, вызовы,
+ * сообщение ассистента. Сообщения `developer`/`system` — часть промпта, не
+ * ответа, и не граница: человек их не отправлял.
+ */
+function isAnswerItem(payload: JsonObject): boolean {
+  const kind = stringField(payload, 'type') ?? ''
+  if (kind.endsWith('_output')) return false
+  if (kind === 'message') return stringField(payload, 'role') === 'assistant'
+  return kind !== ''
 }
 
 function consumeSessionMeta(state: ParseState, payload: JsonObject | undefined): void {
@@ -427,10 +512,22 @@ function consumeTokenCount(state: ParseState, payload: JsonObject, ts: number | 
     tools: pendingTools(state),
   }
   if (contextWindow !== undefined) request.contextWindow = contextWindow
+  // Время — только здесь, после отсева повтора: повтор `token_count` пишется
+  // уже после ответа, и закрой он запрос, следующий потерял бы свой старт.
+  if (
+    state.answering &&
+    state.answerStartTs !== undefined &&
+    state.answerEndTs !== undefined &&
+    state.answerEndTs > state.answerStartTs
+  )
+    request.durationMs = state.answerEndTs - state.answerStartTs
 
   state.requests.push(request)
   state.pendingTools.clear()
   state.compactedPending = false
+  state.answering = false
+  delete state.answerStartTs
+  delete state.answerEndTs
 }
 
 function totalUsage(usage: JsonObject | undefined): TotalUsage | undefined {

@@ -14,6 +14,7 @@
  */
 import {
   formatCount as count,
+  formatDecimal as decimal,
   formatPercent as percent,
   formatTokens as format,
 } from '@agentmeter/core/format'
@@ -39,6 +40,16 @@ export function formatCount(value: number): string {
 /** Доля как процент; число знаков решает место показа (колонка против строки). */
 export function formatPercent(share: number, digits = 1): string {
   return percent(share, locale(), digits)
+}
+
+/** Секунды из миллисекунд, один знак: время ответа модели (8.4). */
+export function formatSeconds(ms: number): string {
+  return decimal(ms / 1000, locale())
+}
+
+/** Темп ответа, токенов в секунду, один знак (8.4). */
+export function formatRate(value: number): string {
+  return decimal(value, locale())
 }
 
 /**

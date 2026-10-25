@@ -21,6 +21,7 @@
 import { t } from '../i18n/index.ts'
 import type { Db } from '../index/db.ts'
 import type { Provider } from '../sources/types.ts'
+import { modelSpeeds, speedKey } from './speed.ts'
 import { addTotals, emptyTotals, requestFilter, sourceCount, totalsFromRow } from './today.ts'
 import type { DayRange, MatrixCell, MatrixRow, RequestScope, SpendMatrix, Totals } from './types.ts'
 
@@ -96,7 +97,7 @@ export function spendMatrix(db: Db, range: DayRange, scope: RequestScope = {}): 
 
     // Ключ маргинали — пара «провайдер + модель», а не одно имя: `provider` в
     // клетке обязан оставаться фактом, а не догадкой по первой букве имени.
-    const key = `${row.provider} ${row.model}`
+    const key = speedKey(row.provider, row.model)
     const marginal = models.get(key)
     if (marginal === undefined) {
       // Копия `totals`, а не та же ссылка: иначе клетка модели, попавшей в два
@@ -107,6 +108,15 @@ export function spendMatrix(db: Db, range: DayRange, scope: RequestScope = {}): 
       addTotals(marginal.totals, cell.totals)
       marginal.inherited += cell.inherited
     }
+  }
+
+  // Скорость (8.4) — тем же сужением и тем же периодом, своей функцией: CLI и
+  // бриф 7.7 берут её оттуда же, и третий экземпляр медианы однажды отстал бы
+  // от двух первых. Только маргиналь: у клетки проекта выборка в разы меньше.
+  const speeds = modelSpeeds(db, range, scope)
+  for (const [key, marginal] of models) {
+    const speed = speeds.get(key)
+    if (speed !== undefined) marginal.speed = speed
   }
 
   return {
