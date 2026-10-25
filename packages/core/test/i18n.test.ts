@@ -52,6 +52,10 @@ const VALUES: Record<string, Record<string, string | number>> = {
   'matrix.legendLine': { percent: '100%', requests: '12 345', average: '≈206.4k' },
   // Экран Workflow (9.5): худшие числа в узких местах — трёхзначные счётчики,
   // «100.0%» и составное окно «100–102» с четырёхзначными счётами.
+  'notify.workflowRework': { value: '≈100.5%' },
+  'notify.workflowErrors': { value: '≈100.5%' },
+  'notify.workflowOverhead': { value: '≈×100.55' },
+  'notify.workflowBody': { threshold: '100.5%' },
   'workflow.shellOf': { k: 12, n: 12 },
   'workflow.prevWindow': { value: '100.0%' },
   'workflow.targetLabel': { pct: '100%' },

@@ -47,6 +47,14 @@ export const LIMITS = {
   'limit.weeklyModel': 20,
   'limit.monthly': 20,
   'limit.other': 20,
+  // Уведомление «пора в /retro» (9.6). Рамка уведомления — дело ОС, а не наше, и
+  // замерить её нечем: macOS режет заголовок на одной строке около 40 знаков, тело
+  // даёт две-три. Потолки взяты по этому ориентиру, с запасом в пять знаков под
+  // «≈×100.5» в значении: заголовок 44, тело 80.
+  'notify.workflowRework': 44,
+  'notify.workflowErrors': 44,
+  'notify.workflowOverhead': 44,
+  'notify.workflowBody': 80,
   // Заголовки вкладок главного окна: четыре штуки в 420 px, кегль 12.5 px.
   'window.tabToday': 14,
   'window.tabBreakdown': 14,

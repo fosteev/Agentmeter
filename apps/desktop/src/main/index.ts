@@ -73,6 +73,7 @@ import type {
 import { configReport, setConfig, setOauth, setStartup } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
 import { buildWorkflowScreen } from './workflow.ts'
+import { createWorkflowSignals, type WorkflowSignalsCache } from './workflow-alerts.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
@@ -204,6 +205,13 @@ interface Runtime {
   codexOauthHost: CodexOauthHost
   /** Последний ответ OpenAI и окно ограничения. Тоже только в памяти. */
   codexOauth: CodexOauthState
+  /**
+   * Показатели Workflow под уведомление «пора в /retro» (9.6). Считаются не в
+   * `buildSnapshot` и не на каждый опрос: агрегат стоит ~30 мс, а индекс
+   * дописывается почти каждую секунду. Устаревают, когда вотчер или первый
+   * проход дописали индекс.
+   */
+  workflowSignals: WorkflowSignalsCache
   /**
    * Кто был живым на последнем снимке и насколько срочен — вход закрепления
    * строк в ленте (6.1).
@@ -346,6 +354,7 @@ function openRuntime(withWatcher: boolean, defer = false): Runtime {
     // `curl` — 200, `fetch` из Node — 403 html-страницей блокировки (6.4).
     codexOauthHost: { codexHome: sources.codexHome, fetch: net.fetch.bind(net) },
     codexOauth: openCodexOauth(),
+    workflowSignals: createWorkflowSignals(),
     issues: ingested?.issues ?? [],
   }
   // Разовая уборка за снятой настройкой (7.5): хук строки состояния ставился в
@@ -391,6 +400,7 @@ function startWatcher(runtime: Runtime): void {
     // первое впечатление.
     onBatch: (_paths, stats) => {
       runtime.issues = stats.issues
+      runtime.workflowSignals.markStale()
     },
   })
 }
@@ -924,6 +934,7 @@ function driveIngest(runtime: Runtime, onProgress: (progress: IndexProgress) => 
   if (done) {
     runtime.pending = undefined
     runtime.indexing = undefined
+    runtime.workflowSignals.markStale()
     if (runtime.config.index.watch) startWatcher(runtime)
     return
   }
@@ -1471,7 +1482,7 @@ function main(): void {
       })
       item.on('click', () => {
         void owners.reveal(notice.sessionId).then((opened) => {
-          if (!opened) openMainWindow('today')
+          if (!opened) openMainWindow(notice.tab ?? 'today')
         })
       })
       item.show()
@@ -1559,7 +1570,14 @@ function main(): void {
     // Уведомления смотрят на **каждый** снимок, а не только на видимые: попап
     // закрыт как раз тогда, когда человек занят чем-то другим, и молчать в этот
     // момент значит молчать всегда, когда уведомление и нужно.
-    show(planNotifications(notifyState, current, runtime!.config))
+    // Показатели Workflow — не из снимка, а из кэша: снимок собирается на каждый
+    // опрос, агрегат стоит 30 мс. Пока индекс собирается первым проходом, их нет
+    // вовсе: частичный индекс дал бы «окно» из первых попавшихся логов.
+    const workflow =
+      runtime!.pending === undefined
+        ? runtime!.workflowSignals.get(runtime!.db, runtime!.config.workflow)
+        : undefined
+    show(planNotifications(notifyState, current, runtime!.config, workflow))
   }
 
   /**
