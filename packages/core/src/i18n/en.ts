@@ -291,6 +291,10 @@ export const en = {
     waitingTitle: '{{provider}} is waiting for you — {{project}}',
     agentBody: '{{branch}} · {{tokens}}',
     noBranch: 'no branch',
+    workflowRework: 'Rework share — {{value}}',
+    workflowErrors: 'Tool error rate — {{value}}',
+    workflowOverhead: 'Cycle overhead — {{value}}',
+    workflowBody: 'Above your threshold of {{threshold}}. Time to review the logs: /retro',
   },
 
   matrix: {

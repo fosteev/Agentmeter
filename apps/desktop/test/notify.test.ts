@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_CONFIG, setLocale, type Config } from '@agentmeter/core'
+import { DEFAULT_CONFIG, setLocale, type Config, type Db, type WorkflowReport } from '@agentmeter/core'
 import type { LiveAgent, LimitReportRow, TraySnapshot } from '@agentmeter/ipc'
 import { emptyNotifyState, planNotifications, type NotifyState } from '../src/main/notify.ts'
+import {
+  MIN_RECOMPUTE_MS,
+  createWorkflowSignals,
+  signalsFromReport,
+  type WorkflowMetric,
+  type WorkflowSignals,
+} from '../src/main/workflow-alerts.ts'
 
 /**
  * Уведомления (4.7).
@@ -231,6 +238,381 @@ describe('planNotifications', () => {
     expect(planNotifications(state, snap({ limits: [unknown] }), config)).toEqual([])
   })
 })
+
+/**
+ * «Пора в /retro» (9.6). Те же четыре правила, что у остальных поводов, плюс два
+ * своих: порог — настройка пользователя, а не вывод продукта (текст не
+ * оценивает), и показатель, которого нет (`null`), — не повод.
+ */
+describe('planNotifications · Workflow', () => {
+  const flow: Config = {
+    ...config,
+    workflow: {
+      ...config.workflow,
+      enabled: true,
+      alerts: { rework: 0.3, errorRate: 0.1, overhead: 3 },
+    },
+  }
+  const quiet = snap({})
+
+  /** Ловит уведомление при запуске: окно выше порога, а приложение только открылось. */
+  it('первый снимок только запоминает', () => {
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+  })
+
+  /** Ловит порог, сравниваемый «в другую сторону» или не с тем показателем. */
+  it('ниже порога — тишина; пересёк — одно уведомление', () => {
+    planNotifications(state, quiet, flow, sig({ rework: [0.1, 'c1'] }))
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.29, 'c1'] }))).toEqual([])
+
+    const crossed = planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))
+    expect(crossed).toHaveLength(1)
+    expect(crossed[0]!.key).toBe('workflow:rework:c1')
+    expect(crossed[0]!.kind).toBe('workflow')
+    expect(crossed[0]!.tab).toBe('workflow')
+    expect(crossed[0]!.sessionId).toBeUndefined()
+  })
+
+  /** Ловит уведомление на каждый опрос: цикл тот же, значение чуть сдвинулось. */
+  it('следующий снимок того же окна — тишина', () => {
+    planNotifications(state, quiet, flow, sig({ rework: [0.1, 'c1'] }))
+    planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))
+
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.51, 'c1'] }))).toEqual([])
+  })
+
+  /**
+   * Ловит забывание ключа по «стало ниже порога»: показатель не монотонен
+   * (доля ошибок сдвигается с каждой сессией при том же последнем цикле), и
+   * значение, гуляющее у порога, будило бы человека несколько раз за одно окно.
+   */
+  it('ушло под порог и вернулось в том же окне — тишина', () => {
+    planNotifications(state, quiet, flow, sig({ errorRate: [0.05, 'c1'] }))
+    expect(planNotifications(state, quiet, flow, sig({ errorRate: [0.12, 'c1'] }))).toHaveLength(1)
+    expect(planNotifications(state, quiet, flow, sig({ errorRate: [0.09, 'c1'] }))).toEqual([])
+    expect(planNotifications(state, quiet, flow, sig({ errorRate: [0.12, 'c1'] }))).toEqual([])
+    // Новый цикл — новое окно, и ключ прошлого наконец забыт.
+    expect(planNotifications(state, quiet, flow, sig({ errorRate: [0.12, 'c2'] }))).toHaveLength(1)
+  })
+
+  /** Ловит порог, вошедший в личность повода: опустили ниже значения — повод сразу. */
+  it('порог опустили ниже текущего значения — повод', () => {
+    planNotifications(state, quiet, flow, sig({ rework: [0.25, 'c1'] }))
+    const lower = { ...flow, workflow: { ...flow.workflow, alerts: { ...flow.workflow.alerts, rework: 0.2 } } }
+
+    expect(planNotifications(state, quiet, lower, sig({ rework: [0.25, 'c1'] }))).toHaveLength(1)
+  })
+
+  /** Ловит ключ без цикла: новое окно выше порога — новый повод. */
+  it('новое окно выше порога — снова', () => {
+    planNotifications(state, quiet, flow, sig({ rework: [0.1, 'c1'] }))
+    planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))
+    const next = planNotifications(state, quiet, flow, sig({ rework: [0.4, 'c2'] }))
+
+    expect(next.map((notice) => notice.key)).toEqual(['workflow:rework:c2'])
+  })
+
+  /** Ловит «не определён» как «выше порога»: окно не набралось, `latest = null`. */
+  it('показатель без значения — никогда; порог null — никогда', () => {
+    planNotifications(state, quiet, flow, sig({}))
+    expect(planNotifications(state, quiet, flow, sig({}))).toEqual([])
+
+    const off = {
+      ...flow,
+      workflow: { ...flow.workflow, alerts: { rework: null, errorRate: null, overhead: null } },
+    }
+    const all = sig({ rework: [0.9, 'c1'], errorRate: [0.9, 'c1'], overhead: [30, 'c1'] })
+    planNotifications(state, quiet, off, all)
+    expect(planNotifications(state, quiet, off, sig({ rework: [0.9, 'c2'] }))).toEqual([])
+  })
+
+  /** Ловит порог одного показателя, применённый к другому: у каждого свой. */
+  it('у каждого показателя свой порог', () => {
+    planNotifications(state, quiet, flow, sig({}))
+    const notices = planNotifications(
+      state,
+      quiet,
+      flow,
+      sig({ rework: [0.29, 'c1'], errorRate: [0.11, 'c1'], overhead: [2.9, 'c1'] }),
+    )
+
+    expect(notices.map((notice) => notice.key)).toEqual(['workflow:errorRate:c1'])
+  })
+
+  /** Ловит `>=` вместо `>`: «выше порога» на самом пороге — неправда в тексте. */
+  it('значение, равное порогу, — тишина', () => {
+    planNotifications(state, quiet, flow, sig({}))
+    const notices = planNotifications(
+      state,
+      quiet,
+      flow,
+      sig({ rework: [0.3, 'c1'], overhead: [3, 'c1'] }),
+    )
+
+    expect(notices).toEqual([])
+  })
+
+  /** Ловит уведомления у человека, который функцию не включал: сигналы пришли, `enabled` — нет. */
+  it('Workflow выключен — никогда', () => {
+    const disabled = { ...flow, workflow: { ...flow.workflow, enabled: false } }
+    planNotifications(state, quiet, disabled, sig({ rework: [0.1, 'c1'] }))
+
+    expect(planNotifications(state, quiet, disabled, sig({ rework: [0.9, 'c2'] }))).toEqual([])
+  })
+
+  /**
+   * Ловит вчерашнее окно, объявленное новостью: индекс дособрался уже после
+   * первого снимка трея, и первыми показатели стали на втором.
+   */
+  it('показатели, появившиеся после первого снимка, тоже сначала запоминаются', () => {
+    planNotifications(state, quiet, flow, undefined)
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c2'] }))).toHaveLength(1)
+  })
+
+  /** Ловит включение функции поверх старого окна: выключили, включили — это снова «первый снимок». */
+  it('выключение и повторное включение запоминают заново', () => {
+    planNotifications(state, quiet, flow, sig({ rework: [0.1, 'c1'] }))
+    planNotifications(state, quiet, flow, undefined)
+
+    expect(planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))).toEqual([])
+  })
+
+  /** Ловит сброс остальных поводов: отдельное запоминание Workflow не должно будить лимиты. */
+  it('Workflow не отменяет «первый снимок» остальных поводов', () => {
+    const first = planNotifications(
+      state,
+      snap({ limits: [limit(94)] }),
+      flow,
+      sig({ rework: [0.46, 'c1'] }),
+    )
+    expect(first).toEqual([])
+    const second = planNotifications(
+      state,
+      snap({ limits: [limit(94)], agents: [agent({ state: 'waiting' })] }),
+      flow,
+      sig({ rework: [0.46, 'c1'] }),
+    )
+    expect(second.map((notice) => notice.kind)).toEqual(['agent'])
+  })
+
+  /** Ловит слова оценки и потерянные подстановки; проценты — из долей, накладные — кратностью. */
+  it('текст: показатель, значение и порог, без оценки', () => {
+    planNotifications(state, quiet, flow, sig({}))
+    const [rework, errors, overhead] = planNotifications(
+      state,
+      quiet,
+      flow,
+      sig({ rework: [0.46, 'c1'], errorRate: [0.125, 'c1'], overhead: [3.24, 'c1', true] }),
+    )
+
+    expect(rework!.title).toBe('Доля переделки — 46%')
+    expect(rework!.body).toBe('Выше вашего порога 30%. Повод разобрать логи: /retro')
+    expect(errors!.title).toBe('Доля ошибок инструментов — 13%')
+    expect(overhead!.title).toBe('Накладные цикла — ≈×3,2')
+    expect(overhead!.body).toContain('×3.')
+    for (const notice of [rework!, errors!, overhead!]) {
+      expect(`${notice.title} ${notice.body}`).not.toMatch(/плох|bad|worse|{{/i)
+    }
+  })
+
+  it('текст на английском', () => {
+    setLocale('en')
+    planNotifications(state, quiet, flow, sig({}))
+    const [notice] = planNotifications(state, quiet, flow, sig({ rework: [0.46, 'c1'] }))
+
+    expect(notice!.title).toBe('Rework share — 46%')
+    expect(notice!.body).toBe('Above your threshold of 30%. Time to review the logs: /retro')
+  })
+
+  /** Ловит «30% — выше порога 30%»: после округления значение и порог совпали, но 30.4 > 30. */
+  it('значение и порог, совпавшие после округления, показываются точнее', () => {
+    planNotifications(state, quiet, flow, sig({}))
+    const [notice] = planNotifications(state, quiet, flow, sig({ rework: [0.304, 'c1'] }))
+
+    expect(notice!.title).toBe('Доля переделки — 30,4%')
+    expect(notice!.body).toContain('30,0%')
+  })
+})
+
+describe('signalsFromReport', () => {
+  /** Ловит ключ ошибок по сессии: она меняется каждые минуты, и повод шёл бы на каждую. */
+  it('ключ ошибок — последний цикл, а не последняя сессия окна', () => {
+    const report = fakeReport({
+      cycles: ['c1', 'c2'],
+      errorRate: { value: 0.2, sessionId: 'subagent-9' },
+    })
+
+    expect(signalsFromReport(report).errorRate?.cycleId).toBe('c2')
+  })
+
+  it('циклов нет — у ошибок нет ключа, показателя нет', () => {
+    const report = fakeReport({ cycles: [], errorRate: { value: 0.2, sessionId: 's' } })
+
+    expect(signalsFromReport(report).errorRate).toBeUndefined()
+  })
+
+  /** Ловит `latest = null`, превращённый в ноль или в нижнюю границу. */
+  it('latest = null — показателя в сигналах нет', () => {
+    const report = fakeReport({ cycles: ['c1'] })
+
+    expect(signalsFromReport(report)).toEqual({})
+  })
+
+  it('rework и overhead берут корень последнего цикла окна, ≈ — у накладных', () => {
+    const report = fakeReport({
+      cycles: ['c1', 'c2'],
+      rework: { value: 0.5, sessionId: 'c2' },
+      overhead: { value: 3.2, sessionId: 'c2', approximate: true },
+    })
+
+    expect(signalsFromReport(report)).toEqual({
+      rework: { value: 0.5, approximate: false, cycleId: 'c2' },
+      overhead: { value: 3.2, approximate: true, cycleId: 'c2' },
+    })
+  })
+})
+
+describe('createWorkflowSignals', () => {
+  const db = {} as Db
+  const on = {
+    ...DEFAULT_CONFIG.workflow,
+    enabled: true,
+    alerts: { rework: 0.3, errorRate: null, overhead: null },
+  }
+  const report = (): WorkflowReport =>
+    fakeReport({ cycles: ['c1'], rework: { value: 0.5, sessionId: 'c1' } })
+
+  function counting(): { compute: () => WorkflowReport; calls: () => number } {
+    let calls = 0
+    return {
+      compute: () => {
+        calls += 1
+        return report()
+      },
+      calls: () => calls,
+    }
+  }
+
+  /** Ловит расход при выключенной функции: агрегат сам `enabled` не читает. */
+  it('выключено — агрегат не зовётся, ответ undefined', () => {
+    const { compute, calls } = counting()
+    const cache = createWorkflowSignals(compute)
+
+    expect(cache.get(db, { ...on, enabled: false }, 0)).toBeUndefined()
+    expect(calls()).toBe(0)
+  })
+
+  /** Ловит агрегат на каждый опрос трея: раз в секунду по 30 мс. */
+  it('индекс не менялся — второй раз не считает', () => {
+    const { compute, calls } = counting()
+    const cache = createWorkflowSignals(compute)
+
+    for (let at = 0; at < 100_000; at += 1000) cache.get(db, on, at)
+
+    expect(calls()).toBe(1)
+  })
+
+  /** Ловит два перекоса сразу: пересчёт, которого нет после изменения индекса, и пересчёт на каждую секунду. */
+  it('индекс дописан — пересчёт, но не чаще раза в MIN_RECOMPUTE_MS', () => {
+    const { compute, calls } = counting()
+    const cache = createWorkflowSignals(compute)
+    cache.get(db, on, 0)
+
+    cache.markStale()
+    cache.get(db, on, 1000)
+    expect(calls()).toBe(1)
+
+    cache.get(db, on, MIN_RECOMPUTE_MS)
+    expect(calls()).toBe(2)
+    // И пометка снята: без нового изменения третьего пересчёта нет.
+    cache.get(db, on, MIN_RECOMPUTE_MS * 5)
+    expect(calls()).toBe(2)
+  })
+
+  /** Ловит старые числа под новой настройкой: окно другого размера — другие показатели. */
+  it('поменялся раздел workflow — пересчёт сразу', () => {
+    const { compute, calls } = counting()
+    const cache = createWorkflowSignals(compute)
+    cache.get(db, on, 0)
+
+    cache.get(db, { ...on, window: { cycles: 5, sessions: 20 } }, 1000)
+
+    expect(calls()).toBe(2)
+  })
+
+  it('все пороги выключены — агрегат не зовётся', () => {
+    const { compute, calls } = counting()
+    const cache = createWorkflowSignals(compute)
+    const nothing = { ...on, alerts: { rework: null, errorRate: null, overhead: null } }
+
+    expect(cache.get(db, nothing, 0)).toEqual({})
+    expect(calls()).toBe(0)
+  })
+
+  /** Ловит падение агрегата в опросе трея и потерянные старые числа. */
+  it('агрегат упал — прежние числа остаются, трей не падает', () => {
+    let fail = false
+    const cache = createWorkflowSignals(() => {
+      if (fail) throw new Error('boom')
+      return report()
+    })
+    const first = cache.get(db, on, 0)
+    fail = true
+    cache.markStale()
+
+    expect(cache.get(db, on, MIN_RECOMPUTE_MS)).toEqual(first)
+  })
+
+  it('первая попытка упала — undefined, а не «пусто»', () => {
+    const cache = createWorkflowSignals(() => {
+      throw new Error('boom')
+    })
+
+    expect(cache.get(db, on, 0)).toBeUndefined()
+  })
+})
+
+type Point = [value: number, cycleId: string, approximate?: boolean]
+
+function sig(parts: Partial<Record<WorkflowMetric, Point>>): WorkflowSignals {
+  const signals: WorkflowSignals = {}
+  for (const [metric, point] of Object.entries(parts) as [WorkflowMetric, Point][]) {
+    signals[metric] = { value: point[0], cycleId: point[1], approximate: point[2] ?? false }
+  }
+  return signals
+}
+
+function fakeReport(parts: {
+  cycles: string[]
+  rework?: { value: number; sessionId: string }
+  overhead?: { value: number; sessionId: string; approximate?: boolean }
+  errorRate?: { value: number; sessionId: string }
+}): WorkflowReport {
+  const series = (point?: { value: number; sessionId: string; approximate?: boolean }) => ({
+    size: 10,
+    count: 10,
+    points: [],
+    latest:
+      point === undefined
+        ? null
+        : { n: 10, startedAt: 0, numerator: 0, denominator: 1, approximate: false, ...point },
+    prev: null,
+    delta: null,
+  })
+  return {
+    emptyIndex: false,
+    emptyScope: false,
+    cycles: parts.cycles.map((sessionId) => ({ sessionId })),
+    rework: series(parts.rework),
+    overhead: series(parts.overhead),
+    errorRate: series(parts.errorRate),
+    verdicts: series(),
+  } as unknown as WorkflowReport
+}
 
 function snap(parts: { limits?: LimitReportRow[]; agents?: LiveAgent[] }): TraySnapshot {
   return {

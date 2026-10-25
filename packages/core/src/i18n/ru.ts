@@ -395,6 +395,10 @@ export const ru = {
     waitingTitle: '{{provider}} ждёт ответа — {{project}}',
     agentBody: '{{branch}} · {{tokens}}',
     noBranch: 'без ветки',
+    workflowRework: 'Доля переделки — {{value}}',
+    workflowErrors: 'Доля ошибок инструментов — {{value}}',
+    workflowOverhead: 'Накладные цикла — {{value}}',
+    workflowBody: 'Выше вашего порога {{threshold}}. Повод разобрать логи: /retro',
   },
 
   /**
