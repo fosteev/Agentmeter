@@ -1,0 +1,124 @@
+{
+  "checks": "9.1, руками: is_error true / false / ключа нет / не булево («true» строкой) / вызов без результата; голова — последний непустой текстовый блок в файле, а не самый поздний по метке (у него метка раньше, чем у предыдущего) и не блок последней записи (после него пустой блок и вызов без результата); обрезка по кодпоинтам: двухсотый — 🧪, две единицы UTF-16",
+  "session": {
+    "id": "92cc27dc-193d-4c2c-aef1-843d7d41aeab",
+    "cwd": "/proj/b",
+    "branch": "feature/one",
+    "model": "claude-opus-4-6",
+    "cliVersion": "2.1.88",
+    "startedAt": "2026-07-10T10:30:05.000Z",
+    "endedAt": "2026-07-10T10:31:12.400Z",
+    "agentType": "review-opus",
+    "lastTextHead": "принят с оговорками\n\nСверка с промтом: два пункта из «Уже решено» выполнены, третий — нет. Модуль разбора исполнитель не тронул, проверку дописал я. Остался экран: он ждёт агрегат из следующего этапа🧪"
+  },
+  "requests": [
+    {
+      "seq": 0,
+      "requestId": "req_synthetic_a",
+      "ts": "2026-07-10T10:30:05.000Z",
+      "model": "claude-opus-4-6",
+      "input": 3,
+      "output": 40,
+      "cacheWrite": 1000,
+      "cacheRead": 0,
+      "contextTokens": 1003,
+      "isSidechain": true,
+      "compacted": false,
+      "synthetic": false,
+      "interjectedBytes": 0,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_synthetic_read",
+          "name": "Read",
+          "kind": "builtin",
+          "isError": true
+        },
+        {
+          "id": "toolu_synthetic_bash1",
+          "name": "Bash",
+          "kind": "builtin",
+          "isError": false
+        }
+      ]
+    },
+    {
+      "seq": 1,
+      "requestId": "req_synthetic_b",
+      "ts": "2026-07-10T10:30:20.000Z",
+      "model": "claude-opus-4-6",
+      "input": 2,
+      "output": 60,
+      "cacheWrite": 200,
+      "cacheRead": 1000,
+      "contextTokens": 1202,
+      "isSidechain": true,
+      "compacted": false,
+      "synthetic": false,
+      "interjectedBytes": 0,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_synthetic_edit",
+          "name": "Edit",
+          "kind": "builtin",
+          "isError": false
+        },
+        {
+          "id": "toolu_synthetic_grep",
+          "name": "Grep",
+          "kind": "builtin",
+          "isError": null
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "requestId": "req_synthetic_c",
+      "ts": "2026-07-10T10:31:10.000Z",
+      "model": "claude-opus-4-6",
+      "input": 2,
+      "output": 300,
+      "cacheWrite": 150,
+      "cacheRead": 1200,
+      "contextTokens": 1352,
+      "isSidechain": true,
+      "compacted": false,
+      "synthetic": false,
+      "interjectedBytes": 0,
+      "origin": "log",
+      "tools": []
+    },
+    {
+      "seq": 3,
+      "requestId": "req_synthetic_d",
+      "ts": "2026-07-10T10:31:12.000Z",
+      "model": "claude-opus-4-6",
+      "input": 1,
+      "output": 20,
+      "cacheWrite": 400,
+      "cacheRead": 1350,
+      "contextTokens": 1751,
+      "isSidechain": true,
+      "compacted": false,
+      "synthetic": false,
+      "interjectedBytes": 0,
+      "origin": "log",
+      "tools": [
+        {
+          "id": "toolu_synthetic_bash2",
+          "name": "Bash",
+          "kind": "builtin",
+          "isError": null
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "input": 8,
+    "output": 420,
+    "cacheWrite": 1750,
+    "cacheRead": 3550
+  },
+  "unknownTypes": {}
+}

@@ -6,7 +6,8 @@
     "model": "claude-opus-4-6",
     "cliVersion": "2.1.88",
     "startedAt": "2026-07-10T10:48:41.586Z",
-    "endedAt": "2026-07-10T10:53:25.247Z"
+    "endedAt": "2026-07-10T10:53:25.247Z",
+    "lastTextHead": "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut la\n\nbor\n\ne et dolore magna aliqua ut enim \n\nad minim veniam quis nostrud exercitation ullamco laboris \nnisi u"
   },
   "requests": [
     {
@@ -32,7 +33,8 @@
           "resultBytes": 388,
           "marginalTokens": 273,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01XnsQhNP9p8kmkgYxLLtBVn",
@@ -41,7 +43,8 @@
           "resultBytes": 652,
           "marginalTokens": 459,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_018KxPeUAAfKfnsemXq81Avo",
@@ -50,7 +53,8 @@
           "resultBytes": 2760,
           "marginalTokens": 1944,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -77,7 +81,8 @@
           "resultBytes": 139,
           "marginalTokens": 49,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_0155cfnfTQ2Vec8ztwNcRRYp",
@@ -86,7 +91,8 @@
           "resultBytes": 4344,
           "marginalTokens": 1528,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01Lbqj1ZAseWuphZaozRmfQZ",
@@ -95,7 +101,8 @@
           "resultBytes": 568,
           "marginalTokens": 200,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01DM6Z6F5smfN3y4vrd2sVMV",
@@ -104,7 +111,8 @@
           "resultBytes": 969,
           "marginalTokens": 341,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -131,7 +139,8 @@
           "resultBytes": 24,
           "marginalTokens": 15,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01DVPK1bFxtMoqUZkR5d6Chh",
@@ -140,7 +149,8 @@
           "resultBytes": 131,
           "marginalTokens": 80,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01G3hS6cPiCK54yXfozSxHGw",
@@ -149,7 +159,8 @@
           "resultBytes": 246,
           "marginalTokens": 150,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01NzRW9yBnapi6pQ5Eq58jp1",
@@ -158,7 +169,8 @@
           "resultBytes": 251,
           "marginalTokens": 153,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01PV6KSzXeeb8aZTzKpJjTU6",
@@ -167,7 +179,8 @@
           "resultBytes": 293,
           "marginalTokens": 178,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -194,7 +207,8 @@
           "resultBytes": 3372,
           "marginalTokens": 1145,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01Jx7UmiqBX8KjxsuvHYr48e",
@@ -203,7 +217,8 @@
           "resultBytes": 12628,
           "marginalTokens": 4289,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_012WBpa58Ngo23EfzmcC6WNi",
@@ -212,7 +227,8 @@
           "resultBytes": 1058,
           "marginalTokens": 359,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_017nW7xabCpdzVC7vRe8yE3p",
@@ -221,7 +237,8 @@
           "resultBytes": 1461,
           "marginalTokens": 496,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -248,7 +265,8 @@
           "resultBytes": 2368,
           "marginalTokens": 777,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01XCvTLZPSgJDms59A3kTQem",
@@ -257,7 +275,8 @@
           "resultBytes": 1751,
           "marginalTokens": 575,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01SAig7eC8qbv8RS5W4X1CkP",
@@ -266,7 +285,8 @@
           "resultBytes": 822,
           "marginalTokens": 270,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01RwDneTNkZPoQJjtTVuGr8T",
@@ -275,7 +295,8 @@
           "resultBytes": 1667,
           "marginalTokens": 547,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -302,7 +323,8 @@
           "resultBytes": 213,
           "marginalTokens": 72,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": true
         },
         {
           "id": "toolu_01SpJdVoMgs5JuzqHFfLHpHh",
@@ -311,7 +333,8 @@
           "resultBytes": 5513,
           "marginalTokens": 1872,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -338,7 +361,8 @@
           "resultBytes": 3951,
           "marginalTokens": 1465,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01SKQMmpd1Kko8ZNAvFbJQBk",
@@ -347,7 +371,8 @@
           "resultBytes": 2057,
           "marginalTokens": 763,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01K39AUnNs7XgMcJN6qwHfCe",
@@ -356,7 +381,8 @@
           "resultBytes": 2688,
           "marginalTokens": 996,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01Qtg2i4iC9RBqTr8b69uBPR",
@@ -365,7 +391,8 @@
           "resultBytes": 101,
           "marginalTokens": 37,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": true
         }
       ]
     },
@@ -392,7 +419,8 @@
           "resultBytes": 181,
           "marginalTokens": 175,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01CbZS8xUQEhZFnRCKG6dm7B",
@@ -401,7 +429,8 @@
           "resultBytes": 51,
           "marginalTokens": 50,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01DDJ23vSb4cJcHEMGVeKD34",
@@ -410,7 +439,8 @@
           "resultBytes": 25,
           "marginalTokens": 24,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_019Zza6nZ8ZECL9WKdpuHrG5",
@@ -419,7 +449,8 @@
           "resultBytes": 24,
           "marginalTokens": 23,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_014YggyVDFoxXW3cDiyqDQvL",
@@ -428,7 +459,8 @@
           "resultBytes": 421,
           "marginalTokens": 408,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -455,7 +487,8 @@
           "resultBytes": 576,
           "marginalTokens": 245,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_015fk2kPG7HegMe6s7obatR7",
@@ -464,7 +497,8 @@
           "resultBytes": 425,
           "marginalTokens": 180,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01WQRka7LLMRZiVgtBjkkphh",
@@ -473,7 +507,8 @@
           "resultBytes": 516,
           "marginalTokens": 219,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01ENp1QqnWePwHEYZBYLcS8g",
@@ -482,7 +517,8 @@
           "resultBytes": 430,
           "marginalTokens": 183,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -509,7 +545,8 @@
           "resultBytes": 4717,
           "marginalTokens": 1480,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_011W4niL5v4T1Z42WVYtxXzB",
@@ -518,7 +555,8 @@
           "resultBytes": 3555,
           "marginalTokens": 1115,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -545,7 +583,8 @@
           "resultBytes": 5907,
           "marginalTokens": 1856,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_013wHRBMUt6jEfk9vmr1VM6A",
@@ -554,7 +593,8 @@
           "resultBytes": 4637,
           "marginalTokens": 1457,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -581,7 +621,8 @@
           "resultBytes": 3461,
           "marginalTokens": 1188,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_015bBaeiSSGV7A8T45dawYSH",
@@ -590,7 +631,8 @@
           "resultBytes": 6774,
           "marginalTokens": 2324,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01XkxRtS5VRnp2aHMcXLuYCG",
@@ -599,7 +641,8 @@
           "resultBytes": 4109,
           "marginalTokens": 1410,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -626,7 +669,8 @@
           "resultBytes": 1927,
           "marginalTokens": 692,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01JoVnmyEJfndo9aSJ94t55B",
@@ -635,7 +679,8 @@
           "resultBytes": 3028,
           "marginalTokens": 1088,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01AyV2i4GjPnmxZjukXEs2eW",
@@ -644,7 +689,8 @@
           "resultBytes": 3168,
           "marginalTokens": 1138,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -671,7 +717,8 @@
           "resultBytes": 69,
           "marginalTokens": 29,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01S5LYFtbnjtkhhqJQWky8ZV",
@@ -680,7 +727,8 @@
           "resultBytes": 72,
           "marginalTokens": 30,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01DJ8E5kW7oWJKg9u8abDEYf",
@@ -689,7 +737,8 @@
           "resultBytes": 657,
           "marginalTokens": 272,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01X8AJaYr2i39rEBW39TP632",
@@ -698,7 +747,8 @@
           "resultBytes": 947,
           "marginalTokens": 392,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_019dGPt89AhdcUHHMroCaLZp",
@@ -707,7 +757,8 @@
           "resultBytes": 1033,
           "marginalTokens": 428,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -734,7 +785,8 @@
           "resultBytes": 3352,
           "marginalTokens": 1098,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_011qkTHL4d5So2WQkSH25JL1",
@@ -743,7 +795,8 @@
           "resultBytes": 4529,
           "marginalTokens": 1483,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01WPQD9nof6WWjYMSiBxWgJf",
@@ -752,7 +805,8 @@
           "resultBytes": 913,
           "marginalTokens": 299,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -779,7 +833,8 @@
           "resultBytes": 3333,
           "marginalTokens": 1213,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_018U42LJ8e1X2BBkY955Eoda",
@@ -788,7 +843,8 @@
           "resultBytes": 5417,
           "marginalTokens": 1971,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_011Zp5tvsxm8p3VyCFg5M7gG",
@@ -797,7 +853,8 @@
           "resultBytes": 3066,
           "marginalTokens": 1115,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -824,7 +881,8 @@
           "resultBytes": 111,
           "marginalTokens": 37,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": true
         },
         {
           "id": "toolu_01BNs4z859kN4Cx9sJ9Axg4q",
@@ -833,7 +891,8 @@
           "resultBytes": 1809,
           "marginalTokens": 602,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01JiuDJqbHDuvU129VCxAkBJ",
@@ -842,7 +901,8 @@
           "resultBytes": 2245,
           "marginalTokens": 747,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_019MREjr1STsGuGKP59qYv8A",
@@ -851,7 +911,8 @@
           "resultBytes": 3410,
           "marginalTokens": 1134,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -878,7 +939,8 @@
           "resultBytes": 61,
           "marginalTokens": 20,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_012Q5KDH9hs7kPi6UMBm1Nda",
@@ -887,7 +949,8 @@
           "resultBytes": 2603,
           "marginalTokens": 868,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01BWPsvAcbSur3EUx1HgZ3VS",
@@ -896,7 +959,8 @@
           "resultBytes": 3146,
           "marginalTokens": 1048,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -923,7 +987,8 @@
           "resultBytes": 15384,
           "marginalTokens": 5058,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01QF1wEsCXhXhhFHoTE8t26X",
@@ -932,7 +997,8 @@
           "resultBytes": 421,
           "marginalTokens": 138,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01LaRpPUWznnH3DJbW8Wx43H",
@@ -941,7 +1007,8 @@
           "resultBytes": 616,
           "marginalTokens": 203,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -968,7 +1035,8 @@
           "resultBytes": 158,
           "marginalTokens": 75,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01AkCXsjoYW65sUGghTB7EcL",
@@ -977,7 +1045,8 @@
           "resultBytes": 965,
           "marginalTokens": 460,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_016SNC12yZks3H5D8R889JvC",
@@ -986,7 +1055,8 @@
           "resultBytes": 2284,
           "marginalTokens": 1088,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1013,7 +1083,8 @@
           "resultBytes": 2530,
           "marginalTokens": 846,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01K9SAybPoRohhRAqbCDbtBK",
@@ -1022,7 +1093,8 @@
           "resultBytes": 2453,
           "marginalTokens": 820,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_0146tiQXLqcCuCt5yWfTpuDw",
@@ -1031,7 +1103,8 @@
           "resultBytes": 3188,
           "marginalTokens": 1066,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1058,7 +1131,8 @@
           "resultBytes": 3331,
           "marginalTokens": 1170,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_017Hn6HHMewozNBf2eHg6Qj8",
@@ -1067,7 +1141,8 @@
           "resultBytes": 2841,
           "marginalTokens": 998,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01CJttuA8dBfthmJgWPsPt5C",
@@ -1076,7 +1151,8 @@
           "resultBytes": 5817,
           "marginalTokens": 2044,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1103,7 +1179,8 @@
           "resultBytes": 3007,
           "marginalTokens": 1033,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_015LgbNbGX6RGhH1MFmvept6",
@@ -1112,7 +1189,8 @@
           "resultBytes": 4146,
           "marginalTokens": 1424,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1139,7 +1217,8 @@
           "resultBytes": 65,
           "marginalTokens": 22,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01JY2TRq94gqtyvBzH8hZYdR",
@@ -1148,7 +1227,8 @@
           "resultBytes": 4144,
           "marginalTokens": 1400,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01A81NpEMuoGpz1xtCEWQ9Zd",
@@ -1157,7 +1237,8 @@
           "resultBytes": 3139,
           "marginalTokens": 1061,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1184,7 +1265,8 @@
           "resultBytes": 33,
           "marginalTokens": 13,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01CpoE1Z2B3Qwb2yUcQE1fSf",
@@ -1193,7 +1275,8 @@
           "resultBytes": 2937,
           "marginalTokens": 1192,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01LLmXCPhSD3iWv36Ww9cF7u",
@@ -1202,7 +1285,8 @@
           "resultBytes": 74,
           "marginalTokens": 30,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -1229,7 +1313,8 @@
           "resultBytes": 5232,
           "marginalTokens": 1768,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_011KTc6AFtt7g7ZUCUNeVjGw",
@@ -1238,7 +1323,8 @@
           "resultBytes": 3325,
           "marginalTokens": 1124,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },

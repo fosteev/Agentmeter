@@ -220,9 +220,20 @@ function projectSession(
   for (const key of Object.keys(expected)) {
     const value = session[key as keyof Session]
     projected[key] =
-      key === 'startedAt' || key === 'endedAt' ? new Date(value as number).toISOString() : value
+      key === 'startedAt' || key === 'endedAt'
+        ? new Date(value as number).toISOString()
+        : absentAsNull(value)
   }
   return projected
+}
+
+/**
+ * `null` в expected.json значит «поля нет»: JSON не знает `undefined`, а «не
+ * знаем» и «было, но пусто» различаются (9.1) — у `ToolCall.isError` и
+ * `Session.lastTextHead` это и есть содержание проверки.
+ */
+function absentAsNull(value: unknown): unknown {
+  return value === undefined ? null : value
 }
 
 function projectRequest(
@@ -252,7 +263,7 @@ function projectTool(tool: ToolCall, expected: unknown): Record<string, unknown>
   const expectedTool = expected as Record<string, unknown>
   const projected: Record<string, unknown> = {}
   for (const key of Object.keys(expectedTool)) {
-    projected[key] = tool[key as keyof ToolCall]
+    projected[key] = absentAsNull(tool[key as keyof ToolCall])
   }
   return projected
 }

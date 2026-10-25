@@ -44,6 +44,11 @@ interface RequestDraft {
 interface ToolResult {
   resultBytes: number
   hasImage: boolean
+  /**
+   * Статус результата (9.1): ключа нет — `false` (так его читает API), булев —
+   * как есть, ключ другого типа — поля нет.
+   */
+  isError?: boolean
 }
 
 interface ParseState {
@@ -84,6 +89,12 @@ interface ParseState {
    * меткой, кроме записей из `RESPONSE_TIME_RECORDS`.
    */
   lastStartTs?: number
+  /**
+   * Голова последнего непустого текстового блока ассистента в порядке записей
+   * файла (9.1). Копится у любого файла: корень это или сабагент, известно
+   * только в конце, и к сессии голова уходит лишь у сабагента.
+   */
+  lastTextHead?: string
 }
 
 const KNOWN_RECORD_TYPES = new Set([
@@ -135,6 +146,15 @@ const RESPONSE_TIME_RECORDS = new Set([
   'pr-link',
 ])
 
+/**
+ * Сколько кодпоинтов последнего ответа сабагента остаётся в индексе (9.1).
+ *
+ * Хватает на «принят с оговорками» и на пару слов после него: вердикт стоит в
+ * начале итога ревьюера, а длиннее голова только хранила бы текст, которого
+ * продукт не показывает.
+ */
+const LAST_TEXT_HEAD_LENGTH = 200
+
 const ENTRYPOINTS = new Set<Entrypoint>([
   'cli',
   'vscode',
@@ -159,8 +179,12 @@ export interface ParseOptions {
 }
 
 export function parseSessionFile(path: string, options: ParseOptions = {}): ParseResult {
+  return parseFile(path, options, false)
+}
+
+function parseFile(path: string, options: ParseOptions, subagent: boolean): ParseResult {
   const { lines } = readJsonlLines(path, true)
-  return parseLines(path, lines, options)
+  return parseLines(path, lines, options, subagent)
 }
 
 export function parseSubagentFile(
@@ -168,7 +192,7 @@ export function parseSubagentFile(
   parentSessionId = parentSessionIdFromSubagentPath(path),
   options: ParseOptions = {},
 ): ParseResult {
-  const result = parseSessionFile(path, options)
+  const result = parseFile(path, options, true)
   markSubagent(result, path, parentSessionId)
   return result
 }
@@ -188,7 +212,12 @@ export function parseSubagents(sessionPath: string, options: ParseOptions = {}):
   return results
 }
 
-function parseLines(path: string, lines: string[], options: ParseOptions): ParseResult {
+function parseLines(
+  path: string,
+  lines: string[],
+  options: ParseOptions,
+  subagent: boolean,
+): ParseResult {
   const sourcePath = resolve(path)
   const state: ParseState = {
     sourcePath,
@@ -211,7 +240,7 @@ function parseLines(path: string, lines: string[], options: ParseOptions): Parse
   }
 
   const requests = buildRequests(state)
-  const session = buildSession(state, requests, options)
+  const session = buildSession(state, requests, options, subagent)
   attributePrefix(session, requests)
   attributeMarginal(requests, 'claude')
   return { session, requests, diagnostics: state.diagnostics }
@@ -376,7 +405,9 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
   }
 
   for (const block of contentBlocks(message)) {
-    if (stringField(block, 'type') !== 'tool_use') continue
+    const blockType = stringField(block, 'type')
+    if (blockType === 'text') noteText(state, block)
+    if (blockType !== 'tool_use') continue
     const id = stringField(block, 'id')
     const name = stringField(block, 'name')
     if (!id || !name || draft.toolIds.has(id)) continue
@@ -413,8 +444,51 @@ function consumeUser(state: ParseState, record: JsonObject): void {
     const resultSource = 'toolUseResult' in record ? record.toolUseResult : block.content
     const resultBytes = JSON.stringify(resultSource).length
     const hasImage = valueHasImage(resultSource) || valueHasImage(block.content)
-    state.toolResults.set(id, { resultBytes, hasImage })
+    // Тот же `tool_result`, что и `resultBytes`, — второго прохода по записям не
+    // нужно (9.1). Ключа нет — это `false`, а не «не знаем»: в Messages API
+    // `is_error` необязателен и по умолчанию ложен, и Claude Code так и пишет —
+    // явный `false` только у `Bash`, у остальных ключ появляется лишь при ошибке
+    // (правило 30). «Не знаем» — ключ не булев или результата нет вовсе.
+    const isError = 'is_error' in block ? booleanField(block, 'is_error') : false
+    state.toolResults.set(id, {
+      resultBytes,
+      hasImage,
+      ...(isError === undefined ? {} : { isError }),
+    })
   }
+}
+
+/**
+ * Запомнить голову текстового блока ответа (9.1).
+ *
+ * Блок из одних пробелов (`"\n"`) последним словом сабагента не бывает: ответа
+ * в нём нет, а предыдущий блок есть. Перебить им голову значило бы потерять
+ * вердикт. На живых логах таких 0 из 795 сабагентов с текстом — правило
+ * страховочное.
+ */
+function noteText(state: ParseState, block: JsonObject): void {
+  const text = stringField(block, 'text')
+  if (text === undefined || !/\S/.test(text)) return
+  state.lastTextHead = codePointHead(text, LAST_TEXT_HEAD_LENGTH)
+}
+
+/**
+ * Первые `limit` кодпоинтов строки.
+ *
+ * Не `text.slice(0, limit)`: тот режет по единицам UTF-16, и эмодзи на границе
+ * остаётся половиной суррогатной пары (9.1). SQLite такую строку не отвергает,
+ * а молча пишет на её место U+FFFD (проверено), так что голова в индексе
+ * расходилась бы с логом на символ — без единой ошибки. Кириллица в BMP, и ей
+ * разницы нет; рвёт именно эмодзи.
+ */
+function codePointHead(text: string, limit: number): string {
+  let end = 0
+  let points = 0
+  while (end < text.length && points < limit) {
+    end += (text.codePointAt(end) ?? 0) > 0xffff ? 2 : 1
+    points += 1
+  }
+  return text.slice(0, end)
 }
 
 function consumeAttachment(state: ParseState, record: JsonObject): void {
@@ -649,6 +723,7 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
       ...tool,
       resultBytes: result?.resultBytes ?? 0,
       hasImage: result?.hasImage ?? false,
+      ...(result?.isError === undefined ? {} : { isError: result.isError }),
     }
   })
 
@@ -680,7 +755,12 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
   return request
 }
 
-function buildSession(state: ParseState, requests: Request[], options: ParseOptions): Session {
+function buildSession(
+  state: ParseState,
+  requests: Request[],
+  options: ParseOptions,
+  subagent: boolean,
+): Session {
   const loggedRequests = requests.filter((request) => request.origin === 'log')
   const firstRequest = loggedRequests[0]
   const lastRequest = loggedRequests.at(-1)
@@ -735,6 +815,11 @@ function buildSession(state: ParseState, requests: Request[], options: ParseOpti
   if (state.firstPrompt !== undefined) session.firstPrompt = state.firstPrompt
   if (requests.length > 0 && requests.every((request) => request.isSidechain))
     session.isSidechain = true
+  // Голова — только у сабагента (9.1). Файл сабагента узнаётся по месту, а не по
+  // флагу внутри записей, как и в `markSubagent`: расползись флаг в новой
+  // версии CLI, голова пропала бы у всех ревьюеров разом.
+  if (state.lastTextHead !== undefined && (subagent || session.isSidechain === true))
+    session.lastTextHead = state.lastTextHead
   return session
 }
 

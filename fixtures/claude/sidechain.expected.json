@@ -7,7 +7,8 @@
     "model": "claude-opus-4-6",
     "cliVersion": "2.1.88",
     "startedAt": "2026-07-10T10:48:23.863Z",
-    "endedAt": "2026-07-10T11:22:21.589Z"
+    "endedAt": "2026-07-10T11:22:21.589Z",
+    "lastTextHead": null
   },
   "requests": [
     {
@@ -34,6 +35,7 @@
           "marginalTokens": 36,
           "marginalBasis": "split",
           "hasImage": false,
+          "isError": true,
           "files": [
             {
               "path": "/proj/c/lorem /lorem ips",
@@ -48,7 +50,8 @@
           "resultBytes": 472,
           "marginalTokens": 164,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -75,7 +78,8 @@
           "resultBytes": 15707,
           "marginalTokens": 3787,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -136,7 +140,8 @@
           "resultBytes": 106,
           "marginalTokens": 38,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01QcYRWQtL8juMx2UY8Dr7qT",
@@ -145,7 +150,8 @@
           "resultBytes": 115,
           "marginalTokens": 41,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_01RVe73W1ddnMapEK7zhzA9U",
@@ -154,7 +160,8 @@
           "resultBytes": 168,
           "marginalTokens": 61,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -181,7 +188,8 @@
           "resultBytes": 181,
           "marginalTokens": 38,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -208,7 +216,8 @@
           "resultBytes": 190,
           "marginalTokens": 171,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -235,7 +244,8 @@
           "resultBytes": 272,
           "marginalTokens": 108,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         },
         {
           "id": "toolu_019b8VrW73hAfdhh9QvzDEim",
@@ -244,7 +254,8 @@
           "resultBytes": 159,
           "marginalTokens": 63,
           "marginalBasis": "split",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -271,7 +282,8 @@
           "resultBytes": 409,
           "marginalTokens": 85,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },
@@ -298,7 +310,8 @@
           "resultBytes": 107,
           "marginalTokens": 21,
           "marginalBasis": "measured",
-          "hasImage": false
+          "hasImage": false,
+          "isError": false
         }
       ]
     },

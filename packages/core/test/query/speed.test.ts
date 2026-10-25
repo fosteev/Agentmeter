@@ -290,21 +290,22 @@ describe('миграция 12 — дочитать без сноса', () => {
     ingestFile(db, { path: claude, provider: 'claude', kind: 'session' })
     ingestFile(db, codexFile)
 
-    // Индекс версии 11: столбца нет; Claude-лог пропал с диска, Codex-лог
-    // помечен пропавшим, хотя лежит на месте.
+    // Индекс версии 11: столбца нет (как и двух столбцов миграции 13); Claude-лог
+    // пропал с диска, Codex-лог помечен пропавшим, хотя лежит на месте.
     db.run('UPDATE sources SET vanished_at = 1')
     rmSync(claude)
     db.exec('ALTER TABLE requests DROP COLUMN duration_ms')
+    db.exec('ALTER TABLE tool_calls DROP COLUMN is_error')
+    db.exec('ALTER TABLE sessions DROP COLUMN last_text_head')
     db.run('UPDATE meta SET value = ? WHERE key = ?', '11', 'schema_version')
     db.close()
 
     const reopened = openDb(join(dir, 'index.sqlite'))
     db = reopened.db
     expect(reopened.rebuilt).toBe(false)
-    expect(SCHEMA_VERSION).toBe(12)
     expect(
       db.get<{ value: string }>('SELECT value FROM meta WHERE key = ?', 'schema_version'),
-    ).toEqual({ value: '12' })
+    ).toEqual({ value: String(SCHEMA_VERSION) })
     expect(db.all<{ offset: number }>('SELECT offset FROM sources')).toEqual([
       { offset: 0 },
       { offset: 0 },
