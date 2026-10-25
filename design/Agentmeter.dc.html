@@ -2567,6 +2567,502 @@
       </div>
     </div>
 
+    <!-- ============ 13 · WORKFLOW (9.4) ============ -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">13 · Вкладка «Workflow» — окупается ли цикл «план → исполнитель → приёмка»</div>
+
+      <div style="display:flex;gap:20px;max-width:1180px">
+        <div style="font-size:12.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty;flex:1">Четвёртая вкладка главного окна, между «Историей» и «Настройками», и есть она только при включённом Workflow. Отвечает на один вопрос: <span style="color:var(--tx)">какую часть кода цикла дописали после исполнителя</span> — главная сессия на приёмке или ревьюер, — и меняется ли эта доля от цикла к циклу. Порядок чтения взят у дашборда discovery: главное число, график по циклам, три контрольных, роли, поправки.</div>
+        <div style="font-size:12.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty;flex:1">Контрольные стоят рядом, чтобы доля не падала за чужой счёт: дороже приёмка, больше ошибок, мягче вердикты. Оценки экран не ставит — <span style="color:var(--tx)">цвет у дельты есть только при заданной цели</span> и означает «к цели», а не «хорошо». Попапа это не касается: экран живёт только в окне.</div>
+      </div>
+
+      <div style="width:1180px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px oklch(0 0 0 / .5)">
+
+        <div style="height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--s1)">
+          <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.65 0.17 27)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.79 0.14 82)"></div><div style="width:11px;height:11px;border-radius:50%;background:oklch(0.72 0.13 155)"></div></div>
+          <div style="display:flex;gap:2px;margin-left:12px">
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Сегодня</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Развёртка</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">История</div>
+            <div style="padding:6px 12px;border-radius:6px;background:var(--s2);font-size:12.5px;font-weight:500">Workflow</div>
+            <div style="padding:6px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Настройки</div>
+          </div>
+          <div style="flex:1"></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums">7 циклов · 6–25 октября · окно 3 цикла</span>
+        </div>
+
+        <!-- ЗАГОЛОВОК И ФИЛЬТР ПРОЕКТА -->
+        <div style="padding:20px 32px;display:flex;align-items:flex-end;justify-content:space-between;gap:32px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:16px;font-weight:600">Кто дописывает код после исполнителя</div>
+            <div style="font-size:12.5px;color:var(--tx2);max-width:640px;line-height:1.5;text-wrap:pretty">Доля правок, сделанных после старта исполнителя кем-то другим. Окно — последние циклы, а не календарь: правки окна делятся на правки окна, доли циклов не усредняются, и большой цикл весит больше маленького.</div>
+          </div>
+          <div style="display:flex;gap:2px;padding:2px;background:var(--s1);border-radius:6px;flex-shrink:0">
+            <span style="padding:4px 12px;font-size:11.5px;border-radius:4px;background:var(--s2)">все проекты</span>
+            <span style="padding:4px 12px;font-size:11.5px;border-radius:4px;color:var(--tx2)">Agentmeter</span>
+            <span style="padding:4px 12px;font-size:11.5px;border-radius:4px;color:var(--tx2)">at</span>
+            <span style="padding:4px 12px;font-size:11.5px;border-radius:4px;color:var(--tx2)">pilot</span>
+            <span style="padding:4px 12px;font-size:11.5px;border-radius:4px;color:var(--tx2)">pulse</span>
+          </div>
+        </div>
+
+        <!-- ГЛАВНЫЙ ПОКАЗАТЕЛЬ И ГРАФИК ПО ЦИКЛАМ -->
+        <div style="padding:20px 32px;display:grid;grid-template-columns:320px 1fr;gap:32px;border-bottom:1px solid var(--line)">
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Переделка · по видимым правкам</span>
+            <div style="display:flex;align-items:baseline;gap:12px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">23.1%</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--ok);font-variant-numeric:tabular-nums">−6.3 п.п.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:12px;color:var(--tx2)">последние 3 цикла, по 25 октября</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums">окно до него — 29.4% · цель ≤ 20%</span>
+            </div>
+            <div style="display:flex;gap:8px;padding:8px 12px;border-radius:6px;background:var(--s1);border:1px solid var(--line)">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);flex-shrink:0">›_</span>
+              <span style="font-size:12px;color:var(--tx2);line-height:1.5;text-wrap:pretty">по 2 циклам из 3: в 1 исполнитель правил шеллом — правок не видно</span>
+            </div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums">6 из 26 видимых правок — не исполнителем</span>
+          </div>
+
+          <!-- график: одна точка на полное окно, ось X с цикла № size -->
+          <div style="position:relative;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">По циклам · окно кончается на цикле</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2)">пунктир — цель из настроек</span>
+            </div>
+            <svg width="764" height="220" viewBox="0 0 764 220" style="display:block;overflow:visible">
+              <g style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx3)">
+                <text x="40" y="15" text-anchor="end">40%</text>
+                <text x="40" y="55" text-anchor="end">30%</text>
+                <text x="40" y="95" text-anchor="end">20%</text>
+                <text x="40" y="135" text-anchor="end">10%</text>
+                <text x="40" y="175" text-anchor="end">0</text>
+              </g>
+              <line x1="48" y1="12" x2="756" y2="12" style="stroke:var(--line);stroke-width:1;opacity:.5"></line>
+              <line x1="48" y1="52" x2="756" y2="52" style="stroke:var(--line);stroke-width:1;opacity:.5"></line>
+              <line x1="48" y1="132" x2="756" y2="132" style="stroke:var(--line);stroke-width:1;opacity:.5"></line>
+              <line x1="48" y1="172" x2="756" y2="172" style="stroke:var(--line);stroke-width:1"></line>
+              <!-- цель: только если задана -->
+              <line x1="48" y1="92" x2="756" y2="92" style="stroke:var(--tx3);stroke-width:1;stroke-dasharray:4 4"></line>
+              <text x="60" y="86" style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx3)">цель ≤ 20%</text>
+              <!-- № 3: все три цикла окна с невидимым исполнителем — точки нет -->
+              <line x1="56" y1="172" x2="56" y2="148" style="stroke:var(--tx3);stroke-width:1;stroke-dasharray:2 3"></line>
+              <text x="56" y="128" text-anchor="middle" style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx3)">точки нет</text>
+              <text x="56" y="142" text-anchor="middle" style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx3)">шеллом 3 из 3</text>
+              <!-- наведение на № 6 -->
+              <line x1="566" y1="12" x2="566" y2="172" style="stroke:var(--tx3);stroke-width:1;opacity:.5"></line>
+              <polyline points="226,54.4 396,33.6 566,69.6 736,79.6" style="fill:none;stroke:var(--tx);stroke-width:1.5;stroke-linejoin:round"></polyline>
+              <circle cx="226" cy="54.4" r="3.5" style="fill:var(--tx)"></circle>
+              <circle cx="396" cy="33.6" r="3.5" style="fill:var(--tx)"></circle>
+              <circle cx="566" cy="69.6" r="4.5" style="fill:var(--tx);stroke:var(--bg);stroke-width:2"></circle>
+              <circle cx="736" cy="79.6" r="4.5" style="fill:var(--tx);stroke:var(--bg);stroke-width:2"></circle>
+              <g style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx2)">
+                <text x="226" y="40" text-anchor="middle">шеллом 2 из 3</text>
+                <text x="396" y="20" text-anchor="middle">шеллом 1 из 3</text>
+                <text x="744" y="64" text-anchor="end">шеллом 1 из 3</text>
+              </g>
+              <g style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;fill:var(--tx3)">
+                <text x="56" y="194" text-anchor="middle">6 окт</text>
+                <text x="226" y="194" text-anchor="middle">9 окт</text>
+                <text x="396" y="194" text-anchor="middle">16 окт</text>
+                <text x="566" y="194" text-anchor="middle" style="fill:var(--tx)">25 окт</text>
+                <text x="736" y="194" text-anchor="middle">25 окт</text>
+              </g>
+              <g style="font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--tx3)">
+                <text x="56" y="210" text-anchor="middle">№ 3</text>
+                <text x="226" y="210" text-anchor="middle">№ 4</text>
+                <text x="396" y="210" text-anchor="middle">№ 5</text>
+                <text x="566" y="210" text-anchor="middle">№ 6</text>
+                <text x="736" y="210" text-anchor="middle">№ 7</text>
+              </g>
+            </svg>
+            <!-- подсказка точки № 6: cycles[5] -->
+            <div style="position:absolute;left:344px;top:88px;width:212px;padding:8px 12px;background:var(--s2);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 20px oklch(0 0 0 / .4);display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:12px;font-weight:600">Цикл 6 · 25 окт · Agentmeter</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">окно 4–6 · 25.6% · 11 из 43</span>
+              <div style="height:1px;background:var(--line);margin:4px 0"></div>
+              <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--tx2)">Исполнитель</span><span style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">15 правок</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--tx2)">после него: Ревьюер</span><span style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">2</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--tx2)">накладные цикла</span><span style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">×0.22</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ТРИ КОНТРОЛЬНЫХ -->
+        <div style="padding:20px 32px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;border-bottom:1px solid var(--line)">
+
+          <!-- накладные: ≈ — пунктир и полый кружок -->
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Накладные цикла</span>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums">×0.45</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">≈−6.63 · до него ≈×7.09</span>
+            </div>
+            <svg width="100%" height="48" viewBox="0 0 318 48" preserveAspectRatio="none" style="display:block;overflow:visible">
+              <line x1="0" y1="44" x2="318" y2="44" style="stroke:var(--line);stroke-width:1"></line>
+              <polyline points="4,20.6 81.5,12.5 159,7.3 236.5,40.7 314,42" style="fill:none;stroke:var(--tx2);stroke-width:1.5;stroke-dasharray:3 3;stroke-linejoin:round"></polyline>
+              <circle cx="4" cy="20.6" r="2.5" style="fill:var(--s1);stroke:var(--tx2);stroke-width:1.2"></circle>
+              <circle cx="81.5" cy="12.5" r="2.5" style="fill:var(--s1);stroke:var(--tx2);stroke-width:1.2"></circle>
+              <circle cx="159" cy="7.3" r="2.5" style="fill:var(--s1);stroke:var(--tx2);stroke-width:1.2"></circle>
+              <circle cx="236.5" cy="40.7" r="2.5" style="fill:var(--s1);stroke:var(--tx2);stroke-width:1.2"></circle>
+              <circle cx="314" cy="42" r="3" style="fill:var(--tx)"></circle>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums"><span>№ 3</span><span>№ 7</span></div>
+            <span style="font-size:11.5px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Главная сессия и ревьюер к исполнителю, в токенах. Пунктир — в окне есть восстановленные запросы.</span>
+          </div>
+
+          <!-- ошибки: ряд по сессиям, в пробе две точки -->
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Ошибки инструментов</span>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums">1.6%</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">+1.6 п.п. · до него 0.0%</span>
+            </div>
+            <svg width="100%" height="48" viewBox="0 0 318 48" preserveAspectRatio="none" style="display:block;overflow:visible">
+              <line x1="0" y1="44" x2="318" y2="44" style="stroke:var(--line);stroke-width:1"></line>
+              <circle cx="182.1" cy="44" r="2.5" style="fill:var(--tx2)"></circle>
+              <circle cx="314" cy="12" r="3" style="fill:var(--tx)"></circle>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums"><span>48 окон назад</span><span>сейчас</span></div>
+            <span style="font-size:11.5px;color:var(--tx2);line-height:1.5;text-wrap:pretty">14 из 868 вызовов с известным статусом. Окно — 20 сессий, корни и сабагенты по отдельности.</span>
+          </div>
+
+          <!-- вердикты: доля «с оговорками + не принято» и счётчики всех четырёх -->
+          <div style="background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Вердикты приёмки</span>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums">87.5%</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">+60.2 п.п. · до него 27.3%</span>
+            </div>
+            <svg width="100%" height="48" viewBox="0 0 318 48" preserveAspectRatio="none" style="display:block;overflow:visible">
+              <line x1="0" y1="44" x2="318" y2="44" style="stroke:var(--line);stroke-width:1"></line>
+              <circle cx="81.5" cy="33.1" r="2.5" style="fill:var(--tx2)"></circle>
+              <circle cx="314" cy="9" r="3" style="fill:var(--tx)"></circle>
+            </svg>
+            <div style="display:flex;gap:1px;height:8px;border-radius:2px;overflow:hidden;background:var(--s2)">
+              <div style="width:11.1%;background:color-mix(in oklch, var(--tx) 78%, transparent)"></div>
+              <div style="width:77.8%;background:color-mix(in oklch, var(--tx) 52%, transparent)"></div>
+              <div style="width:11.1%;box-shadow:inset 0 0 0 1px var(--tx3)"></div>
+            </div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);font-variant-numeric:tabular-nums">Принято 1 · С оговорками 7 · Не принято 0 · Вердикта нет 1</span>
+            <span style="font-size:11.5px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Доля «с оговорками» и «не принято» среди 8 вынесенных вердиктов; «вердикта нет» в неё не входит.</span>
+          </div>
+        </div>
+
+        <!-- РОЛИ И КТО ПЕРЕДЕЛЫВАЕТ -->
+        <div style="padding:20px 32px;display:grid;grid-template-columns:1fr 320px;gap:32px;border-bottom:1px solid var(--line)">
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Роли · последние 3 цикла</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2)">в 1 цикле исполнитель не виден: расход учтён, правки — нет</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding-bottom:4px;border-bottom:1px solid var(--line)">
+              <span>Роль</span><span>Расход</span><span></span><span style="text-align:right">Правок</span><span style="text-align:right">После исп.</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Главная сессия</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:18.6%;height:100%;background:var(--tx2)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">26.9M · 11.4%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">3</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">1</span>
+              </div>
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Исполнитель</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:100%;height:100%;background:var(--tx2)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">144.5M · 61.4%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">20</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3)">—</span>
+              </div>
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Ревьюер</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:26.7%;height:100%;background:var(--tx2)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">38.6M · 16.4%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">5</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">5</span>
+              </div>
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Планировщик</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:6.9%;height:100%;background:var(--tx2)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">10.0M · 4.3%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx2);font-variant-numeric:tabular-nums">10</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">0</span>
+              </div>
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px;color:var(--tx2)">Разведка</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2)"></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0 · 0%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0</span>
+              </div>
+              <!-- unknown — строка всегда, но не блок: в циклах его мало -->
+              <div style="display:grid;grid-template-columns:168px 1fr 120px 64px 112px;gap:12px;align-items:center">
+                <span style="font-size:12.5px;color:var(--tx2)">Роль не определена</span>
+                <div style="height:12px;border-radius:2px;background:var(--s2);overflow:hidden"><div style="width:10.4%;height:100%;background:var(--tx3)"></div></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums">15.1M · 6.4%</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--tx3);font-variant-numeric:tabular-nums">0</span>
+              </div>
+            </div>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">правок — видимых Edit/Write · после исп. — с момента старта первого исполнителя цикла</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">После исполнителя правили</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">6</span>
+            </div>
+            <div style="display:flex;gap:2px;height:20px">
+              <div style="width:16.7%;background:var(--tx2);border-radius:4px 0 0 4px"></div>
+              <div style="width:83.3%;background:var(--tx);border-radius:0 4px 4px 0"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:baseline">
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:2px;background:var(--tx2)"></div><span style="font-size:12.5px">Главная сессия</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">/plan-review</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">1 · 16.7%</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:baseline">
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:2px;background:var(--tx)"></div><span style="font-size:12.5px">Ревьюер</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">сабагент</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">5 · 83.3%</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:baseline;opacity:.55">
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--tx3)"></div><span style="font-size:12.5px">Планировщик, разведка, роль не определена</span></div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums">0</span>
+              </div>
+            </div>
+            <span style="font-size:11.5px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Приёмка в главной сессии и ревьюер-сабагент — два разных места, где доделывают за исполнителем. Считать только второе — получить нижнюю границу доли.</span>
+          </div>
+        </div>
+
+        <!-- ПОДВАЛ: ИЗМЕРЕННЫЕ ПОПРАВКИ -->
+        <div style="padding:12px 32px 20px;display:flex;flex-direction:column;gap:8px;background:var(--s1)">
+          <div style="font-size:11.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty"><span style="color:var(--tx)">Считаются только правки Edit и Write.</span> Правки шеллом — <span style="font-family:'IBM Plex Mono',monospace">Bash</span> с heredoc, <span style="font-family:'IBM Plex Mono',monospace">sed -i</span>, — и через MCP не видны, а на живых циклах шеллом идёт большинство правок у всех ролей, не только у исполнителя. Цикл, где исполнитель не оставил ни одной видимой правки, в долю не входит и назван числом у точки.</div>
+          <div style="font-size:11.5px;color:var(--tx2);line-height:1.55;text-wrap:pretty"><span style="color:var(--tx)">Накладные — в токенах, а не в деньгах:</span> токен Opus и токен Sonnet здесь весят одинаково. <span style="font-family:'IBM Plex Mono',monospace">≈</span> — в окне есть запросы, восстановленные по разрыву цепочки кэша.</div>
+        </div>
+      </div>
+
+      <!-- ПОЯСНЕНИЯ К ГЛАВНОМУ ВИДУ -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:1180px">
+        <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Почему «по видимым правкам»</div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Грубый счёт пробы по тексту команд <span style="font-family:'IBM Plex Mono',monospace">Bash</span> с явной записью в файл: у исполнителей видно 32 правки из 208, у ревьюеров 21 из 104, у главной сессии 16 из 139. Порядок у всех ролей один — <span style="color:var(--tx)">видна примерно каждая шестая</span>. На экран эти числа не едут: шелл не разбирается, а угаданное нечем честно пометить. Поэтому подпись у числа — «по видимым правкам», а не просто «переделка».</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Подсказка у цикла с невидимым исполнителем</div>
+          <div style="padding:8px 12px;background:var(--s2);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:12px;font-weight:600">Цикл 7 · 25 окт · Agentmeter</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums">окно 5–7 · 23.1% · 6 из 26</span>
+            <div style="height:1px;background:var(--line);margin:4px 0"></div>
+            <span style="font-size:11.5px;color:var(--tx2);line-height:1.5">Исполнитель правил шеллом — правок не видно, в долю окна цикл не входит</span>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--tx2)">после него</span><span style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">0</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--tx2)">накладные цикла</span><span style="font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums">×0.51</span></div>
+          </div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Вместо «0 правок / после» — пометка: без знаменателя такой цикл дал бы 100% без единой ошибки в данных. Расход, ошибки и вердикты он даёт как обычно.</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Откуда числа макета</div>
+          <div style="font-size:12px;color:var(--tx2);line-height:1.6;text-wrap:pretty">Проба <span style="font-family:'IBM Plex Mono',monospace">workflow-live.ts</span>, индекс живой машины, 25 октября: 7 циклов с 6 по 25 октября, окно 3 цикла (в конфиге по умолчанию 10 — это «окно не набралось», ниже). За все семь по видимым правкам — 25.6%, 11 из 43; без исключения невидимых было бы 49.2%. Только ревьюер-сабагенты, как считал discovery, — 39.6% против его 42%. У ошибок и вердиктов проба печатает два окна, последнее и до него, — столько точек и нарисовано; экран рисует все.</div>
+        </div>
+      </div>
+
+      <!-- ВАРИАНТЫ ГЛАВНОГО ПОКАЗАТЕЛЯ: ТОЧКИ НЕТ, ДЕЛЬТЫ НЕТ -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:1180px">
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Переделка · по видимым правкам</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--tx3)">—</span>
+          <span style="font-size:12px;color:var(--tx2)">последние 3 цикла, по 6 октября</span>
+          <div style="display:flex;gap:8px;padding:8px 12px;border-radius:6px;background:var(--s1);border:1px solid var(--line)">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);flex-shrink:0">›_</span>
+            <span style="font-size:12px;color:var(--tx2);line-height:1.5">в 3 циклах из 3 исполнитель правил шеллом — правок не видно</span>
+          </div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:12px">точки нет: исключены все · окно № 3</span>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Переделка · по видимым правкам</span>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">34.6%</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">дельты нет</span>
+          </div>
+          <span style="font-size:12px;color:var(--tx2)">последние 3 цикла, по 16 октября</span>
+          <span style="font-size:12px;color:var(--tx2);line-height:1.5">окна до него ещё нет: нужно 6 циклов, есть 5</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:12px">дельты нет: окно до него не набралось · окно № 5</span>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Переделка · по видимым правкам</span>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums">25.6%</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3)">дельты нет</span>
+          </div>
+          <span style="font-size:12px;color:var(--tx2)">последние 3 цикла, по 25 октября</span>
+          <span style="font-size:12px;color:var(--tx2);line-height:1.5">в окне до него исполнитель не виден ни в одном цикле — сравнивать не с чем</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:12px">дельты нет: у окна до него нет точки · окно № 6</span>
+        </div>
+      </div>
+
+      <!-- ПУСТЫЕ СОСТОЯНИЯ: ПЯТЬ, РАЗНЫМИ СЛОВАМИ -->
+      <div style="display:flex;gap:20px;width:1180px">
+        <div style="flex:1;min-height:240px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px">
+            <div style="font-size:13px">Окно не набралось: 7 из 10</div>
+            <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px">
+              <div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;background:var(--tx2)"></div><div style="height:6px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:6px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--line)"></div><div style="height:6px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--line)"></div>
+            </div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5">Доля считается по полным окнам. До первой точки — ещё 3 цикла, или окно поменьше.</div>
+            <a style="font-size:12px">Размер окна в настройках →</a>
+          </div>
+          <div style="padding:12px 20px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">points пуст · сейчас на живом</div>
+        </div>
+        <div style="flex:1;min-height:240px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px">
+            <div style="font-size:13px">Ни одного исполнителя по вашим правилам</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5">Цикл начинается с сабагента-исполнителя, а ни один тип сабагента не совпал с правилом <span style="font-family:'IBM Plex Mono',monospace">exec-*</span>. Без правила сабагент — «Роль не определена».</div>
+            <a style="font-size:12px">Правила ролей →</a>
+          </div>
+          <div style="padding:12px 20px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">циклов нет, без фильтра тоже</div>
+        </div>
+        <div style="flex:1;min-height:240px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px">
+            <div style="font-size:13px">В проекте Wayfork циклов нет</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5">В других проектах они есть — фильтр отсёк всё.</div>
+            <a style="font-size:12px">Все проекты</a>
+          </div>
+          <div style="padding:12px 20px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">emptyScope · фильтр проекта</div>
+        </div>
+        <div style="flex:1;min-height:240px;background:var(--bg);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px">
+            <div style="font-size:13px">Первичное индексирование</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5">Циклы появятся после чтения логов.</div>
+          </div>
+          <div style="padding:12px 20px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">emptyIndex</div>
+        </div>
+        <div style="flex:1;min-height:240px;background:var(--bg);border:1px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;padding:20px">
+            <div style="font-size:13px">Workflow выключен</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.5">Экран для тех, кто гоняет сабагентов по схеме «план → исполнитель → приёмка». Нужны правила ролей.</div>
+            <a style="font-size:12px">Включить в настройках →</a>
+          </div>
+          <div style="padding:12px 20px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">вкладки нет · текст над выключателем</div>
+        </div>
+      </div>
+
+      <!-- РАЗДЕЛ НАСТРОЕК «WORKFLOW» -->
+      <div style="width:900px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:180px 1fr">
+        <div style="background:var(--s1);border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column;gap:4px">
+          <div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Источники данных</div>
+          <div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Лимиты</div>
+          <div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Уведомления</div>
+          <div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Внешний вид</div>
+          <div style="padding:8px 12px;border-radius:6px;font-size:12.5px;color:var(--tx2)">Приватность</div>
+          <div style="padding:8px 12px;border-radius:6px;background:var(--s2);font-size:12.5px">Workflow</div>
+        </div>
+
+        <div style="padding:20px 32px;display:flex;flex-direction:column;gap:20px">
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:20px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:12.5px">Экран Workflow</span>
+              <span style="font-size:11.5px;color:var(--tx3);line-height:1.5">вкладка в окне и уведомления «пора в /retro»; выключено — ни того, ни другого</span>
+            </div>
+            <div style="width:34px;height:19px;border-radius:10px;background:var(--ok);position:relative;flex-shrink:0"><div style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--bg)"></div></div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Роли сабагентов</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:grid;grid-template-columns:20px 1fr 160px 48px;gap:12px;align-items:center;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">1</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">exec-*</span>
+                <span style="font-size:12px;padding:4px 8px;border-radius:4px;background:var(--s2)">Исполнитель ▾</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);text-align:right">↑ ↓ ×</span>
+              </div>
+              <div style="display:grid;grid-template-columns:20px 1fr 160px 48px;gap:12px;align-items:center;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">2</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">review-*</span>
+                <span style="font-size:12px;padding:4px 8px;border-radius:4px;background:var(--s2)">Ревьюер ▾</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);text-align:right">↑ ↓ ×</span>
+              </div>
+              <div style="display:grid;grid-template-columns:20px 1fr 160px 48px;gap:12px;align-items:center;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">3</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">plan-*</span>
+                <span style="font-size:12px;padding:4px 8px;border-radius:4px;background:var(--s2)">Планировщик ▾</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);text-align:right">↑ ↓ ×</span>
+              </div>
+              <div style="display:grid;grid-template-columns:20px 1fr 160px 48px;gap:12px;align-items:center;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--tx3)">4</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">Explore</span>
+                <span style="font-size:12px;padding:4px 8px;border-radius:4px;background:var(--s2)">Разведка ▾</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--tx3);text-align:right">↑ ↓ ×</span>
+              </div>
+              <div style="padding:8px 12px;border:1px dashed var(--line);border-radius:6px;font-size:12px;color:var(--tx2)">+ правило</div>
+            </div>
+            <span style="font-size:11.5px;color:var(--tx3);line-height:1.5">Правило — шаблон типа сабагента: <span style="font-family:'IBM Plex Mono',monospace">*</span> значит любую подстроку, регистр учитывается. Побеждает первое совпавшее, порядок значим; не совпало ни одно — «Роль не определена».</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Вердикт приёмки</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Не принято</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">не\s+принят|not\s+accepted|rejected</span>
+              </div>
+              <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center">
+                <span style="font-size:12.5px">С оговорками</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">с\s+оговорками|with\s+notes</span>
+              </div>
+              <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center">
+                <span style="font-size:12.5px">Принято</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px">принят|accepted</span>
+              </div>
+            </div>
+            <span style="font-size:11.5px;color:var(--tx3);line-height:1.5">Ищется в первой строке последнего ответа ревьюера, без учёта регистра. Проверяются сверху вниз: «не принят» содержит «принят». Ничего не совпало — «Вердикта нет».</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Окно и цель</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Окно переделки</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums">3 <span style="color:var(--tx3)">цикла</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Окно ошибок</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums">20 <span style="color:var(--tx3)">сессий</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Цель по переделке</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;background:var(--s1);border:1px solid var(--line);border-radius:6px;font-variant-numeric:tabular-nums">≤ 20 <span style="color:var(--tx3)">%</span></span>
+              </div>
+            </div>
+            <span style="font-size:11.5px;color:var(--tx3);line-height:1.5">Окно — последние циклы, а не дни. Пустая цель — графику без линии цели, дельте без цвета.</span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:20px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">Пора в /retro, когда</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Переделка выше</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;color:var(--tx3)">— <span>%</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Ошибки выше</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;color:var(--tx3)">— <span>%</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font-size:12px;color:var(--tx2)">Накладные выше</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;color:var(--tx3)">× —</span>
+              </div>
+            </div>
+            <span style="font-size:11.5px;color:var(--tx3);line-height:1.5">Пустое поле — показатель не уведомляет. Порог — ваш, а не норма продукта: уведомление срабатывает раз на окно.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
