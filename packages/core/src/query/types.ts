@@ -1,3 +1,4 @@
+import type { Verdict, WorkflowRole } from '../config/types.ts'
 import type { ModelSpeed } from './speed.ts'
 import type { LimitWindow, MarginalBasis, Provider } from '../sources/types.ts'
 
@@ -248,4 +249,143 @@ export interface DoctorReport {
     fiveHourCap: number | null
     weeklyCap: number | null
   }
+}
+
+// ─── Workflow (M9) ───────────────────────────────────────────────────────────
+
+/**
+ * Кем был узел дерева цикла. Роли конфига плюс `main` — корневая сессия: её роль
+ * назначает запрос по `is_sidechain = 0`, а не `roleOf` (у корня нет `agentType`, и
+ * `roleOf` ответил бы `unknown`).
+ */
+export type WorkflowNodeRole = WorkflowRole | 'main'
+
+/** Число на каждую из шести ролей. Ключи есть всегда, и `unknown` — тоже: экран не прячет его. */
+export type RoleNumbers = Record<WorkflowNodeRole, number>
+
+/**
+ * Один цикл «план → исполнитель → приёмка»: корневая сессия и её дерево.
+ *
+ * Всё здесь — суммы по узлам дерева, разложенные по ролям. Долей нет: окно
+ * делит суммы друг на друга, а доля цикла в этом смысле ничего не значит.
+ */
+export interface WorkflowCycle {
+  /** Корень: его `id` ключует цикл в окне, в уведомлении (9.6) и в подсказке графика. */
+  sessionId: string
+  /** Проект корня. Сабагенты идут за ним, как бы ни назывался их собственный каталог. */
+  project: string
+  startedAt: number
+  /**
+   * Старт **первого** исполнителя — граница «до/после» для `writesAfter`.
+   * `null` — ни у одного исполнителя нет ни одного запроса: границы нет, `after` нулевой.
+   */
+  executorStartedAt: number | null
+  /**
+   * Исполнитель не оставил ни одной видимой записи (`writes.executor === 0`) — правил
+   * шеллом, которого разбор не читает, или не правил вовсе; различить нечем. Такой
+   * цикл в переделку не входит: без знаменателя он дал бы 100% (приёмка 9.3, 4 из 7
+   * живых циклов). Расход, ошибки и вердикты он даёт как обычно.
+   */
+  executorUnseen: boolean
+  /** `input + output + cache_write + cache_read` (правило 16), включая восстановленные запросы. */
+  spend: RoleNumbers
+  /** Строки `tool_files` с `action = 'write'`: событий записи, а не разных файлов. */
+  writes: RoleNumbers
+  /**
+   * Записи не-исполнителей с `requests.ts >= executorStartedAt`. У исполнителя всегда
+   * ноль: его записи — знаменатель, а не переделка. Промт и roadmap, которые главная
+   * сессия пишет до запуска, сюда не попадают.
+   */
+  writesAfter: RoleNumbers
+  toolCalls: number
+  /** Вызовы с `is_error = 1`. */
+  toolErrors: number
+  /** Вызовы с известным статусом (`is_error IS NOT NULL`) — знаменатель доли ошибок (правило 30). */
+  toolErrorsKnown: number
+  /** По одному на каждого ревьюера дерева, в порядке старта. Не-ревьюеры вердикта не имеют. */
+  verdicts: Verdict[]
+  /** В дереве есть запросы с `origin != 'log'` (1.3): расход цикла точен не до токена. */
+  inherited: boolean
+}
+
+/**
+ * Точка скользящего окна: сумма числителей окна, делённая на сумму знаменателей.
+ *
+ * Единицы те же, в которых лежат пороги конфига: переделка и ошибки — доли 0..1,
+ * накладные — кратность (`3` — втрое). Сравнивать с порогом можно без пересчёта.
+ */
+export interface WorkflowPoint {
+  /** Номер последнего элемента окна, с единицы: цикла (переделка, накладные, вердикты) или сессии (ошибки). */
+  n: number
+  /** Корень последнего цикла окна; для ошибок — последняя сессия окна. */
+  sessionId: string
+  startedAt: number
+  value: number
+  numerator: number
+  denominator: number
+  /**
+   * `≈`: в окне есть восстановленные запросы (1.3). Ставится только у накладных — у
+   * переделки, ошибок и вердиктов всегда `false`: восстановленный запрос вызовов не
+   * несёт.
+   */
+  approximate: boolean
+}
+
+/**
+ * У точки переделки — сколько циклов окна исключено (`executorUnseen`). Окно —
+ * по-прежнему последние N циклов, а доля — по тем, где исполнитель виден; экран
+ * обязан назвать это число рядом с долей. Все исключены — точки нет.
+ */
+export interface WorkflowReworkPoint extends WorkflowPoint {
+  unseen: number
+}
+
+/** У точки вердиктов рядом лежат четыре счётчика: окно показывает не только долю. */
+export interface WorkflowVerdictPoint extends WorkflowPoint {
+  counts: Record<Verdict, number>
+}
+
+export interface WorkflowSeries<P extends WorkflowPoint = WorkflowPoint> {
+  /** Размер окна из конфига. */
+  size: number
+  /** Сколько элементов (циклов или сессий) есть вообще: «окно не набралось (count из size)». */
+  count: number
+  /** Только полные окна; окно с нулевым знаменателем точки не даёт (не нуль). */
+  points: P[]
+  /** Окно, кончающееся на последнем элементе. `null` — окна нет или знаменатель нулевой. */
+  latest: P | null
+  /** Окно без пересечения перед ним, то есть кончающееся на `size` элементов раньше. */
+  prev: P | null
+  /** `latest.value − prev.value`; нет любого из двух — нет дельты. Для долей — разность долей. */
+  delta: number | null
+}
+
+/** Роли в последнем окне: суммы по циклам, доли считает main (правило 13). */
+export interface WorkflowRoles {
+  /** Сколько циклов вошло: последние `min(size, count)`. */
+  cycles: number
+  /** Из них с невидимым исполнителем: их расход здесь есть, записей и `after` — нет. */
+  unseen: number
+  spend: RoleNumbers
+  /** Только циклы с видимым исполнителем: сумма `afterByRole` — числитель переделки. */
+  writes: RoleNumbers
+  /** Кто переделывает после исполнителя: главная сессия (`/plan-review`) или ревьюер-агент. */
+  afterByRole: RoleNumbers
+}
+
+export interface WorkflowReport {
+  emptyIndex: boolean
+  /**
+   * Циклов после сужения нет, а без него есть (правило 15). «Ни одного исполнителя
+   * по вашим правилам» — это `cycles.length === 0 && !emptyScope`.
+   */
+  emptyScope: boolean
+  /** По `started_at` корня; все циклы под сужением, не только последнее окно. */
+  cycles: WorkflowCycle[]
+  rework: WorkflowSeries<WorkflowReworkPoint>
+  overhead: WorkflowSeries
+  /** Окно в сессиях (корни и сабагенты любого провайдера), а не в циклах. */
+  errorRate: WorkflowSeries
+  verdicts: WorkflowSeries<WorkflowVerdictPoint>
+  roles: WorkflowRoles
 }

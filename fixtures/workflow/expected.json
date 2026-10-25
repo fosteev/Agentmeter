@@ -1,0 +1,795 @@
+{
+  "_": "Ручной расчёт — в README.md рядом. Пересобирать выводом реализации нельзя. «sessions» — входные данные расчёта (по порядку started_at, id), «cases» — ответ workflowReport на них; метки времени — ISO, тест переводит поля *At в миллисекунды.",
+  "sessions": [
+    { "id": "a1", "root": "a1", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-01T10:00:00.000Z", "spend": 3000, "calls": 6, "errors": 0, "known": 6, "writes": { "10:00:00": 2, "10:50:00": 2 }, "inherited": false },
+    { "id": "a1-plan", "root": "a1", "agentType": "plan-opus", "provider": "claude", "project": "alpha", "startedAt": "2026-09-01T10:05:00.000Z", "spend": 500, "calls": 1, "errors": 0, "known": 1, "writes": { "10:05:00": 1 }, "inherited": false },
+    { "id": "a1-exec", "root": "a1", "agentType": "exec-sonnet-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-01T10:15:00.000Z", "spend": 6000, "calls": 7, "errors": 1, "known": 7, "writes": { "10:20:00": 2, "10:25:00": 2 }, "inherited": false },
+    { "id": "a1-rev", "root": "a1", "agentType": "review-opus", "provider": "claude", "project": "alpha", "startedAt": "2026-09-01T10:40:00.000Z", "spend": 1000, "calls": 3, "errors": 0, "known": 3, "writes": {}, "inherited": false, "verdict": "notes" },
+    { "id": "b1", "root": "b1", "agentType": null, "provider": "claude", "project": "beta", "startedAt": "2026-09-02T10:00:00.000Z", "spend": 2000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:00:00": 1 }, "inherited": false },
+    { "id": "b1-exec", "root": "b1", "agentType": "exec-sonnet-medium", "provider": "claude", "project": "beta", "startedAt": "2026-09-02T10:10:00.000Z", "spend": 4000, "calls": 11, "errors": 2, "known": 11, "writes": { "10:15:00": 5, "10:20:00": 5 }, "inherited": false },
+    { "id": "b1-rev", "root": "b1", "agentType": "review-opus", "provider": "claude", "project": "beta", "startedAt": "2026-09-02T10:30:00.000Z", "spend": 1500, "calls": 3, "errors": 0, "known": 3, "writes": { "10:32:00": 2 }, "inherited": false, "verdict": "notes" },
+    { "id": "a2", "root": "a2", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-03T10:00:00.000Z", "spend": 4000, "calls": 4, "errors": 0, "known": 4, "writes": { "10:50:00": 2 }, "inherited": false },
+    { "id": "a2-exec", "root": "a2", "agentType": "exec-opus-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-03T10:10:00.000Z", "spend": 2000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:15:00": 2 }, "inherited": false },
+    { "id": "a2-rev", "root": "a2", "agentType": "review-opus", "provider": "claude", "project": "beta", "startedAt": "2026-09-03T10:30:00.000Z", "spend": 3000, "calls": 4, "errors": 1, "known": 4, "writes": {}, "inherited": false, "verdict": "rejected" },
+    { "id": "g1", "root": "g1", "agentType": null, "provider": "claude", "project": "gamma", "startedAt": "2026-09-04T10:00:00.000Z", "spend": 1500, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false },
+    { "id": "g1-exec", "root": "g1", "agentType": "exec-sonnet-high", "provider": "claude", "project": "gamma", "startedAt": "2026-09-04T10:10:00.000Z", "spend": 3000, "calls": 6, "errors": 1, "known": 6, "writes": {}, "inherited": false },
+    { "id": "g1-rev", "root": "g1", "agentType": "review-opus", "provider": "claude", "project": "gamma", "startedAt": "2026-09-04T10:30:00.000Z", "spend": 500, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false, "verdict": "none" },
+    { "id": "b0", "root": "b0", "agentType": null, "provider": "claude", "project": "beta", "startedAt": "2026-09-05T11:00:00.000Z", "spend": 1200, "calls": 3, "errors": 1, "known": 3, "writes": { "11:10:00": 1 }, "inherited": false },
+    { "id": "b0-gp", "root": "b0", "agentType": "general-purpose", "provider": "claude", "project": "beta", "startedAt": "2026-09-05T11:10:00.000Z", "spend": 1400, "calls": 3, "errors": 0, "known": 3, "writes": { "11:11:00": 2 }, "inherited": false },
+    { "id": "b0-expl", "root": "b0", "agentType": "Explore", "provider": "claude", "project": "beta", "startedAt": "2026-09-05T11:20:00.000Z", "spend": 400, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false },
+    { "id": "a3", "root": "a3", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-07T10:00:00.000Z", "spend": 2500, "calls": 3, "errors": 0, "known": 3, "writes": { "10:00:00": 1, "10:10:00": 1 }, "inherited": false },
+    { "id": "a3-exec", "root": "a3", "agentType": "exec-sonnet-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-07T10:10:00.000Z", "spend": 5000, "calls": 9, "errors": 1, "known": 9, "writes": { "10:15:00": 3, "10:20:00": 3 }, "inherited": false },
+    { "id": "a3-gp", "root": "a3", "agentType": "general-purpose", "provider": "claude", "project": "alpha", "startedAt": "2026-09-07T10:30:00.000Z", "spend": 2000, "calls": 5, "errors": 0, "known": 4, "writes": { "10:30:00": 1, "10:34:00": 2 }, "inherited": false },
+    { "id": "b2", "root": "b2", "agentType": null, "provider": "claude", "project": "beta", "startedAt": "2026-09-08T10:00:00.000Z", "spend": 3500, "calls": 4, "errors": 0, "known": 4, "writes": { "10:00:00": 1, "10:25:00": 1 }, "inherited": false },
+    { "id": "b2-exec1", "root": "b2", "agentType": "exec-sonnet-high", "provider": "claude", "project": "beta", "startedAt": "2026-09-08T10:10:00.000Z", "spend": 3000, "calls": 4, "errors": 0, "known": 4, "writes": { "10:15:00": 2, "10:20:00": 1 }, "inherited": false },
+    { "id": "a4", "root": "a4", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-08T10:30:00.000Z", "spend": 2000, "calls": 3, "errors": 0, "known": 3, "writes": { "11:30:00": 2 }, "inherited": false },
+    { "id": "a4-expl", "root": "a4", "agentType": "Explore", "provider": "claude", "project": "alpha", "startedAt": "2026-09-08T10:35:00.000Z", "spend": 300, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false },
+    { "id": "b2-exec2", "root": "b2", "agentType": "exec-sonnet-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-08T10:40:00.000Z", "spend": 4000, "calls": 8, "errors": 1, "known": 8, "writes": { "10:45:00": 3, "10:50:00": 2 }, "inherited": false },
+    { "id": "a4-exec", "root": "a4", "agentType": "exec-sonnet-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-08T10:50:00.000Z", "spend": 6000, "calls": 10, "errors": 0, "known": 10, "writes": { "10:55:00": 4, "11:00:00": 4 }, "inherited": false },
+    { "id": "b2-rev", "root": "b2", "agentType": "review-opus", "provider": "claude", "project": "beta", "startedAt": "2026-09-08T11:00:00.000Z", "spend": 1000, "calls": 3, "errors": 0, "known": 3, "writes": { "11:03:00": 1 }, "inherited": false, "verdict": "accepted" },
+    { "id": "a4-rev", "root": "a4", "agentType": "review-opus", "provider": "claude", "project": "alpha", "startedAt": "2026-09-08T11:20:00.000Z", "spend": 1500, "calls": 2, "errors": 0, "known": 2, "writes": { "11:22:00": 1 }, "inherited": false, "verdict": "accepted" },
+    { "id": "g2", "root": "g2", "agentType": null, "provider": "claude", "project": "gamma", "startedAt": "2026-09-10T10:00:00.000Z", "spend": 1000, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false },
+    { "id": "g2-exec", "root": "g2", "agentType": "exec-sonnet-max", "provider": "claude", "project": "gamma", "startedAt": "2026-09-10T10:10:00.000Z", "spend": 2500, "calls": 6, "errors": 1, "known": 6, "writes": {}, "inherited": false },
+    { "id": "g2-rev", "root": "g2", "agentType": "review-opus", "provider": "claude", "project": "gamma", "startedAt": "2026-09-10T10:40:00.000Z", "spend": 500, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false, "verdict": "accepted" },
+    { "id": "b3", "root": "b3", "agentType": null, "provider": "claude", "project": "beta", "startedAt": "2026-09-11T10:00:00.000Z", "spend": 3000, "calls": 5, "errors": 0, "known": 5, "writes": { "10:00:00": 3 }, "inherited": false },
+    { "id": "b3-plan", "root": "b3", "agentType": "plan-opus", "provider": "claude", "project": "beta", "startedAt": "2026-09-11T10:05:00.000Z", "spend": 1000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:35:00": 2 }, "inherited": false },
+    { "id": "b3-exec", "root": "b3", "agentType": "exec-sonnet-high", "provider": "claude", "project": "beta", "startedAt": "2026-09-11T10:20:00.000Z", "spend": 10000, "calls": 13, "errors": 2, "known": 12, "writes": { "10:25:00": 6, "10:30:00": 6 }, "inherited": true },
+    { "id": "b3-rev", "root": "b3", "agentType": "review-opus", "provider": "claude", "project": "beta", "startedAt": "2026-09-11T10:50:00.000Z", "spend": 2000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:52:00": 1 }, "inherited": false, "verdict": "notes" },
+    { "id": "a5", "root": "a5", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-14T10:00:00.000Z", "spend": 5000, "calls": 6, "errors": 0, "known": 6, "writes": { "11:00:00": 3 }, "inherited": false },
+    { "id": "a5-exec", "root": "a5", "agentType": "exec-sonnet-medium", "provider": "claude", "project": "alpha", "startedAt": "2026-09-14T10:30:00.000Z", "spend": 500, "calls": 2, "errors": 1, "known": 2, "writes": { "10:31:00": 1 }, "inherited": false },
+    { "id": "a5-rev", "root": "a5", "agentType": "review-opus", "provider": "claude", "project": "alpha", "startedAt": "2026-09-14T11:10:00.000Z", "spend": 800, "calls": 1, "errors": 0, "known": 1, "writes": {}, "inherited": false, "verdict": "none" },
+    { "id": "g3", "root": "g3", "agentType": null, "provider": "claude", "project": "gamma", "startedAt": "2026-09-15T10:00:00.000Z", "spend": 1000, "calls": 3, "errors": 0, "known": 3, "writes": {}, "inherited": false },
+    { "id": "g3-exec", "root": "g3", "agentType": "exec-sonnet-medium", "provider": "claude", "project": "gamma", "startedAt": "2026-09-15T10:10:00.000Z", "spend": 2000, "calls": 4, "errors": 0, "known": 4, "writes": {}, "inherited": false },
+    { "id": "g3-rev", "root": "g3", "agentType": "review-opus", "provider": "claude", "project": "gamma", "startedAt": "2026-09-15T10:40:00.000Z", "spend": 500, "calls": 2, "errors": 0, "known": 2, "writes": {}, "inherited": false, "verdict": "rejected" },
+    { "id": "x1", "root": "x1", "agentType": null, "provider": "codex", "project": "alpha", "startedAt": "2026-09-15T15:00:00.000Z", "spend": 4950, "calls": 5, "errors": 0, "known": 0, "writes": {}, "inherited": false },
+    { "id": "a6", "root": "a6", "agentType": null, "provider": "claude", "project": "alpha", "startedAt": "2026-09-16T10:00:00.000Z", "spend": 2000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:00:00": 1 }, "inherited": false },
+    { "id": "a6-exec", "root": "a6", "agentType": "exec-sonnet-high", "provider": "claude", "project": "alpha", "startedAt": "2026-09-16T10:10:00.000Z", "spend": 4500, "calls": 12, "errors": 1, "known": 12, "writes": { "10:15:00": 5, "10:20:00": 4 }, "inherited": false },
+    { "id": "a6-gp", "root": "a6", "agentType": "general-purpose", "provider": "claude", "project": "alpha", "startedAt": "2026-09-16T10:40:00.000Z", "spend": 1000, "calls": 3, "errors": 0, "known": 3, "writes": { "10:43:00": 1 }, "inherited": false }
+  ],
+  "cases": [
+    {
+      "name": "all",
+      "note": "Ничего не сужено: всё, что в README, целиком.",
+      "scope": {},
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "cycles": [
+          {
+            "sessionId": "a1",
+            "project": "alpha",
+            "startedAt": "2026-09-01T10:00:00.000Z",
+            "executorStartedAt": "2026-09-01T10:15:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 3000, "executor": 6000, "reviewer": 1000, "planner": 500, "explore": 0, "unknown": 0 },
+            "writes": { "main": 4, "executor": 4, "reviewer": 0, "planner": 1, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 2, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 17,
+            "toolErrors": 1,
+            "toolErrorsKnown": 17,
+            "verdicts": ["notes"],
+            "inherited": false
+          },
+          {
+            "sessionId": "b1",
+            "project": "beta",
+            "startedAt": "2026-09-02T10:00:00.000Z",
+            "executorStartedAt": "2026-09-02T10:10:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 2000, "executor": 4000, "reviewer": 1500, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 1, "executor": 10, "reviewer": 2, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 2, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 17,
+            "toolErrors": 2,
+            "toolErrorsKnown": 17,
+            "verdicts": ["notes"],
+            "inherited": false
+          },
+          {
+            "sessionId": "a2",
+            "project": "alpha",
+            "startedAt": "2026-09-03T10:00:00.000Z",
+            "executorStartedAt": "2026-09-03T10:10:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 4000, "executor": 2000, "reviewer": 3000, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 2, "executor": 2, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 2, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 11,
+            "toolErrors": 1,
+            "toolErrorsKnown": 11,
+            "verdicts": ["rejected"],
+            "inherited": false
+          },
+          {
+            "sessionId": "g1",
+            "project": "gamma",
+            "startedAt": "2026-09-04T10:00:00.000Z",
+            "executorStartedAt": "2026-09-04T10:10:00.000Z",
+            "executorUnseen": true,
+            "spend": { "main": 1500, "executor": 3000, "reviewer": 500, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 10,
+            "toolErrors": 1,
+            "toolErrorsKnown": 10,
+            "verdicts": ["none"],
+            "inherited": false
+          },
+          {
+            "sessionId": "a3",
+            "project": "alpha",
+            "startedAt": "2026-09-07T10:00:00.000Z",
+            "executorStartedAt": "2026-09-07T10:10:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 2500, "executor": 5000, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 2000 },
+            "writes": { "main": 2, "executor": 6, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 3 },
+            "writesAfter": { "main": 1, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 3 },
+            "toolCalls": 17,
+            "toolErrors": 1,
+            "toolErrorsKnown": 16,
+            "verdicts": [],
+            "inherited": false
+          },
+          {
+            "sessionId": "b2",
+            "project": "beta",
+            "startedAt": "2026-09-08T10:00:00.000Z",
+            "executorStartedAt": "2026-09-08T10:10:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 3500, "executor": 7000, "reviewer": 1000, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 2, "executor": 8, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 1, "executor": 0, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 19,
+            "toolErrors": 1,
+            "toolErrorsKnown": 19,
+            "verdicts": ["accepted"],
+            "inherited": false
+          },
+          {
+            "sessionId": "a4",
+            "project": "alpha",
+            "startedAt": "2026-09-08T10:30:00.000Z",
+            "executorStartedAt": "2026-09-08T10:50:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 2000, "executor": 6000, "reviewer": 1500, "planner": 0, "explore": 300, "unknown": 0 },
+            "writes": { "main": 2, "executor": 8, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 2, "executor": 0, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 17,
+            "toolErrors": 0,
+            "toolErrorsKnown": 17,
+            "verdicts": ["accepted"],
+            "inherited": false
+          },
+          {
+            "sessionId": "g2",
+            "project": "gamma",
+            "startedAt": "2026-09-10T10:00:00.000Z",
+            "executorStartedAt": "2026-09-10T10:10:00.000Z",
+            "executorUnseen": true,
+            "spend": { "main": 1000, "executor": 2500, "reviewer": 500, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 10,
+            "toolErrors": 1,
+            "toolErrorsKnown": 10,
+            "verdicts": ["accepted"],
+            "inherited": false
+          },
+          {
+            "sessionId": "b3",
+            "project": "beta",
+            "startedAt": "2026-09-11T10:00:00.000Z",
+            "executorStartedAt": "2026-09-11T10:20:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 3000, "executor": 10000, "reviewer": 2000, "planner": 1000, "explore": 0, "unknown": 0 },
+            "writes": { "main": 3, "executor": 12, "reviewer": 1, "planner": 2, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 1, "planner": 2, "explore": 0, "unknown": 0 },
+            "toolCalls": 24,
+            "toolErrors": 2,
+            "toolErrorsKnown": 23,
+            "verdicts": ["notes"],
+            "inherited": true
+          },
+          {
+            "sessionId": "a5",
+            "project": "alpha",
+            "startedAt": "2026-09-14T10:00:00.000Z",
+            "executorStartedAt": "2026-09-14T10:30:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 5000, "executor": 500, "reviewer": 800, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 3, "executor": 1, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 3, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 9,
+            "toolErrors": 1,
+            "toolErrorsKnown": 9,
+            "verdicts": ["none"],
+            "inherited": false
+          },
+          {
+            "sessionId": "g3",
+            "project": "gamma",
+            "startedAt": "2026-09-15T10:00:00.000Z",
+            "executorStartedAt": "2026-09-15T10:10:00.000Z",
+            "executorUnseen": true,
+            "spend": { "main": 1000, "executor": 2000, "reviewer": 500, "planner": 0, "explore": 0, "unknown": 0 },
+            "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+            "toolCalls": 9,
+            "toolErrors": 0,
+            "toolErrorsKnown": 9,
+            "verdicts": ["rejected"],
+            "inherited": false
+          },
+          {
+            "sessionId": "a6",
+            "project": "alpha",
+            "startedAt": "2026-09-16T10:00:00.000Z",
+            "executorStartedAt": "2026-09-16T10:10:00.000Z",
+            "executorUnseen": false,
+            "spend": { "main": 2000, "executor": 4500, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 1000 },
+            "writes": { "main": 1, "executor": 9, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 1 },
+            "writesAfter": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 1 },
+            "toolCalls": 18,
+            "toolErrors": 1,
+            "toolErrorsKnown": 18,
+            "verdicts": [],
+            "inherited": false
+          }
+        ],
+        "rework": {
+          "size": 5,
+          "count": 12,
+          "points": [
+            { "n": 5, "sessionId": "a3", "startedAt": "2026-09-07T10:00:00.000Z", "value": 0.3125, "numerator": 10, "denominator": 32, "approximate": false, "unseen": 1 },
+            { "n": 6, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.2777777777777778, "numerator": 10, "denominator": 36, "approximate": false, "unseen": 1 },
+            { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.3142857142857143, "numerator": 11, "denominator": 35, "approximate": false, "unseen": 1 },
+            { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.2903225806451613, "numerator": 9, "denominator": 31, "approximate": false, "unseen": 2 },
+            { "n": 9, "sessionId": "b3", "startedAt": "2026-09-11T10:00:00.000Z", "value": 0.2608695652173913, "numerator": 12, "denominator": 46, "approximate": false, "unseen": 1 },
+            { "n": 10, "sessionId": "a5", "startedAt": "2026-09-14T10:00:00.000Z", "value": 0.275, "numerator": 11, "denominator": 40, "approximate": false, "unseen": 1 },
+            { "n": 11, "sessionId": "g3", "startedAt": "2026-09-15T10:00:00.000Z", "value": 0.3, "numerator": 9, "denominator": 30, "approximate": false, "unseen": 2 },
+            { "n": 12, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.2413793103448276, "numerator": 7, "denominator": 29, "approximate": false, "unseen": 2 }
+          ],
+          "latest": { "n": 12, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.2413793103448276, "numerator": 7, "denominator": 29, "approximate": false, "unseen": 2 },
+          "prev": { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.3142857142857143, "numerator": 11, "denominator": 35, "approximate": false, "unseen": 1 },
+          "delta": -0.07290640394088668
+        },
+        "overhead": {
+          "size": 5,
+          "count": 12,
+          "points": [
+            { "n": 5, "sessionId": "a3", "startedAt": "2026-09-07T10:00:00.000Z", "value": 0.95, "numerator": 19000, "denominator": 20000, "approximate": false },
+            { "n": 6, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.9285714285714286, "numerator": 19500, "denominator": 21000, "approximate": false },
+            { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.8478260869565217, "numerator": 19500, "denominator": 23000, "approximate": false },
+            { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.5957446808510638, "numerator": 14000, "denominator": 23500, "approximate": false },
+            { "n": 9, "sessionId": "b3", "startedAt": "2026-09-11T10:00:00.000Z", "value": 0.5573770491803278, "numerator": 17000, "denominator": 30500, "approximate": true },
+            { "n": 10, "sessionId": "a5", "startedAt": "2026-09-14T10:00:00.000Z", "value": 0.7807692307692308, "numerator": 20300, "denominator": 26000, "approximate": true },
+            { "n": 11, "sessionId": "g3", "startedAt": "2026-09-15T10:00:00.000Z", "value": 0.8238095238095238, "numerator": 17300, "denominator": 21000, "approximate": true },
+            { "n": 12, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.8102564102564103, "numerator": 15800, "denominator": 19500, "approximate": true }
+          ],
+          "latest": { "n": 12, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.8102564102564103, "numerator": 15800, "denominator": 19500, "approximate": true },
+          "prev": { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.8478260869565217, "numerator": 19500, "denominator": 23000, "approximate": false },
+          "delta": -0.037569676700111465
+        },
+        "errorRate": {
+          "size": 10,
+          "count": 44,
+          "points": [
+            { "n": 10, "sessionId": "a2-rev", "startedAt": "2026-09-03T10:30:00.000Z", "value": 0.08888888888888889, "numerator": 4, "denominator": 45, "approximate": false },
+            { "n": 11, "sessionId": "g1", "startedAt": "2026-09-04T10:00:00.000Z", "value": 0.0975609756097561, "numerator": 4, "denominator": 41, "approximate": false },
+            { "n": 12, "sessionId": "g1-exec", "startedAt": "2026-09-04T10:10:00.000Z", "value": 0.10869565217391304, "numerator": 5, "denominator": 46, "approximate": false },
+            { "n": 13, "sessionId": "g1-rev", "startedAt": "2026-09-04T10:30:00.000Z", "value": 0.0975609756097561, "numerator": 4, "denominator": 41, "approximate": false },
+            { "n": 14, "sessionId": "b0", "startedAt": "2026-09-05T11:00:00.000Z", "value": 0.12195121951219512, "numerator": 5, "denominator": 41, "approximate": false },
+            { "n": 15, "sessionId": "b0-gp", "startedAt": "2026-09-05T11:10:00.000Z", "value": 0.12195121951219512, "numerator": 5, "denominator": 41, "approximate": false },
+            { "n": 16, "sessionId": "b0-expl", "startedAt": "2026-09-05T11:20:00.000Z", "value": 0.09375, "numerator": 3, "denominator": 32, "approximate": false },
+            { "n": 17, "sessionId": "a3", "startedAt": "2026-09-07T10:00:00.000Z", "value": 0.09375, "numerator": 3, "denominator": 32, "approximate": false },
+            { "n": 18, "sessionId": "a3-exec", "startedAt": "2026-09-07T10:10:00.000Z", "value": 0.10810810810810811, "numerator": 4, "denominator": 37, "approximate": false },
+            { "n": 19, "sessionId": "a3-gp", "startedAt": "2026-09-07T10:30:00.000Z", "value": 0.10526315789473684, "numerator": 4, "denominator": 38, "approximate": false },
+            { "n": 20, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.07894736842105263, "numerator": 3, "denominator": 38, "approximate": false },
+            { "n": 21, "sessionId": "b2-exec1", "startedAt": "2026-09-08T10:10:00.000Z", "value": 0.075, "numerator": 3, "denominator": 40, "approximate": false },
+            { "n": 22, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.05405405405405406, "numerator": 2, "denominator": 37, "approximate": false },
+            { "n": 23, "sessionId": "a4-expl", "startedAt": "2026-09-08T10:35:00.000Z", "value": 0.05405405405405406, "numerator": 2, "denominator": 37, "approximate": false },
+            { "n": 24, "sessionId": "b2-exec2", "startedAt": "2026-09-08T10:40:00.000Z", "value": 0.047619047619047616, "numerator": 2, "denominator": 42, "approximate": false },
+            { "n": 25, "sessionId": "a4-exec", "startedAt": "2026-09-08T10:50:00.000Z", "value": 0.04081632653061224, "numerator": 2, "denominator": 49, "approximate": false },
+            { "n": 26, "sessionId": "b2-rev", "startedAt": "2026-09-08T11:00:00.000Z", "value": 0.04, "numerator": 2, "denominator": 50, "approximate": false },
+            { "n": 27, "sessionId": "a4-rev", "startedAt": "2026-09-08T11:20:00.000Z", "value": 0.04081632653061224, "numerator": 2, "denominator": 49, "approximate": false },
+            { "n": 28, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.023809523809523808, "numerator": 1, "denominator": 42, "approximate": false },
+            { "n": 29, "sessionId": "g2-exec", "startedAt": "2026-09-10T10:10:00.000Z", "value": 0.045454545454545456, "numerator": 2, "denominator": 44, "approximate": false },
+            { "n": 30, "sessionId": "g2-rev", "startedAt": "2026-09-10T10:40:00.000Z", "value": 0.047619047619047616, "numerator": 2, "denominator": 42, "approximate": false },
+            { "n": 31, "sessionId": "b3", "startedAt": "2026-09-11T10:00:00.000Z", "value": 0.046511627906976744, "numerator": 2, "denominator": 43, "approximate": false },
+            { "n": 32, "sessionId": "b3-plan", "startedAt": "2026-09-11T10:05:00.000Z", "value": 0.046511627906976744, "numerator": 2, "denominator": 43, "approximate": false },
+            { "n": 33, "sessionId": "b3-exec", "startedAt": "2026-09-11T10:20:00.000Z", "value": 0.07547169811320754, "numerator": 4, "denominator": 53, "approximate": false },
+            { "n": 34, "sessionId": "b3-rev", "startedAt": "2026-09-11T10:50:00.000Z", "value": 0.0625, "numerator": 3, "denominator": 48, "approximate": false },
+            { "n": 35, "sessionId": "a5", "startedAt": "2026-09-14T10:00:00.000Z", "value": 0.06818181818181818, "numerator": 3, "denominator": 44, "approximate": false },
+            { "n": 36, "sessionId": "a5-exec", "startedAt": "2026-09-14T10:30:00.000Z", "value": 0.09302325581395349, "numerator": 4, "denominator": 43, "approximate": false },
+            { "n": 37, "sessionId": "a5-rev", "startedAt": "2026-09-14T11:10:00.000Z", "value": 0.09523809523809523, "numerator": 4, "denominator": 42, "approximate": false },
+            { "n": 38, "sessionId": "g3", "startedAt": "2026-09-15T10:00:00.000Z", "value": 0.09302325581395349, "numerator": 4, "denominator": 43, "approximate": false },
+            { "n": 39, "sessionId": "g3-exec", "startedAt": "2026-09-15T10:10:00.000Z", "value": 0.07317073170731707, "numerator": 3, "denominator": 41, "approximate": false },
+            { "n": 40, "sessionId": "g3-rev", "startedAt": "2026-09-15T10:40:00.000Z", "value": 0.07317073170731707, "numerator": 3, "denominator": 41, "approximate": false },
+            { "n": 41, "sessionId": "x1", "startedAt": "2026-09-15T15:00:00.000Z", "value": 0.08333333333333333, "numerator": 3, "denominator": 36, "approximate": false },
+            { "n": 42, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.08333333333333333, "numerator": 3, "denominator": 36, "approximate": false },
+            { "n": 43, "sessionId": "a6-exec", "startedAt": "2026-09-16T10:10:00.000Z", "value": 0.05555555555555555, "numerator": 2, "denominator": 36, "approximate": false },
+            { "n": 44, "sessionId": "a6-gp", "startedAt": "2026-09-16T10:40:00.000Z", "value": 0.05555555555555555, "numerator": 2, "denominator": 36, "approximate": false }
+          ],
+          "latest": { "n": 44, "sessionId": "a6-gp", "startedAt": "2026-09-16T10:40:00.000Z", "value": 0.05555555555555555, "numerator": 2, "denominator": 36, "approximate": false },
+          "prev": { "n": 34, "sessionId": "b3-rev", "startedAt": "2026-09-11T10:50:00.000Z", "value": 0.0625, "numerator": 3, "denominator": 48, "approximate": false },
+          "delta": -0.0069444444444444475
+        },
+        "verdicts": {
+          "size": 5,
+          "count": 12,
+          "points": [
+            {
+              "n": 5,
+              "sessionId": "a3",
+              "startedAt": "2026-09-07T10:00:00.000Z",
+              "value": 1,
+              "numerator": 3,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 0, "notes": 2, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 6,
+              "sessionId": "b2",
+              "startedAt": "2026-09-08T10:00:00.000Z",
+              "value": 0.6666666666666666,
+              "numerator": 2,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 1, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 7,
+              "sessionId": "a4",
+              "startedAt": "2026-09-08T10:30:00.000Z",
+              "value": 0.3333333333333333,
+              "numerator": 1,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 2, "notes": 0, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 8,
+              "sessionId": "g2",
+              "startedAt": "2026-09-10T10:00:00.000Z",
+              "value": 0,
+              "numerator": 0,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 3, "notes": 0, "rejected": 0, "none": 1 }
+            },
+            {
+              "n": 9,
+              "sessionId": "b3",
+              "startedAt": "2026-09-11T10:00:00.000Z",
+              "value": 0.25,
+              "numerator": 1,
+              "denominator": 4,
+              "approximate": false,
+              "counts": { "accepted": 3, "notes": 1, "rejected": 0, "none": 0 }
+            },
+            {
+              "n": 10,
+              "sessionId": "a5",
+              "startedAt": "2026-09-14T10:00:00.000Z",
+              "value": 0.25,
+              "numerator": 1,
+              "denominator": 4,
+              "approximate": false,
+              "counts": { "accepted": 3, "notes": 1, "rejected": 0, "none": 1 }
+            },
+            {
+              "n": 11,
+              "sessionId": "g3",
+              "startedAt": "2026-09-15T10:00:00.000Z",
+              "value": 0.5,
+              "numerator": 2,
+              "denominator": 4,
+              "approximate": false,
+              "counts": { "accepted": 2, "notes": 1, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 12,
+              "sessionId": "a6",
+              "startedAt": "2026-09-16T10:00:00.000Z",
+              "value": 0.6666666666666666,
+              "numerator": 2,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 1, "rejected": 1, "none": 1 }
+            }
+          ],
+          "latest": {
+            "n": 12,
+            "sessionId": "a6",
+            "startedAt": "2026-09-16T10:00:00.000Z",
+            "value": 0.6666666666666666,
+            "numerator": 2,
+            "denominator": 3,
+            "approximate": false,
+            "counts": { "accepted": 1, "notes": 1, "rejected": 1, "none": 1 }
+          },
+          "prev": {
+            "n": 7,
+            "sessionId": "a4",
+            "startedAt": "2026-09-08T10:30:00.000Z",
+            "value": 0.3333333333333333,
+            "numerator": 1,
+            "denominator": 3,
+            "approximate": false,
+            "counts": { "accepted": 2, "notes": 0, "rejected": 1, "none": 1 }
+          },
+          "delta": 0.3333333333333333
+        },
+        "roles": {
+          "cycles": 5,
+          "unseen": 2,
+          "spend": { "main": 12000, "executor": 19500, "reviewer": 3800, "planner": 1000, "explore": 0, "unknown": 1000 },
+          "writes": { "main": 7, "executor": 22, "reviewer": 1, "planner": 2, "explore": 0, "unknown": 1 },
+          "afterByRole": { "main": 3, "executor": 0, "reviewer": 1, "planner": 2, "explore": 0, "unknown": 1 }
+        }
+      }
+    },
+    {
+      "name": "until",
+      "note": "Верхняя граница 11 сентября 00:00: циклы 1…8, окон четыре, prev нет.",
+      "scope": {},
+      "until": "2026-09-11T00:00:00.000Z",
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "cycles": [{ "sessionId": "a1" }, { "sessionId": "b1" }, { "sessionId": "a2" }, { "sessionId": "g1" }, { "sessionId": "a3" }, { "sessionId": "b2" }, { "sessionId": "a4" }, { "sessionId": "g2" }],
+        "rework": {
+          "size": 5,
+          "count": 8,
+          "points": [
+            { "n": 5, "sessionId": "a3", "startedAt": "2026-09-07T10:00:00.000Z", "value": 0.3125, "numerator": 10, "denominator": 32, "approximate": false, "unseen": 1 },
+            { "n": 6, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.2777777777777778, "numerator": 10, "denominator": 36, "approximate": false, "unseen": 1 },
+            { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.3142857142857143, "numerator": 11, "denominator": 35, "approximate": false, "unseen": 1 },
+            { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.2903225806451613, "numerator": 9, "denominator": 31, "approximate": false, "unseen": 2 }
+          ],
+          "latest": { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.2903225806451613, "numerator": 9, "denominator": 31, "approximate": false, "unseen": 2 },
+          "prev": null,
+          "delta": null
+        },
+        "overhead": {
+          "size": 5,
+          "count": 8,
+          "points": [
+            { "n": 5, "sessionId": "a3", "startedAt": "2026-09-07T10:00:00.000Z", "value": 0.95, "numerator": 19000, "denominator": 20000, "approximate": false },
+            { "n": 6, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.9285714285714286, "numerator": 19500, "denominator": 21000, "approximate": false },
+            { "n": 7, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.8478260869565217, "numerator": 19500, "denominator": 23000, "approximate": false },
+            { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.5957446808510638, "numerator": 14000, "denominator": 23500, "approximate": false }
+          ],
+          "latest": { "n": 8, "sessionId": "g2", "startedAt": "2026-09-10T10:00:00.000Z", "value": 0.5957446808510638, "numerator": 14000, "denominator": 23500, "approximate": false },
+          "prev": null,
+          "delta": null
+        },
+        "verdicts": {
+          "size": 5,
+          "count": 8,
+          "points": [
+            {
+              "n": 5,
+              "sessionId": "a3",
+              "startedAt": "2026-09-07T10:00:00.000Z",
+              "value": 1,
+              "numerator": 3,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 0, "notes": 2, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 6,
+              "sessionId": "b2",
+              "startedAt": "2026-09-08T10:00:00.000Z",
+              "value": 0.6666666666666666,
+              "numerator": 2,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 1, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 7,
+              "sessionId": "a4",
+              "startedAt": "2026-09-08T10:30:00.000Z",
+              "value": 0.3333333333333333,
+              "numerator": 1,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 2, "notes": 0, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 8,
+              "sessionId": "g2",
+              "startedAt": "2026-09-10T10:00:00.000Z",
+              "value": 0,
+              "numerator": 0,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 3, "notes": 0, "rejected": 0, "none": 1 }
+            }
+          ],
+          "latest": {
+            "n": 8,
+            "sessionId": "g2",
+            "startedAt": "2026-09-10T10:00:00.000Z",
+            "value": 0,
+            "numerator": 0,
+            "denominator": 3,
+            "approximate": false,
+            "counts": { "accepted": 3, "notes": 0, "rejected": 0, "none": 1 }
+          },
+          "prev": null,
+          "delta": null
+        },
+        "errorRate": {
+          "size": 10,
+          "count": 30,
+          "latest": { "n": 30, "sessionId": "g2-rev", "startedAt": "2026-09-10T10:40:00.000Z", "value": 0.047619047619047616, "numerator": 2, "denominator": 42, "approximate": false },
+          "prev": { "n": 20, "sessionId": "b2", "startedAt": "2026-09-08T10:00:00.000Z", "value": 0.07894736842105263, "numerator": 3, "denominator": 38, "approximate": false },
+          "delta": -0.03132832080200501
+        },
+        "roles": {
+          "cycles": 5,
+          "unseen": 2,
+          "spend": { "main": 10500, "executor": 23500, "reviewer": 3500, "planner": 0, "explore": 300, "unknown": 2000 },
+          "writes": { "main": 6, "executor": 22, "reviewer": 2, "planner": 0, "explore": 0, "unknown": 3 },
+          "afterByRole": { "main": 4, "executor": 0, "reviewer": 2, "planner": 0, "explore": 0, "unknown": 3 }
+        }
+      }
+    },
+    {
+      "name": "project-alpha",
+      "note": "Сабагент идёт за корнем: a2-rev (каталог beta) внутри, b2-exec2 (каталог alpha) снаружи.",
+      "scope": { "project": "alpha" },
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "cycles": [{ "sessionId": "a1" }, { "sessionId": "a2" }, { "sessionId": "a3" }, { "sessionId": "a4" }, { "sessionId": "a5" }, { "sessionId": "a6" }],
+        "rework": {
+          "size": 5,
+          "count": 6,
+          "points": [
+            { "n": 5, "sessionId": "a5", "startedAt": "2026-09-14T10:00:00.000Z", "value": 0.4, "numerator": 14, "denominator": 35, "approximate": false, "unseen": 0 },
+            { "n": 6, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.3333333333333333, "numerator": 13, "denominator": 39, "approximate": false, "unseen": 0 }
+          ],
+          "latest": { "n": 6, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 0.3333333333333333, "numerator": 13, "denominator": 39, "approximate": false, "unseen": 0 },
+          "prev": null,
+          "delta": null
+        },
+        "overhead": {
+          "size": 5,
+          "count": 6,
+          "points": [
+            { "n": 5, "sessionId": "a5", "startedAt": "2026-09-14T10:00:00.000Z", "value": 1.1692307692307693, "numerator": 22800, "denominator": 19500, "approximate": false },
+            { "n": 6, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 1.1555555555555554, "numerator": 20800, "denominator": 18000, "approximate": false }
+          ],
+          "latest": { "n": 6, "sessionId": "a6", "startedAt": "2026-09-16T10:00:00.000Z", "value": 1.1555555555555554, "numerator": 20800, "denominator": 18000, "approximate": false },
+          "prev": null,
+          "delta": null
+        },
+        "verdicts": {
+          "size": 5,
+          "count": 6,
+          "points": [
+            {
+              "n": 5,
+              "sessionId": "a5",
+              "startedAt": "2026-09-14T10:00:00.000Z",
+              "value": 0.6666666666666666,
+              "numerator": 2,
+              "denominator": 3,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 1, "rejected": 1, "none": 1 }
+            },
+            {
+              "n": 6,
+              "sessionId": "a6",
+              "startedAt": "2026-09-16T10:00:00.000Z",
+              "value": 0.5,
+              "numerator": 1,
+              "denominator": 2,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 0, "rejected": 1, "none": 1 }
+            }
+          ],
+          "latest": {
+            "n": 6,
+            "sessionId": "a6",
+            "startedAt": "2026-09-16T10:00:00.000Z",
+            "value": 0.5,
+            "numerator": 1,
+            "denominator": 2,
+            "approximate": false,
+            "counts": { "accepted": 1, "notes": 0, "rejected": 1, "none": 1 }
+          },
+          "prev": null,
+          "delta": null
+        },
+        "errorRate": {
+          "size": 10,
+          "count": 21,
+          "latest": { "n": 21, "sessionId": "a6-gp", "startedAt": "2026-09-16T10:40:00.000Z", "value": 0.04878048780487805, "numerator": 2, "denominator": 41, "approximate": false },
+          "prev": { "n": 11, "sessionId": "a4", "startedAt": "2026-09-08T10:30:00.000Z", "value": 0.07317073170731707, "numerator": 3, "denominator": 41, "approximate": false },
+          "delta": -0.02439024390243902
+        },
+        "roles": {
+          "cycles": 5,
+          "unseen": 0,
+          "spend": { "main": 15500, "executor": 18000, "reviewer": 5300, "planner": 0, "explore": 300, "unknown": 3000 },
+          "writes": { "main": 10, "executor": 26, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 4 },
+          "afterByRole": { "main": 8, "executor": 0, "reviewer": 1, "planner": 0, "explore": 0, "unknown": 4 }
+        }
+      }
+    },
+    {
+      "name": "project-beta",
+      "note": "Три цикла — окно не набралось; b2-exec2 внутри, a2-rev снаружи.",
+      "scope": { "project": "beta" },
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "cycles": [{ "sessionId": "b1" }, { "sessionId": "b2" }, { "sessionId": "b3" }],
+        "rework": { "size": 5, "count": 3, "points": [], "latest": null, "prev": null, "delta": null },
+        "overhead": { "size": 5, "count": 3, "points": [], "latest": null, "prev": null, "delta": null },
+        "verdicts": { "size": 5, "count": 3, "points": [], "latest": null, "prev": null, "delta": null },
+        "errorRate": {
+          "size": 10,
+          "count": 14,
+          "points": [
+            { "n": 10, "sessionId": "b2-rev", "startedAt": "2026-09-08T11:00:00.000Z", "value": 0.09090909090909091, "numerator": 4, "denominator": 44, "approximate": false },
+            { "n": 11, "sessionId": "b3", "startedAt": "2026-09-11T10:00:00.000Z", "value": 0.08695652173913043, "numerator": 4, "denominator": 46, "approximate": false },
+            { "n": 12, "sessionId": "b3-plan", "startedAt": "2026-09-11T10:05:00.000Z", "value": 0.05263157894736842, "numerator": 2, "denominator": 38, "approximate": false },
+            { "n": 13, "sessionId": "b3-exec", "startedAt": "2026-09-11T10:20:00.000Z", "value": 0.0851063829787234, "numerator": 4, "denominator": 47, "approximate": false },
+            { "n": 14, "sessionId": "b3-rev", "startedAt": "2026-09-11T10:50:00.000Z", "value": 0.06382978723404255, "numerator": 3, "denominator": 47, "approximate": false }
+          ],
+          "latest": { "n": 14, "sessionId": "b3-rev", "startedAt": "2026-09-11T10:50:00.000Z", "value": 0.06382978723404255, "numerator": 3, "denominator": 47, "approximate": false },
+          "prev": null,
+          "delta": null
+        },
+        "roles": {
+          "cycles": 3,
+          "unseen": 0,
+          "spend": { "main": 8500, "executor": 21000, "reviewer": 4500, "planner": 1000, "explore": 0, "unknown": 0 },
+          "writes": { "main": 6, "executor": 30, "reviewer": 4, "planner": 2, "explore": 0, "unknown": 0 },
+          "afterByRole": { "main": 1, "executor": 0, "reviewer": 4, "planner": 2, "explore": 0, "unknown": 0 }
+        }
+      }
+    },
+    {
+      "name": "project-gamma",
+      "note": "Правок через Edit/Write нет ни у кого: знаменатель переделки нулевой, точки нет. Окно 3 цикла.",
+      "scope": { "project": "gamma" },
+      "config": { "window": { "cycles": 3, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": false,
+        "cycles": [{ "sessionId": "g1" }, { "sessionId": "g2" }, { "sessionId": "g3" }],
+        "rework": { "size": 3, "count": 3, "points": [], "latest": null, "prev": null, "delta": null },
+        "overhead": {
+          "size": 3,
+          "count": 3,
+          "points": [{ "n": 3, "sessionId": "g3", "startedAt": "2026-09-15T10:00:00.000Z", "value": 0.6666666666666666, "numerator": 5000, "denominator": 7500, "approximate": false }],
+          "latest": { "n": 3, "sessionId": "g3", "startedAt": "2026-09-15T10:00:00.000Z", "value": 0.6666666666666666, "numerator": 5000, "denominator": 7500, "approximate": false },
+          "prev": null,
+          "delta": null
+        },
+        "verdicts": {
+          "size": 3,
+          "count": 3,
+          "points": [
+            {
+              "n": 3,
+              "sessionId": "g3",
+              "startedAt": "2026-09-15T10:00:00.000Z",
+              "value": 0.5,
+              "numerator": 1,
+              "denominator": 2,
+              "approximate": false,
+              "counts": { "accepted": 1, "notes": 0, "rejected": 1, "none": 1 }
+            }
+          ],
+          "latest": {
+            "n": 3,
+            "sessionId": "g3",
+            "startedAt": "2026-09-15T10:00:00.000Z",
+            "value": 0.5,
+            "numerator": 1,
+            "denominator": 2,
+            "approximate": false,
+            "counts": { "accepted": 1, "notes": 0, "rejected": 1, "none": 1 }
+          },
+          "prev": null,
+          "delta": null
+        },
+        "errorRate": { "size": 10, "count": 9, "points": [], "latest": null, "prev": null, "delta": null },
+        "roles": {
+          "cycles": 3,
+          "unseen": 3,
+          "spend": { "main": 3500, "executor": 7500, "reviewer": 1500, "planner": 0, "explore": 0, "unknown": 0 },
+          "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+          "afterByRole": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 }
+        }
+      }
+    },
+    {
+      "name": "provider-codex",
+      "note": "Циклов у Codex нет, а в индексе они есть: emptyScope. Окно ошибок из одной сессии без известных статусов — точки нет.",
+      "scope": { "provider": "codex" },
+      "config": { "window": { "cycles": 5, "sessions": 1 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": true,
+        "cycles": [],
+        "rework": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "overhead": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "verdicts": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "errorRate": { "size": 1, "count": 1, "points": [], "latest": null, "prev": null, "delta": null },
+        "roles": {
+          "cycles": 0,
+          "unseen": 0,
+          "spend": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+          "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+          "afterByRole": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 }
+        }
+      }
+    },
+    {
+      "name": "provider-claude",
+      "note": "x1 (Codex) выпадает из окна ошибок.",
+      "scope": { "provider": "claude" },
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyScope": false,
+        "cycles": [
+          { "sessionId": "a1" },
+          { "sessionId": "b1" },
+          { "sessionId": "a2" },
+          { "sessionId": "g1" },
+          { "sessionId": "a3" },
+          { "sessionId": "b2" },
+          { "sessionId": "a4" },
+          { "sessionId": "g2" },
+          { "sessionId": "b3" },
+          { "sessionId": "a5" },
+          { "sessionId": "g3" },
+          { "sessionId": "a6" }
+        ],
+        "errorRate": {
+          "size": 10,
+          "count": 43,
+          "latest": { "n": 43, "sessionId": "a6-gp", "startedAt": "2026-09-16T10:40:00.000Z", "value": 0.05128205128205128, "numerator": 2, "denominator": 39, "approximate": false },
+          "prev": { "n": 33, "sessionId": "b3-exec", "startedAt": "2026-09-11T10:20:00.000Z", "value": 0.07547169811320754, "numerator": 4, "denominator": 53, "approximate": false },
+          "delta": -0.024189646831156264
+        }
+      }
+    },
+    {
+      "name": "project-missing",
+      "note": "Сужение отсекло всё: emptyScope при непустом индексе.",
+      "scope": { "project": "нет такого" },
+      "config": { "window": { "cycles": 5, "sessions": 10 } },
+      "report": {
+        "emptyIndex": false,
+        "emptyScope": true,
+        "cycles": [],
+        "rework": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "overhead": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "verdicts": { "size": 5, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "errorRate": { "size": 10, "count": 0, "points": [], "latest": null, "prev": null, "delta": null },
+        "roles": {
+          "cycles": 0,
+          "unseen": 0,
+          "spend": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+          "writes": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 },
+          "afterByRole": { "main": 0, "executor": 0, "reviewer": 0, "planner": 0, "explore": 0, "unknown": 0 }
+        }
+      }
+    }
+  ]
+}

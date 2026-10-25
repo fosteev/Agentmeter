@@ -24,17 +24,33 @@
  * дней, целиком), он не читает сабагентов воркфлоу и считает ошибкой любое
  * истинное `is_error`; проба печатает эти три отличия числами.
  *
- * Дальше этот файл растёт: 9.3 дописывает сюда печать `workflowReport`.
+ * Вторая половина файла (9.3) — `workflowReport` на тех же логах: циклы, окно,
+ * переделка, накладные, ошибки, вердикты, роли. Тоже два счёта. Сырой пересчёт
+ * не знает про индекс и `tool_files`: дерево берёт из каталогов сабагентов,
+ * записи — из `tool_use` с путём (`Edit`/`Write`/`NotebookEdit`), метку — из
+ * первой строки запроса; роль — тем же `roleOf` с дефолтными правилами.
+ * Расходятся числа циклов, записей по ролям или `after` — врёт одна из
+ * реализаций, и проба краснеет.
+ *
+ *     node --experimental-strip-types scripts/probe/workflow-live.ts --cycles 10 --sessions 20
+ *
+ * `--cycles` и `--sessions` — размеры окон (по умолчанию из конфига: 10 и 20).
+ * Числа discovery (`route_stats.py`) с этими **не обязаны** сходиться: роли там
+ * угаданы по промту, а переделка — только ревьюер-агентов (нижняя граница).
  */
 import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import {
+  DEFAULT_CONFIG,
   discoverSources,
   ingestAll,
   openDb,
+  roleOf,
+  workflowReport,
   type Db,
   type SourceFile,
+  type WorkflowReport,
 } from '../../packages/core/src/index.ts'
 
 const DAY_MS = 86_400_000
@@ -45,6 +61,8 @@ const DISCOVERY_TOLERANCE = 0.5
 const args = process.argv.slice(2)
 const days = Number(flag('--days') ?? '30')
 const discoveryPath = flag('--discovery')
+const cycleWindow = Number(flag('--cycles') ?? DEFAULT_CONFIG.workflow.window.cycles)
+const sessionWindow = Number(flag('--sessions') ?? DEFAULT_CONFIG.workflow.window.sessions)
 const since = Date.now() - days * DAY_MS
 
 function flag(name: string): string | undefined {
@@ -237,6 +255,295 @@ function report(n: number, name: string, detail: string, ok: boolean): void {
   console.log(`${ok ? '✓' : '✗'} ${n}. ${name}: ${detail}`)
 }
 
+// ─── workflowReport: сырой пересчёт (9.3) ────────────────────────────────────
+
+const WRITE_TOOLS: Record<string, string> = {
+  Edit: 'file_path',
+  Write: 'file_path',
+  NotebookEdit: 'notebook_path',
+}
+const ROLES = ['main', 'executor', 'reviewer', 'planner', 'explore', 'unknown'] as const
+type Role = (typeof ROLES)[number]
+
+interface RawNode {
+  id: string
+  type: string | null
+  /** Метка первого запроса; `NaN` — запросов нет. */
+  start: number
+  requests: number
+  writes: number[]
+}
+
+function zeroRoles(): Record<Role, number> {
+  return { main: 0, executor: 0, reviewer: 0, planner: 0, explore: 0, unknown: 0 }
+}
+
+/** Файл транскрипта → запросы и записи; ничего не знает ни про индекс, ни про `tool_files`. */
+function rawNode(file: SourceFile): RawNode {
+  const first = new Map<string, number>()
+  const tools: Array<{ request: string; name: string; path: unknown }> = []
+  const seen = new Set<string>()
+  for (const line of readFileSync(file.path, 'utf8').split('\n')) {
+    if (line.trim() === '') continue
+    let record: Json
+    try {
+      record = JSON.parse(line) as Json
+    } catch {
+      continue
+    }
+    if (record.type !== 'assistant' || typeof record.requestId !== 'string') continue
+    const message = record.message as Json | undefined
+    if (!message) continue
+    const stamp = typeof record.timestamp === 'string' ? Date.parse(record.timestamp) : Number.NaN
+    if (!first.has(record.requestId)) first.set(record.requestId, Number.isNaN(stamp) ? 0 : stamp)
+    const content = Array.isArray(message.content) ? (message.content as Json[]) : []
+    for (const block of content) {
+      if (block?.type !== 'tool_use' || typeof block.id !== 'string' || typeof block.name !== 'string')
+        continue
+      if (seen.has(block.id)) continue
+      seen.add(block.id)
+      const key = WRITE_TOOLS[block.name]
+      if (key === undefined) continue
+      tools.push({ request: record.requestId, name: block.name, path: (block.input as Json | undefined)?.[key] })
+    }
+  }
+  const stem = basename(file.path, '.jsonl')
+  let type: string | null = null
+  if (file.kind === 'subagent') {
+    try {
+      const meta = JSON.parse(readFileSync(`${file.path.slice(0, -'.jsonl'.length)}.meta.json`, 'utf8')) as Json
+      type = typeof meta.agentType === 'string' && meta.agentType !== '' ? meta.agentType : null
+    } catch {
+      type = null
+    }
+  }
+  return {
+    id: file.kind === 'subagent' ? stem.replace(/^agent-/, '') : stem,
+    type,
+    start: first.size === 0 ? Number.NaN : first.values().next().value!,
+    requests: first.size,
+    writes: tools
+      .filter((tool) => typeof tool.path === 'string' && tool.path.length > 0)
+      .map((tool) => first.get(tool.request) ?? 0),
+  }
+}
+
+interface RawCycle {
+  id: string
+  started: number
+  writes: Record<Role, number>
+  after: Record<Role, number>
+}
+
+/** Циклы из сырых файлов: корень, чей каталог содержит сабагента с ролью исполнителя. */
+function rawCycles(all: SourceFile[]): RawCycle[] {
+  const childrenOf = new Map<string, SourceFile[]>()
+  for (const file of all)
+    if (file.kind === 'subagent' && file.parentPath !== undefined) {
+      const list = childrenOf.get(file.parentPath) ?? []
+      list.push(file)
+      childrenOf.set(file.parentPath, list)
+    }
+  const out: RawCycle[] = []
+  for (const root of all.filter((file) => file.kind === 'session')) {
+    const children = (childrenOf.get(root.path) ?? []).map((file) => rawNode(file))
+    const role = (node: RawNode): Role => roleOf(node.type, DEFAULT_CONFIG.workflow.roles)
+    const executors = children.filter((node) => role(node) === 'executor')
+    if (executors.length === 0) continue
+    const main = rawNode(root)
+    const worked = executors.filter((node) => node.requests > 0).map((node) => node.start)
+    const boundary = worked.length === 0 ? null : Math.min(...worked)
+    const cycle: RawCycle = { id: main.id, started: main.start, writes: zeroRoles(), after: zeroRoles() }
+    const nodes: Array<[RawNode, Role]> = [
+      [main, 'main'],
+      ...children.map((node): [RawNode, Role] => [node, role(node)]),
+    ]
+    for (const [node, kind] of nodes) {
+      cycle.writes[kind] += node.writes.length
+      if (kind !== 'executor' && boundary !== null)
+        cycle.after[kind] += node.writes.filter((ts) => ts >= boundary).length
+    }
+    out.push(cycle)
+  }
+  return out.sort((a, b) => a.started - b.started || (a.id < b.id ? -1 : 1))
+}
+
+// ─── workflowReport: вывод (9.3) ─────────────────────────────────────────────
+
+function share(value: number | null): string {
+  return value === null ? '—' : `${(value * 100).toFixed(1)}%`
+}
+
+function show(report: WorkflowReport['rework'], unit: 'share' | 'times'): string {
+  // `≈` — только у накладных: они считаются токенами, а восстановленные запросы
+  // (1.3) в токенах не точны; доля записей и доля ошибок от них не зависят.
+  const text = (point: { value: number; numerator: number; denominator: number; approximate: boolean } | null): string =>
+    point === null
+      ? '—'
+      : `${unit === 'share' ? share(point.value) : `×${point.value.toFixed(2)}${point.approximate ? ' ≈' : ''}`} (${point.numerator}/${point.denominator})`
+  const delta =
+    report.delta === null
+      ? 'дельты нет'
+      : unit === 'share'
+        ? `${report.delta >= 0 ? '+' : ''}${(report.delta * 100).toFixed(1)} п.п.`
+        : `${report.delta >= 0 ? '+' : ''}${report.delta.toFixed(2)}`
+  return `последнее ${text(report.latest)}; перед ним ${text(report.prev)}; ${delta}; всего ${report.count}, окно ${report.size}`
+}
+
+function printWorkflow(db: Db, all: SourceFile[]): void {
+  const config = { ...DEFAULT_CONFIG.workflow, window: { cycles: cycleWindow, sessions: sessionWindow } }
+  const wf = workflowReport(db, { config })
+  const day = (ms: number): string => new Date(ms).toISOString().slice(0, 10)
+
+  console.log(`\n── workflowReport · окно ${cycleWindow} циклов / ${sessionWindow} сессий ──`)
+  console.log(
+    `циклов ${wf.cycles.length}` +
+      (wf.cycles.length > 0
+        ? `, с ${day(wf.cycles[0]!.startedAt)} по ${day(wf.cycles.at(-1)!.startedAt)}`
+        : '') +
+      `; восстановленные запросы в ${wf.cycles.filter((cycle) => cycle.inherited).length}; ` +
+      `emptyIndex ${wf.emptyIndex}, emptyScope ${wf.emptyScope}`,
+  )
+  const unknownTypes = new Map<string, number>()
+  for (const row of db.all<{ type: string | null }>(
+    `SELECT agent_type AS type FROM sessions WHERE is_sidechain = 1`,
+  )) {
+    const role = roleOf(row.type, DEFAULT_CONFIG.workflow.roles)
+    if (role === 'unknown') unknownTypes.set(row.type ?? '—', (unknownTypes.get(row.type ?? '—') ?? 0) + 1)
+  }
+  console.log(
+    `роль не определена у сабагентов: ${[...unknownTypes.entries()].map(([type, n]) => `${type} ${n}`).join(', ') || 'нет'}`,
+  )
+  console.log(
+    `переделка:  ${show(wf.rework, 'share')}; исключено циклов без видимых записей исполнителя: ` +
+      `в последнем ${wf.rework.latest?.unseen ?? '—'}, перед ним ${wf.rework.prev?.unseen ?? '—'}, ` +
+      `всего ${wf.cycles.filter((cycle) => cycle.executorUnseen).length} из ${wf.cycles.length}`,
+  )
+  console.log(`накладные:  ${show(wf.overhead, 'times')}`)
+  console.log(`ошибки:     ${show(wf.errorRate, 'share')}`)
+  const verdict = wf.verdicts.latest
+  console.log(
+    `вердикты:   доля «с оговорками + не принят» ${share(verdict?.value ?? null)}` +
+      (verdict === null
+        ? ''
+        : ` — принят ${verdict.counts.accepted}, с оговорками ${verdict.counts.notes}, не принят ${verdict.counts.rejected}, нет ${verdict.counts.none}`) +
+      `; перед ним ${share(wf.verdicts.prev?.value ?? null)}`,
+  )
+  console.log(
+    `ряд переделки (n:значение): ${wf.rework.points.map((point) => `${point.n}:${share(point.value)}`).join(' ') || 'окно не набралось'}`,
+  )
+  console.log(
+    `ряд накладных:             ${wf.overhead.points.map((point) => `${point.n}:×${point.value.toFixed(2)}`).join(' ') || '—'}`,
+  )
+
+  // Каждый цикл строкой: это то, что экран покажет подсказкой над точкой графика.
+  console.log('\nциклы по порядку: дата · проект · записи исполнителя / after (по ролям) · накладные · вердикты')
+  wf.cycles.forEach((cycle, index) => {
+    const after = ROLES.filter((role) => cycle.writesAfter[role] > 0).map((role) => `${role} ${cycle.writesAfter[role]}`)
+    const executor = cycle.spend.executor
+    console.log(
+      `  ${String(index + 1).padStart(2)} ${day(cycle.startedAt)} ${cycle.project.padEnd(14)}` +
+        ` ex ${String(cycle.writes.executor).padStart(3)} / after ${String(ROLES.reduce((acc, role) => acc + cycle.writesAfter[role], 0)).padStart(3)}` +
+        ` (${after.join(', ') || '—'})${cycle.executorUnseen ? ' исполнитель невидим' : ''}` +
+        `  ${executor === 0 ? '—' : `×${((cycle.spend.main + cycle.spend.reviewer) / executor).toFixed(2)}`}${cycle.inherited ? ' ≈' : ''}` +
+        `  ${cycle.verdicts.join(',') || '—'}`,
+    )
+  })
+
+  // Роли последнего окна и все циклы за всё время.
+  const total = (values: Record<Role, number>): number => ROLES.reduce((acc, role) => acc + values[role], 0)
+  console.log(
+    `\nроли последнего окна (${wf.roles.cycles} циклов, из них с невидимым исполнителем ${wf.roles.unseen} — ` +
+      'их расход есть, записей нет): расход / записи / из них after',
+  )
+  for (const role of ROLES) {
+    console.log(
+      `  ${role.padEnd(9)} ${String(wf.roles.spend[role]).padStart(12)} ${share(total(wf.roles.spend) === 0 ? null : wf.roles.spend[role] / total(wf.roles.spend)).padStart(6)}` +
+        `  записей ${String(wf.roles.writes[role]).padStart(4)}  after ${String(wf.roles.afterByRole[role]).padStart(4)}`,
+    )
+  }
+  const whole = zeroRoles()
+  const wholeAfter = zeroRoles()
+  const seenWhole = zeroRoles()
+  const seenAfter = zeroRoles()
+  for (const cycle of wf.cycles)
+    for (const role of ROLES) {
+      whole[role] += cycle.writes[role]
+      wholeAfter[role] += cycle.writesAfter[role]
+      if (cycle.executorUnseen) continue
+      seenWhole[role] += cycle.writes[role]
+      seenAfter[role] += cycle.writesAfter[role]
+    }
+  const after = total(wholeAfter)
+  console.log(
+    `за все циклы: записей исполнителей ${whole.executor}, after ${after} (${ROLES.filter((role) => wholeAfter[role] > 0).map((role) => `${role} ${wholeAfter[role]}`).join(', ')}) ` +
+      `→ переделка ${share(whole.executor + after === 0 ? null : after / (whole.executor + after))}; ` +
+      `только ревьюер-агенты, как у discovery (нижняя граница): ${share(whole.executor + whole.reviewer === 0 ? null : whole.reviewer / (whole.executor + whole.reviewer))}`,
+  )
+  console.log(
+    `  без циклов с невидимым исполнителем (так считает отчёт): записей исполнителей ${seenWhole.executor}, after ${total(seenAfter)} ` +
+      `→ переделка ${share(seenWhole.executor + total(seenAfter) === 0 ? null : total(seenAfter) / (seenWhole.executor + total(seenAfter)))}`,
+  )
+  console.log(
+    `вызовы в циклах: ${wf.cycles.reduce((acc, cycle) => acc + cycle.toolCalls, 0)}, ` +
+      `ошибок ${wf.cycles.reduce((acc, cycle) => acc + cycle.toolErrors, 0)}, ` +
+      `с известным статусом ${wf.cycles.reduce((acc, cycle) => acc + cycle.toolErrorsKnown, 0)}`,
+  )
+
+  // Сверка с сырым пересчётом.
+  const raw = rawCycles(all)
+  const rawIds = raw.map((cycle) => cycle.id)
+  const indexIds = wf.cycles.map((cycle) => cycle.sessionId)
+  const missing = rawIds.filter((id) => !indexIds.includes(id))
+  const extra = indexIds.filter((id) => !rawIds.includes(id))
+  report(
+    9,
+    'циклы из сырых файлов совпадают с индексом',
+    `сырых ${raw.length}, в отчёте ${indexIds.length}` +
+      (missing.length > 0 ? `; нет в отчёте: ${missing.slice(0, 5).join(', ')}` : '') +
+      (extra.length > 0 ? `; лишние в отчёте: ${extra.slice(0, 5).join(', ')}` : ''),
+    missing.length === 0 && extra.length === 0,
+  )
+  const rawWrites = zeroRoles()
+  const rawAfter = zeroRoles()
+  for (const cycle of raw)
+    for (const role of ROLES) {
+      rawWrites[role] += cycle.writes[role]
+      rawAfter[role] += cycle.after[role]
+    }
+  const sameWrites = ROLES.every((role) => rawWrites[role] === whole[role])
+  const sameAfter = ROLES.every((role) => rawAfter[role] === wholeAfter[role])
+  report(
+    10,
+    'записи по ролям совпадают с сырыми логами',
+    ROLES.map((role) => `${role} ${whole[role]}/${rawWrites[role]}`).join(', ') + ' (индекс/сырые)',
+    sameWrites,
+  )
+  report(
+    11,
+    'after по ролям совпадает с сырыми логами',
+    ROLES.map((role) => `${role} ${wholeAfter[role]}/${rawAfter[role]}`).join(', ') + ' (индекс/сырые)',
+    sameAfter,
+  )
+  // Последнее окно переделки — теми же суммами из сырых циклов; цикл без видимых
+  // записей исполнителя в переделку не входит (приёмка 9.3).
+  const lastWindow = raw.slice(-cycleWindow)
+  if (lastWindow.length === cycleWindow) {
+    const seen = lastWindow.filter((cycle) => cycle.writes.executor > 0)
+    const num = seen.reduce((acc, cycle) => acc + total(cycle.after), 0)
+    const den = seen.reduce((acc, cycle) => acc + cycle.writes.executor + total(cycle.after), 0)
+    const latest = wf.rework.latest
+    report(
+      12,
+      'переделка последнего окна из сырых логов равна отчёту',
+      `${num}/${den} против ${latest === null ? 'нет точки' : `${latest.numerator}/${latest.denominator}`}`,
+      den === 0 ? latest === null : latest !== null && latest.numerator === num && latest.denominator === den,
+    )
+  } else {
+    console.log(`окно не набралось: ${lastWindow.length} из ${cycleWindow} циклов — переделка последнего окна не сверялась`)
+  }
+}
+
 // ─── прогон ──────────────────────────────────────────────────────────────────
 
 const files = discoverSources({}).filter((file) => file.provider === 'claude')
@@ -411,6 +718,9 @@ try {
       Math.abs(cutShare - theirs) <= 0.1,
     )
   }
+
+  // ─── workflowReport (9.3) ────────────────────────────────────────────────
+  printWorkflow(db, files)
 } finally {
   db.close()
   rmSync(temp, { recursive: true, force: true })
