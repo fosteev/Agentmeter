@@ -6,11 +6,13 @@ import type {
   DayReport,
   DeepPartial,
   SpendScreen,
+  WorkflowScreen,
   HistoryScreen,
   HistorySpan,
   TaskCard,
   TodayFilter,
   TraySnapshot,
+  WorkflowFilter,
 } from '@agentmeter/ipc'
 // Границы дня — из ядра, тем же кодом, что у трея и CLI. Своя копия правила
 // здесь стояла и была верной; опасна не она, а то, что дважды в год день
@@ -19,10 +21,11 @@ import type {
 // файловой системе не ходит, а `index.ts` тянет `node:sqlite`.
 import { dayRange } from '@agentmeter/core/day'
 import './tokens.css'
-import { SettingsTab } from './components/SettingsTab.tsx'
+import { SettingsTab, type SettingsSection } from './components/SettingsTab.tsx'
 import { TodayTab } from './components/TodayTab.tsx'
 import { BreakdownTab } from './components/BreakdownTab.tsx'
 import { HistoryTab } from './components/HistoryTab.tsx'
+import { WorkflowTab } from './components/WorkflowTab.tsx'
 import { TodaySide } from './components/TodaySide.tsx'
 import { Window } from './components/Window.tsx'
 import { WINDOW_TABS, type WindowTab } from './components/WindowTabs.tsx'
@@ -85,6 +88,15 @@ export function initialTab(search: string): WindowTab {
 }
 
 /**
+ * Вкладка, на которой окно остаётся (9.5). Workflow выключили при открытой
+ * вкладке — настройками в соседнем окне или правкой файла — и её больше нет в
+ * шапке: окно уходит на «Сегодня», а не стоит на экране, до которого не дойти.
+ */
+export function resolveTab(tab: WindowTab, workflowEnabled: boolean): WindowTab {
+  return tab === 'workflow' && !workflowEnabled ? 'today' : tab
+}
+
+/**
  * Отпечаток снимка, по которому стоит перезапросить ленту (6.1).
  *
  * Две величины: итог дня (в индекс доехали новые запросы) и живые сессии
@@ -103,6 +115,18 @@ export function liveSignature(snapshot: TraySnapshot): string {
     .map((agent) => `${agent.sessionId}:${agent.state}`)
     .sort()
   return `${snapshot.today.total.value}|${live.join(',')}`
+}
+
+/**
+ * Отпечаток, по которому перезапросить экран Workflow (9.5, приёмка). Не
+ * `liveSignature`: смена состояния агента циклов не меняет, а первичная сборка
+ * индекса меняет их без единого запроса за сегодня — экран, открытый до конца
+ * сборки, застревал бы на «индекс ещё не собран».
+ */
+export function workflowSignature(snapshot: TraySnapshot): string {
+  // Фаза, а не байты: прогресс сборки тикает каждую секунду, и ядро звалось бы на
+  // каждый тик, а экрану нужен только её конец.
+  return `${snapshot.today.total.value}|${snapshot.indexing?.phase ?? ''}`
 }
 
 export function requestToday(
@@ -164,6 +188,13 @@ export function requestBreakdown(
   return getBreakdown(arg)
 }
 
+export function requestWorkflow(
+  filter: WorkflowFilter,
+  getWorkflow: (filter: WorkflowFilter) => Promise<WorkflowScreen> = window.agentmeter['workflow:get'],
+): Promise<WorkflowScreen> {
+  return getWorkflow(filter)
+}
+
 type TaskGetter = (arg: { sessionId: string; from: number; to: number }) => Promise<TaskCard | null>
 
 /**
@@ -221,12 +252,21 @@ export function WindowApp() {
   // с расходом. Хранить здесь «сегодня» нельзя — окно не знает, где кончаются
   // сутки: граница настраивается (`ui.dayStartsAtHour`).
   const [historyDay, setHistoryDay] = useState<number | null>(null)
+  // Экран Workflow (9.5) и его фильтр проекта. Проект — свой, не из ленты: у
+  // вкладки собственный набор проектов (те, где есть циклы), и выбранный на
+  // «Сегодня» мог бы вовсе не иметь циклов.
+  const [workflow, setWorkflow] = useState<WorkflowScreen | null>(null)
+  const [workflowProject, setWorkflowProject] = useState<string | undefined>(undefined)
+  // Раздел настроек, с которого открыть вкладку: ссылки пустых состояний Workflow
+  // ведут сразу к правилам ролей и размеру окна, а обычный вход — к первому.
+  const [settingsSection, setSettingsSection] = useState<SettingsSection | undefined>(undefined)
   const [tab, setTab] = useState<WindowTab>(() =>
     initialTab(typeof location === 'undefined' ? '' : location.search),
   )
   const todayRequest = useRef(0)
   const breakdownRequest = useRef(0)
   const historyRequest = useRef(0)
+  const workflowRequest = useRef(0)
   const taskRequest = useRef(createTaskRequestGuard())
   useTheme(config?.ui.theme ?? 'system')
 
@@ -373,6 +413,37 @@ export function WindowApp() {
     })
   }, [tab, todayFilter, breakdownScope, breakdownDay, dayStartsAtHour])
 
+  // Экран Workflow считается по запросу вкладки, при смене проекта и после
+  // дочитывания индекса (`workflowKey`: доехали новые запросы или сменилась фаза сборки
+  // индекса), но не на каждый опрос трея и не на смену состояния агента: ответ —
+  // синхронный проход по таблицам в main, при фильтре проекта — два.
+  const workflowEnabled = config?.workflow.enabled ?? false
+  const workflowKey = snapshot === null ? '' : workflowSignature(snapshot)
+  useEffect(() => {
+    if (tab !== 'workflow') return
+    setWorkflow(null)
+  }, [tab, workflowProject])
+
+  useEffect(() => {
+    // Выключенный Workflow ядро не зовёт: `?tab=workflow` при выключенном экране
+    // уводит на «Сегодня» эффектом ниже, а запрос ушёл бы раньше.
+    if (tab !== 'workflow' || !workflowEnabled) return
+    const request = ++workflowRequest.current
+    void requestWorkflow({ ...(workflowProject === undefined ? {} : { project: workflowProject }) }).then(
+      (screen) => {
+        if (request === workflowRequest.current) setWorkflow(screen)
+      },
+    )
+  }, [tab, workflowEnabled, workflowProject, workflowKey])
+
+  // Workflow выключили при открытой вкладке (настройки в соседнем окне или файл) —
+  // вкладки больше нет, и окно уходит на «Сегодня», а не остаётся на пустом месте.
+  useEffect(() => {
+    if (config === null) return
+    const next = resolveTab(tab, workflowEnabled)
+    if (next !== tab) setTab(next)
+  }, [config, tab, workflowEnabled])
+
   // Пустая история — только при смене периода и вкладки, тем же правилом, что
   // у ленты выше. Выбор дня экран не гасит: столбики и хитмап у нового ответа
   // те же, меняется правая колонка — и ронять весь экран в «данных нет», чтобы
@@ -405,7 +476,14 @@ export function WindowApp() {
   // прикнопливается только своей кнопкой, которая зовёт `setTab` напрямую.
   const changeTab = (next: WindowTab): void => {
     if (next === 'breakdown') setBreakdownDay(null)
+    // Обычный вход в настройки — с первого раздела; к Workflow ведёт только ссылка.
+    if (next === 'settings') setSettingsSection(undefined)
     setTab(next)
+  }
+
+  const openWorkflowSettings = (): void => {
+    setSettingsSection('workflow')
+    setTab('settings')
   }
 
   const openDayBreakdown = (at: number): void => {
@@ -415,7 +493,7 @@ export function WindowApp() {
 
   if (snapshot === null || config === null) return null
   return (
-    <Window snapshot={snapshot} activeTab={tab} onTabChange={changeTab}>
+    <Window snapshot={snapshot} activeTab={tab} onTabChange={changeTab} workflow={workflowEnabled}>
       {tab === 'today' && todayFilter !== null ? (
         <>
           <TodayTab
@@ -461,9 +539,16 @@ export function WindowApp() {
           onSelectDay={setHistoryDay}
           onOpenBreakdown={openDayBreakdown}
         />
+      ) : tab === 'workflow' && workflowEnabled ? (
+        <WorkflowTab
+          screen={workflow}
+          onProjectChange={setWorkflowProject}
+          onOpenSettings={openWorkflowSettings}
+        />
       ) : tab === 'settings' && configReport !== null ? (
         <SettingsTab
           report={configReport}
+          {...(settingsSection === undefined ? {} : { section: settingsSection })}
           onChange={changeConfig}
           onStartup={changeStartup}
           onOauth={changeOauth}

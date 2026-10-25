@@ -97,3 +97,48 @@ export function dayTitle(at: number): string {
   const value = formatter('day', { weekday: 'long', day: 'numeric', month: 'long' }).format(at)
   return value.charAt(0).toLocaleUpperCase(locale()) + value.slice(1)
 }
+
+/** «25 октября» — дата в подписи окна (9.5). */
+export function dateLong(at: number): string {
+  return formatter('dateLong', { day: 'numeric', month: 'long' }).format(at)
+}
+
+/** «25 окт» — дата под точкой графика. Точка после сокращения убрана: в макете её нет. */
+export function dateShort(at: number): string {
+  return formatter('dateShort', { day: 'numeric', month: 'short' })
+    .format(at)
+    .replace(/\.$/, '')
+}
+
+/** «6–25 октября» — период циклов в шапке экрана Workflow. */
+export function dateRange(from: number, to: number): string {
+  return formatter('dateLong', { day: 'numeric', month: 'long' }).formatRange(from, to)
+}
+
+/**
+ * Число с фиксированным числом знаков и знаком: «+1.6», «−6.3». Нуль без знака —
+ * дельта «0.0 п.п.» не растёт в «+0.0», которого она не значит. Разделитель
+ * дробной части — из локали, как у `formatTokens`.
+ */
+export function formatSigned(value: number, digits: number): string {
+  return (
+    new Intl.NumberFormat(locale(), {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+      signDisplay: 'exceptZero',
+    })
+      .format(value)
+      // Минус — настоящий (U+2212), как в макете: `Intl` отдаёт то дефис, то минус
+      // в зависимости от версии ICU, а экран с двумя видами минуса — ещё одна
+      // разница, которую заметит только глаз.
+      .replace(/^-/, '\u2212')
+  )
+}
+
+/** Кратность накладных: «×0.45» — две цифры после запятой, как в макете. */
+export function formatMultiple(value: number): string {
+  return `×${new Intl.NumberFormat(locale(), {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)}`
+}

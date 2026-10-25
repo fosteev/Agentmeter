@@ -8,6 +8,8 @@ export interface WindowHeaderProps {
   snapshot: TraySnapshot
   activeTab: WindowTab
   onTabChange: (tab: WindowTab) => void
+  /** Показывать вкладку Workflow (9.5). */
+  workflow?: boolean
 }
 
 function providerLimits(limits: LimitReportRow[]): LimitReportRow[] {
@@ -31,7 +33,12 @@ function providerLimits(limits: LimitReportRow[]): LimitReportRow[] {
 
 const ORDER: readonly Provider[] = ['claude', 'codex']
 
-export function WindowHeader({ snapshot, activeTab, onTabChange }: WindowHeaderProps) {
+export function WindowHeader({
+  snapshot,
+  activeTab,
+  onTabChange,
+  workflow = false,
+}: WindowHeaderProps) {
   const active = snapshot.agents.filter((agent) => agent.state !== 'done').length
   const limits = providerLimits(snapshot.limits)
 
@@ -48,7 +55,7 @@ export function WindowHeader({ snapshot, activeTab, onTabChange }: WindowHeaderP
         boxSizing: 'border-box',
       }}
     >
-      <WindowTabs active={activeTab} onChange={onTabChange} />
+      <WindowTabs active={activeTab} onChange={onTabChange} workflow={workflow} />
       <div style={{ flex: 1 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div
