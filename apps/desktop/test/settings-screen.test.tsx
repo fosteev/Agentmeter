@@ -95,11 +95,11 @@ function find(tree: ReactNode, attribute: keyof Props, value: string): ReactElem
 }
 
 describe('экран настроек', () => {
-  /** Ловит потерянный раздел: их шесть — пять из макета и «Приложение» (5.3). */
-  it('рисует шесть разделов и открывает первый', () => {
+  /** Ловит потерянный раздел: их семь — пять из макета, «Приложение» (5.3) и «Workflow» (9.5). */
+  it('рисует семь разделов и открывает первый', () => {
     const html = renderToStaticMarkup(<SettingsTab report={report()} onChange={() => undefined} onStartup={() => undefined} onOauth={() => undefined} onRefreshOauth={() => undefined} onCheckUpdate={() => undefined} onInstallUpdate={() => undefined} />)
 
-    expect(html.split('data-settings-section=').length - 1).toBe(6)
+    expect(html.split('data-settings-section=').length - 1).toBe(7)
     expect(html).toContain('data-settings-pane="sources"')
     expect(html).toContain('Источники данных')
     expect(html).toContain('Приватность')

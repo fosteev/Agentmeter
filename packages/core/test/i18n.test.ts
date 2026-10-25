@@ -50,6 +50,14 @@ const VALUES: Record<string, Record<string, string | number>> = {
   // Худшее из встречающихся в легенде моделей (8.2): пятизначный счёт запросов
   // с разделителем, знак оценки у среднего и целый процент.
   'matrix.legendLine': { percent: '100%', requests: '12 345', average: '≈206.4k' },
+  // Экран Workflow (9.5): худшие числа в узких местах — трёхзначные счётчики,
+  // «100.0%» и составное окно «100–102» с четырёхзначными счётами.
+  'workflow.shellOf': { k: 12, n: 12 },
+  'workflow.prevWindow': { value: '100.0%' },
+  'workflow.targetLabel': { pct: '100%' },
+  'workflow.windowsBack': { count: 48 },
+  'workflow.tipEdits': { count: 128 },
+  'workflow.tipWindow': { from: 100, to: 102, value: '100.0%', num: 1234, den: 1234 },
 }
 
 describe('потолки длины', () => {

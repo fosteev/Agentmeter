@@ -72,6 +72,7 @@ import type {
 } from '@agentmeter/ipc'
 import { configReport, setConfig, setOauth, setStartup } from './config.ts'
 import { buildSpendScreen } from './breakdown.ts'
+import { buildWorkflowScreen } from './workflow.ts'
 import { buildDayReport } from './day.ts'
 import { buildHistoryScreen } from './history.ts'
 import { buildTaskCard } from './task.ts'
@@ -770,6 +771,7 @@ function createHandlers(
     'task:get': (arg) => buildTaskCard(runtime().db, arg, runtime().config),
     'breakdown:get': (filter) => buildSpendScreen(runtime().db, filter),
     'history:get': (arg) => buildHistoryScreen(runtime().db, arg, runtime().config, Date.now()),
+    'workflow:get': (filter) => buildWorkflowScreen(runtime().db, runtime().config.workflow, filter),
     'config:set': ({ patch }) => changeConfig(patch),
     // Автозапуск пишется в систему, а не в файл настроек, — но окну об этом
     // знать незачем: ответ тот же отчёт, и рассылается он так же.

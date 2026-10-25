@@ -7,6 +7,8 @@ export interface WindowProps {
   snapshot: TraySnapshot
   activeTab: WindowTab
   onTabChange: (tab: WindowTab) => void
+  /** Вкладка Workflow видна (9.5): `config.workflow.enabled`. */
+  workflow?: boolean
   children: ReactNode
 }
 
@@ -20,7 +22,13 @@ export interface WindowProps {
  * границу вплотную к настоящей. В витрине карточка обрамляется снаружи, там это
  * действительно образец на листе.
  */
-export function Window({ snapshot, activeTab, onTabChange, children }: WindowProps) {
+export function Window({
+  snapshot,
+  activeTab,
+  onTabChange,
+  workflow = false,
+  children,
+}: WindowProps) {
   return (
     <div
       style={{
@@ -33,7 +41,12 @@ export function Window({ snapshot, activeTab, onTabChange, children }: WindowPro
         boxSizing: 'border-box',
       }}
     >
-      <WindowHeader snapshot={snapshot} activeTab={activeTab} onTabChange={onTabChange} />
+      <WindowHeader
+        snapshot={snapshot}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        workflow={workflow}
+      />
       <main
         style={{
           flex: 1,

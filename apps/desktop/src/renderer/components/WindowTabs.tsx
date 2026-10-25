@@ -15,21 +15,38 @@ export const WINDOW_TABS: ReadonlyArray<{ id: WindowTab; labelKey: TabLabelKey; 
   { id: 'today', labelKey: 'window.tabToday', stage: '3.2' },
   { id: 'breakdown', labelKey: 'window.tabBreakdown', stage: '4.2' },
   { id: 'history', labelKey: 'window.tabHistory', stage: '4.6' },
+  { id: 'workflow', labelKey: 'window.tabWorkflow', stage: '9.5' },
   { id: 'settings', labelKey: 'window.tabSettings', stage: '3.6' },
 ]
 
 type TabLabelKey =
-  'window.tabToday' | 'window.tabBreakdown' | 'window.tabHistory' | 'window.tabSettings'
+  | 'window.tabToday'
+  | 'window.tabBreakdown'
+  | 'window.tabHistory'
+  | 'window.tabWorkflow'
+  | 'window.tabSettings'
+
+/**
+ * Вкладки, которые видно (9.5). «Workflow» есть только при включённом экране
+ * (`config.workflow.enabled`): тем, кто не гоняет сабагентов, пустая вкладка
+ * только мешает. Список в `WINDOW_TABS` остаётся полным — по нему окно узнаёт
+ * вкладку из адреса, а выключенную поймает уже само.
+ */
+export function visibleTabs(workflow: boolean): typeof WINDOW_TABS {
+  return WINDOW_TABS.filter((tab) => tab.id !== 'workflow' || workflow)
+}
 
 export interface WindowTabsProps {
   active: WindowTab
   onChange: (tab: WindowTab) => void
+  /** Экран Workflow включён в настройках. Без него четвёртой вкладки нет. */
+  workflow?: boolean
 }
 
-export function WindowTabs({ active, onChange }: WindowTabsProps) {
+export function WindowTabs({ active, onChange, workflow = false }: WindowTabsProps) {
   return (
     <div style={{ display: 'flex', gap: 2, marginLeft: 12 }}>
-      {WINDOW_TABS.map((tab) => {
+      {visibleTabs(workflow).map((tab) => {
         const selected = tab.id === active
         return (
           <button

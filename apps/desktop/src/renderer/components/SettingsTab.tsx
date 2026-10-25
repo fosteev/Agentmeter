@@ -9,6 +9,7 @@ import { SettingsPopupLimits } from './SettingsPopupLimits.tsx'
 import { SettingsPrivacy } from './SettingsPrivacy.tsx'
 import { SettingsSources } from './SettingsSources.tsx'
 import { SettingsUsage } from './SettingsUsage.tsx'
+import { SettingsWorkflow } from './SettingsWorkflow.tsx'
 
 /**
  * Настройки — раздел 6 макета (строки 1168–1249).
@@ -23,8 +24,18 @@ import { SettingsUsage } from './SettingsUsage.tsx'
  * про приватность — он про то, будет ли приложение открыто вообще. Своё место
  * ему нужно ещё и потому, что состояние он берёт у операционной системы, а не
  * из файла настроек, — то есть правится другим каналом.
+ *
+ * Седьмым стал «Workflow» (9.5) — шестым в списке, перед «Приложением»: раздел
+ * про экран, которого у многих нет вовсе, и про само приложение он не говорит.
  */
-export type SettingsSection = 'sources' | 'limits' | 'alerts' | 'appearance' | 'privacy' | 'app'
+export type SettingsSection =
+  | 'sources'
+  | 'limits'
+  | 'alerts'
+  | 'appearance'
+  | 'privacy'
+  | 'workflow'
+  | 'app'
 
 /** Ключи, а не подписи: `t()` на верхнем уровне застыл бы на языке загрузки. */
 const SECTIONS: ReadonlyArray<{ id: SettingsSection; key: string }> = [
@@ -33,6 +44,8 @@ const SECTIONS: ReadonlyArray<{ id: SettingsSection; key: string }> = [
   { id: 'alerts', key: 'settings.tabAlerts' },
   { id: 'appearance', key: 'settings.tabAppearance' },
   { id: 'privacy', key: 'settings.tabPrivacy' },
+  // Шестым, после «Приватности» (9.5): раздел про экран, которого у многих нет.
+  { id: 'workflow', key: 'settings.tabWorkflow' },
   { id: 'app', key: 'settings.tabApp' },
 ]
 
@@ -145,6 +158,9 @@ export function SettingsTab({
           <SettingsAppearance config={config} onChange={onChange} />
         ) : null}
         {active === 'privacy' ? <SettingsPrivacy config={config} onChange={onChange} /> : null}
+        {active === 'workflow' ? (
+          <SettingsWorkflow config={config} problems={report.problems} onChange={onChange} />
+        ) : null}
         {active === 'app' ? (
           <SettingsApp
             config={config}

@@ -51,6 +51,7 @@ export const LIMITS = {
   'window.tabToday': 14,
   'window.tabBreakdown': 14,
   'window.tabHistory': 14,
+  'window.tabWorkflow': 14,
   'window.tabSettings': 14,
   // Шапка ленты (строка 614 макета): колонки шириной 118/84/96/92 px, кегль
   // 10 px с разрядкой 0.1em — 6 px на знак моноширинного плюс пиксель разрядки.
@@ -105,6 +106,46 @@ export const LIMITS = {
   'matrix.speedSeconds': 10,
   'matrix.speedP90': 12,
   'matrix.speedFew': 18,
+  // Экран «Workflow» (9.5), раздел 13. Мерки — из блоков макета: сегмент фильтра
+  // проекта (кегль 11.5, два поля по 12) делит строку с заголовком; подпись
+  // главного числа — mono 10 с разрядкой .14em (≈7.4 px на знак) в колонке 320 px,
+  // то есть 43 знака, взято 38; заголовок контрольного — то же в карточке ≈315 px
+  // (42 знака, взято 30). «шеллом K из N» стоит над точкой в слоте ≈170 px, mono 10
+  // (6 px на знак), — 28 знаков, взято 20 с запасом на двузначные числа.
+  'workflow.roleMain': 22,
+  'workflow.allProjects': 14,
+  'workflow.mainLabel': 38,
+  'workflow.shellOf': 20,
+  // Строка под числом: «окно до него — 29.4%» и «цель ≤ 20%» — mono 11 (6.6 px) в
+  // колонке 320 px, то есть 48 знаков на обе подписи с разделителем.
+  'workflow.prevWindow': 24,
+  'workflow.targetLabel': 16,
+  'workflow.overheadTitle': 30,
+  'workflow.errorsTitle': 30,
+  'workflow.verdictsTitle': 30,
+  'workflow.windowsBack': 20,
+  // Шапка таблицы ролей: колонки 168/120/64/112 px, mono 10 с разрядкой .08em
+  // (≈6.8 px на знак): 24, 17, 9 и 16 знаков, взято с запасом на один.
+  'workflow.rolesHeadRole': 20,
+  'workflow.rolesHeadSpend': 12,
+  'workflow.rolesHeadEdits': 8,
+  'workflow.rolesHeadAfter': 14,
+  // Подсказка точки: рамка 212 px, поля по 12, остаётся 186 px; кегль 11.5 / mono 11.
+  'workflow.tipEdits': 14,
+  'workflow.tipOverhead': 20,
+  'workflow.tipAfterNone': 14,
+  'workflow.tipWindow': 40,
+  // Подписи вердиктов в разделе настроек стоят в колонке 120 px рядом с полем.
+  'workflow.verdictAccepted': 16,
+  'workflow.verdictNotes': 16,
+  'workflow.verdictRejected': 16,
+  // Подписи полей раздела настроек: колонки по трети от 656 px правой части.
+  'workflow.setWindowCycles': 28,
+  'workflow.setWindowSessions': 28,
+  'workflow.setTarget': 28,
+  'workflow.setAlertRework': 28,
+  'workflow.setAlertErrors': 28,
+  'workflow.setAlertOverhead': 28,
 } as const
 
 export type LimitedKey = keyof typeof LIMITS

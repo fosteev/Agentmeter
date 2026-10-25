@@ -162,6 +162,38 @@
   opacity: 1;
 }
 
+/* Подсказка точки графика Workflow (9.5): та же логика, что у состава статьи
+   выше, — показом управляет CSS, а не состояние. Колонка слота ловит наведение и
+   фокус, внутри неё лежат линия цикла и подсказка. Тень вынесена сюда из
+   разметки: цвет с прозрачностью в компонентах писать нельзя (`tokens.test.ts`),
+   а в макете тень — `oklch(0 0 0 / .4)` (строка 2682). */
+[data-wf-line],
+[data-wf-tip] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-wf-slot]:hover [data-wf-line],
+[data-wf-slot]:focus [data-wf-line] {
+  visibility: visible;
+  opacity: 0.5;
+}
+
+[data-wf-slot]:hover [data-wf-tip],
+[data-wf-slot]:focus [data-wf-tip] {
+  visibility: visible;
+  opacity: 1;
+}
+
+[data-wf-tip] {
+  box-shadow: 0 8px 20px oklch(0 0 0 / 0.4);
+}
+
+[data-wf-slot]:focus {
+  outline: none;
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -17,6 +17,8 @@ import type {
   LimitWindow,
   LimitWindowKind,
   Provider,
+  Verdict,
+  WorkflowNodeRole,
 } from '@agentmeter/core'
 
 /** Агент, работающий прямо сейчас. */
@@ -513,8 +515,13 @@ export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends readonly unknown[] ? T[K] : T[K] extends object ? DeepPartial<T[K]> : T[K]
 }
 
-/** Вкладки главного окна — шапка раздела 3 макета (строки 568–573). */
-export type WindowTab = 'today' | 'breakdown' | 'history' | 'settings'
+/**
+ * Вкладки главного окна — шапка раздела 3 макета (строки 568–573).
+ *
+ * `workflow` (9.5) — четвёртая, между «Историей» и «Настройками», и существует
+ * только при `config.workflow.enabled`: список вкладок решает окно, а не этот тип.
+ */
+export type WindowTab = 'today' | 'breakdown' | 'history' | 'workflow' | 'settings'
 
 export interface TodayFilter {
   from: number
@@ -1317,6 +1324,169 @@ export interface HistoryDaySummary {
   projects: ProjectRow[]
 }
 
+// ─── Экран «Workflow» (M9, 9.5) ──────────────────────────────────────────────
+//
+// Раздел 13 макета, строки 2570–3064. Ответ собирает `main/workflow.ts` поверх
+// `workflowReport`: **доли, которые видно числом**, считаются там (правило 13 —
+// доли ролей, дельты в п.п., кратность накладных цикла), а длины полосок и
+// положение точек — в окне. Метки — миллисекунды. Текста головы ответа
+// сабагента здесь нет и быть не может: наружу идёт только вердикт.
+
+/** Шесть строк ролей: пять назначаемых плюс `unknown` и главная сессия. */
+export type WorkflowRoleKey = WorkflowNodeRole
+/** Вердикт приёмки — слово, а не текст ответа. */
+export type WorkflowVerdictKey = Verdict
+
+export interface WorkflowFilter {
+  /** Тот же `RequestScope.project`, что у развёртки: сужает циклы и окно ошибок, а не только картинку. */
+  project?: string
+}
+
+/** Точка ряда: окно, кончающееся на элементе № `n`. */
+export interface WorkflowDot {
+  n: number
+  startedAt: number
+  /** Доля 0..1 или кратность — в единицах ряда, как в конфиге. */
+  value: number
+  /** Из чего сложено: «6 из 26» в подсказке точки. */
+  numerator: number
+  denominator: number
+  /** `≈`: в окне есть восстановленные запросы. Только у накладных. */
+  approximate: boolean
+}
+
+/** У точки переделки — сколько циклов окна исключено (исполнитель правил шеллом). */
+export interface WorkflowReworkDot extends WorkflowDot {
+  unseen: number
+}
+
+/** Окно целиком: значение и из чего оно сложено. */
+export interface WorkflowWindowValue {
+  value: number
+  numerator: number
+  denominator: number
+  startedAt: number
+  approximate: boolean
+}
+
+/** Разность двух окон: в п.п. у долей (`value` — уже ×100), в единицах кратности у накладных. */
+export interface WorkflowDelta {
+  value: number
+  /** `≈` перед дельтой: хотя бы одно из двух окон оценочное. */
+  approximate: boolean
+}
+
+/** Главное число экрана и график под ним. */
+export interface WorkflowReworkBlock {
+  /** Размер окна из конфига, циклов. */
+  size: number
+  /** Циклов в выборке: «окно не набралось (count из size)». */
+  count: number
+  /** Не набралось ни одного полного окна. */
+  short: boolean
+  /** Окно, кончающееся на последнем цикле. `null` — исключены все или окна нет. */
+  latest: (WorkflowWindowValue & { unseen: number }) | null
+  prev: (WorkflowWindowValue & { unseen: number }) | null
+  /** Сколько циклов последнего окна исключено (исполнитель невидим) — считается и при `latest = null`. */
+  unseen: number
+  /** Старт последнего цикла: «по 25 октября» остаётся и там, где точки нет. */
+  lastStartedAt: number | null
+  delta: (WorkflowDelta & { tone: 'toward' | 'neutral' }) | null
+  /**
+   * Почему дельты нет при живом `latest`: `short` — окно до него не набралось
+   * (нужно `need` циклов, есть `count`), `noPoint` — окно есть, но у него нет точки.
+   */
+  noDelta: 'short' | 'noPoint' | null
+  need: number
+  /** Цель, доля 0..1. `null` — линии нет. */
+  target: number | null
+  /** Только полные окна: ось X идёт от цикла № `size` до `count`. */
+  points: WorkflowReworkDot[]
+}
+
+/** Подсказка точки: один цикл. `n` — номер с единицы, `cycles[n − 1]`. */
+export interface WorkflowCycleTip {
+  n: number
+  startedAt: number
+  project: string
+  /** Исполнитель не оставил видимых правок: в долю окна цикл не входит. */
+  unseen: boolean
+  /** Видимые записи исполнителей цикла. */
+  executorWrites: number
+  /** Кто правил после старта исполнителя; только ненулевые, в порядке ролей. */
+  after: Array<{ role: WorkflowRoleKey; count: number }>
+  /** `(main + reviewer) / executor` по расходу цикла; `null` — расход исполнителя ноль. */
+  overhead: number | null
+  /** `≈` перед кратностью: в цикле есть восстановленные запросы. */
+  overheadApproximate: boolean
+}
+
+/** Контрольный показатель: число, дельта и маленькая линия. */
+export interface WorkflowControl {
+  size: number
+  count: number
+  latest: WorkflowWindowValue | null
+  prev: WorkflowWindowValue | null
+  delta: WorkflowDelta | null
+  points: WorkflowDot[]
+}
+
+export interface WorkflowVerdictsControl extends WorkflowControl {
+  /** Четыре счётчика последнего окна; `null` — окна нет. */
+  counts: Record<WorkflowVerdictKey, number> | null
+}
+
+export interface WorkflowRoleRow {
+  role: WorkflowRoleKey
+  spend: number
+  /** Доля расхода окна по шести ролям; ноль, когда расхода нет вовсе. */
+  share: number
+  /** Видимые записи (по циклам с видимым исполнителем). */
+  writes: number
+  /** Записи после старта исполнителя; `null` у исполнителя — после себя он не правит. */
+  after: number | null
+}
+
+export interface WorkflowRolesBlock {
+  /** Сколько циклов вошло в окно ролей: последние `min(size, count)`. */
+  cycles: number
+  /** Из них с невидимым исполнителем. */
+  unseen: number
+  /** Шесть строк, всегда: `unknown` виден и при нуле. */
+  rows: WorkflowRoleRow[]
+  after: {
+    total: number
+    /** Главная и ревьюер всегда, остальные — при ненулевом счёте. */
+    rows: Array<{ role: WorkflowRoleKey; count: number; share: number }>
+    /** Роли с нулём, которые не получили своей строки: одна приглушённая строка с нулём. */
+    quiet: WorkflowRoleKey[]
+  }
+}
+
+export interface WorkflowScreen {
+  /**
+   * Что рисовать. `indexing` — индекс не собран; `none` — ни одного исполнителя
+   * по правилам; `scope` — фильтр отсёк всё (правило 15); `ready` — циклы есть
+   * (в том числе «окно не набралось» — это `rework.short`).
+   */
+  state: 'indexing' | 'none' | 'scope' | 'ready'
+  /** Проект фильтра, когда он задан. */
+  project?: string
+  /** Проекты, в которых есть циклы (без сужения), по убыванию числа циклов. */
+  projects: Array<{ name: string; cycles: number }>
+  /** Первый и последний цикл выборки; `null` — циклов нет. */
+  period: { from: number; to: number } | null
+  window: { cycles: number; sessions: number }
+  /** Все циклы выборки по порядку: подсказка точки № n — `cycles[n − 1]`. */
+  cycles: WorkflowCycleTip[]
+  rework: WorkflowReworkBlock
+  overhead: WorkflowControl
+  /** Ряд по сессиям, не по циклам; точки подрезаны до последних 48. */
+  errors: WorkflowControl
+  verdicts: WorkflowVerdictsControl
+  roles: WorkflowRolesBlock
+}
+
 export interface DoctorReport {
   cliVersions: string[]
   unknownRecordTypes: Record<string, number>
@@ -1373,6 +1543,12 @@ export interface IpcCalls {
    * сегодня, не знает — граница дня настраивается (`ui.dayStartsAtHour`).
    */
   'history:get': { arg: { span: HistorySpan; at?: number }; result: HistoryScreen }
+  /**
+   * Вкладка «Workflow» (9.5). Зовётся по запросу вкладки и после дочитывания
+   * индекса, но не на каждый опрос трея: синхронный проход по таблицам стоит
+   * около 30 мс на индексе в полторы тысячи сессий.
+   */
+  'workflow:get': { arg: WorkflowFilter; result: WorkflowScreen }
   'limits:get': { arg: void; result: LimitReportRow[] }
   'config:get': { arg: void; result: ConfigReport }
   /**
@@ -1519,6 +1695,7 @@ export const IPC_CALLS = [
   'task:get',
   'breakdown:get',
   'history:get',
+  'workflow:get',
   'limits:get',
   'config:get',
   'config:set',
