@@ -21,6 +21,7 @@ import {
   locale as currentLocale,
   setLocale,
   exportRows,
+  spendMatrix,
   spendSplit,
   t,
   toCsv,
@@ -30,7 +31,13 @@ import {
   type DayRange,
   type Provider,
 } from '@agentmeter/core'
-import { renderBreakdown, type BreakdownAxis } from './commands/breakdown.ts'
+import {
+  renderBreakdown,
+  renderModels,
+  renderProjectModel,
+  type BreakdownAxis,
+  type ReportAxis,
+} from './commands/breakdown.ts'
 import { renderDoctor } from './commands/doctor.ts'
 import { renderLimits } from './commands/limits.ts'
 import { renderLive } from './commands/live.ts'
@@ -68,7 +75,7 @@ function usage(): string {
     t('cli.usageFlags'),
     'today     [--day YYYY-MM-DD] [--days N] [--provider claude|codex]',
     'tasks     [--day YYYY-MM-DD] [--limit N]',
-    'breakdown [--day YYYY-MM-DD] [--session <id>] [--by tool|server|skill|agent|model]',
+    'breakdown [--day YYYY-MM-DD] [--days N] [--session <id>] [--by tool|server|skill|agent|model|project-model]',
     'limits',
     'live',
     'doctor',
@@ -256,20 +263,70 @@ function runBreakdown(
   common: CommonOptions,
   config: Config,
 ): number {
-  const values = parseValues(common.rest, new Set(['--day', '--session', '--by']))
+  const values = parseValues(common.rest, new Set(['--day', '--days', '--session', '--by']))
   if (values.has('--day') && values.has('--session')) {
     throw new CliArgumentError(t('cli.dayAndSession'))
   }
+  if (values.has('--days') && values.has('--session')) {
+    throw new CliArgumentError(t('cli.daysAndSession'))
+  }
   const axis = breakdownAxis(values.get('--by'))
-  const scope = values.has('--session')
-    ? { sessionId: values.get('--session')! }
-    : { range: rangeFor(values.get('--day'), config.ui.dayStartsAtHour) }
-  const report = breakdownReport(db, scope)
+  const sessionId = values.get('--session')
+  if (axis === 'project-model' && sessionId !== undefined) {
+    // У сессии один проект, и разрез «проект × модель» из неё — одна строка.
+    throw new CliArgumentError(t('cli.projectModelSession'))
+  }
+  const days = positiveInteger(values.get('--days') ?? '1', '--days')
+
+  if (sessionId !== undefined) {
+    // Ось моделей здесь прежняя (`BreakdownReport.model`): скорость — свойство
+    // периода, а у `RequestScope` нет `sessionId`.
+    const report = breakdownReport(db, { sessionId })
+    const reportAxis = axis as ReportAxis
+    output(
+      common.json
+        ? { ...report, by: axis }
+        : renderBreakdown(report, reportAxis, currentLocale(), true),
+      common.json,
+    )
+    return 0
+  }
+
+  const range = periodRange(values.get('--day'), days, config.ui.dayStartsAtHour)
+  if (axis === 'project-model' || axis === 'model') {
+    // Один источник — `spendMatrix`, тот же, что у окна: свой `GROUP BY` здесь
+    // разошёлся бы с ним на первом же запросе без проекта.
+    const matrix = spendMatrix(db, range)
+    if (axis === 'project-model') {
+      output(
+        common.json ? { ...matrix, by: axis } : renderProjectModel(matrix, currentLocale()),
+        common.json,
+      )
+    } else {
+      output(
+        common.json
+          ? { ...breakdownReport(db, { range }), by: axis, models: matrix.models }
+          : renderModels(matrix, currentLocale()),
+        common.json,
+      )
+    }
+    return 0
+  }
+  const report = breakdownReport(db, { range })
   output(
     common.json ? { ...report, by: axis } : renderBreakdown(report, axis, currentLocale()),
     common.json,
   )
   return 0
+}
+
+/** Период из `days` суток до `day` включительно — тот же код, что у `brief` и `export`. */
+function periodRange(day: string | undefined, days: number, dayStartsAtHour: number): DayRange {
+  const endRange = rangeFor(day, dayStartsAtHour)
+  return {
+    from: dayRange(endRange.from, dayStartsAtHour, -(days - 1)).from,
+    to: endRange.to,
+  }
 }
 
 function runLimits(
@@ -439,7 +496,7 @@ function optionalProvider(value: string | undefined): Provider | undefined {
 
 function breakdownAxis(value: string | undefined): BreakdownAxis {
   if (value === undefined) return 'tool'
-  if (['tool', 'server', 'skill', 'agent', 'model'].includes(value)) {
+  if (['tool', 'server', 'skill', 'agent', 'model', 'project-model'].includes(value)) {
     return value as BreakdownAxis
   }
   throw new CliArgumentError(t('cli.badBy'))

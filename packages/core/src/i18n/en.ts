@@ -156,6 +156,10 @@ export const en = {
       'Where deferred tools (ToolSearch) are enabled, only MCP tool names travel in the prefix, without schemas — the same server costs an order of magnitude less. MCP advice holds only for measured sessions; about eager-set sessions the logs only say it cost more there.',
     ruleCache:
       'A cache rebuild adds no tokens to the period: the same tokens travel either as reads or as writes. The one saving here is not letting the cache expire — a pause longer than its lifetime re-writes the prefix at full price.',
+    ruleModels:
+      'The breakdown by model answers "how much and with what", not "what it cost": the file has no prices, a model\'s weight in the subscription limit is not measured for either provider, and a heavier model\'s average request is larger because it is handed heavier tasks. Do not advise switching models from these numbers — they do not say that.',
+    ruleSpeed:
+      'Response time runs from sending the prompt to the last recorded part of the answer: network, queueing, retries after overload and thinking together. It is not generation speed: a long response means a long answer or a queue, not a slow model. Pace is the median of output / time per request, not a sum over a sum. Reconstructed requests have no time and are left out of the sample.',
     ruleApprox:
       'Numbers called a lower bound are exactly that: some requests are reconstructed from gaps in the cache chain, and service calls (session titles, summaries) are never written to the logs at all.',
     totalsTitle: '## Totals',
@@ -184,6 +188,20 @@ export const en = {
     toolsTitle: '## One-off spend by tool',
     toolLine: '- {{name}}: calls {{calls}}, tokens {{tokens}}',
     toolsRest: '- …and more tools: {{count}}, tokens: {{tokens}}',
+    modelsTitle: '## Models and projects',
+    modelLine:
+      '- {{name}} ({{provider}}): tokens {{tokens}}, share of the period {{percent}}%, requests {{requests}}{{inherited}}{{speed}}',
+    modelInherited:
+      '; of which {{tokens}} tokens came from reconstructed requests whose model is borrowed from a neighbour: the split of this row by model is an estimate, not a measurement',
+    modelSpeed:
+      '; response: median {{p50}} s, p90 {{p90}} s, pace {{pace}} tok/s, measured requests: {{count}}',
+    modelSpeedFew: '; response: not enough data, fewer than {{min}} measured requests',
+    modelsRest: '- …and more models: {{count}}, tokens: {{tokens}}',
+    projectsTitle: '### Projects',
+    projectLine:
+      '- {{name}}: tokens {{tokens}}, share of the period {{percent}}%, requests {{requests}}; project models: {{models}}',
+    projectModel: '{{model}} {{percent}}%',
+    projectsRest: '- …and more projects: {{count}}, tokens: {{tokens}}',
     cacheTitle: '## Cache rebuilds (Claude only)',
     cacheNone: 'No Claude requests in the period — cache rebuilds cannot be measured.',
     cacheLine:
@@ -751,6 +769,11 @@ export const en = {
     columnUntilCap: 'Until cap',
     columnBasis: 'Basis',
     columnProject: 'Project',
+    columnProjectModel: 'Project / model',
+    columnResponse: 'Response, s',
+    columnP90: 'p90, s',
+    rowTotal: 'Total',
+    speedNeedsRange: 'speed is computed over a period — not available with --session',
     columnState: 'State',
     columnTurn: 'Turn',
     columnLiveness: 'Liveness',
@@ -807,6 +830,8 @@ export const en = {
       'the verify command is out of scope for stage 1.10 and is not implemented yet',
     unsupported: 'command {{command}} is not supported',
     dayAndSession: '--day and --session cannot be used together',
+    daysAndSession: '--days and --session cannot be used together',
+    projectModelSession: '--by project-model cannot be combined with --session: a session has one project',
     noIngestIndex: '--no-ingest does not apply to the index command',
     needsValue: '{{flag}} requires a value',
     unknownFlag: 'unknown flag: {{flag}}',
@@ -814,6 +839,6 @@ export const en = {
     badDate: 'invalid date: {{value}}',
     positiveInt: '{{name}} must be a positive integer',
     badProvider: '--provider must be claude or codex',
-    badBy: '--by must be tool, server, skill, agent or model',
+    badBy: '--by must be tool, server, skill, agent, model or project-model',
   },
 } as const
