@@ -37,7 +37,7 @@ function megabytes(bytes: number): string {
  * Оставшееся время. Под минутой — секундами, как в макете («≈ 40 с»); дальше
  * общим `span`, потому что «≈ 400 с» никто не читает.
  */
-function remaining(ms: number): string {
+export function remaining(ms: number): string {
   if (ms < 60_000) {
     return t('popup.etaSeconds', {
       seconds: new Intl.NumberFormat(locale()).format(Math.round(ms / 1000)),

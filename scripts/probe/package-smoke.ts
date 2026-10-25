@@ -238,7 +238,7 @@ const leaked = entries.filter(
 // одним модулем сверху вниз, и повторное `const` — не тень, а синтаксическая
 // ошибка: проба перестаёт разбираться целиком, включая проверки, к которым
 // правка отношения не имела.
-const required = ['/dist/main/index.js', '/dist/preload/index.cjs', '/dist/web/window.html']
+const required = ['/dist/main/index.js', '/dist/preload/index.cjs', '/dist/web/window.html', '/dist/web/setup.html']
 const lost = required.filter((name) => !entries.includes(name))
 report(
   5,

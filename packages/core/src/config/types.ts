@@ -68,6 +68,19 @@ export interface Config {
     watch: boolean
   }
 
+  /**
+   * Окно первичной настройки (7.3). Единственное поле мастера, которого нет в
+   * «Настройках»: остальное он пишет теми же путями, что и разделы настроек.
+   */
+  setup: {
+    /**
+     * Мастер пройден или пропущен. Дефолт `false` — для первого запуска (файла
+     * нет); у существующего файла без ключа загрузчик ставит `true`, иначе
+     * мастер увидел бы каждый, кто обновился (`carrySetupCompleted`).
+     */
+    completed: boolean
+  }
+
   updates: {
     /**
      * Проверять обновления автоматически (5.4).
@@ -355,6 +368,7 @@ export const DEFAULT_CONFIG: Config = {
     alerts: { rework: null, errorRate: null, overhead: null },
   },
   index: { watch: true },
+  setup: { completed: false },
   updates: { auto: true },
   statusline: { previous: null },
   live: { pollMs: 1_000, idleMs: 90_000, codexSilenceMs: 300_000 },

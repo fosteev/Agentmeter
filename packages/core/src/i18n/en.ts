@@ -685,6 +685,8 @@ export const en = {
     updateError: 'check failed: {{message}}',
     launchUnpackaged: 'available in an installed app only',
     tabApp: 'Application',
+    setupTitle: 'First-run wizard',
+    setupOpen: 'Open wizard',
 
     // Where limit percentages come from (6.3, 6.4). The status line hook stood
     // here until 7.5 and went out with the caps: only the terminal CLI draws a
@@ -718,6 +720,47 @@ export const en = {
     codexApiFetched: 'asked {{ago}}: {{windows}}',
     codexApiFetchedFew: 'asked {{ago}}, no windows in the reply',
     codexApiRetry: 'OpenAI asked us to wait — next try {{at}}',
+  },
+
+  /** First-run wizard (7.3). Threshold and notification labels come from `settings.*`. */
+  setup: {
+    skip: 'Skip setup',
+    stepOf: 'step {{n}} of {{total}}',
+    back: 'Back',
+    next: 'Next',
+    start: 'Start',
+
+    sourcesTitle: 'What we monitor',
+    sourcesLede: 'Agentmeter found logs on this machine. Everything is read locally.',
+    sourcesNone:
+      'No logs yet. The app starts working as soon as the first sessions appear — it will look in the same places.',
+    sourceFound: '✓ {{path}} · {{files}} · {{size}}',
+    sourceMissing: 'no logs found in {{path}}',
+    modelsTitle: 'Models',
+    modelsEmpty: 'models appear once the logs are read',
+    modelsMore: '+{{count}}',
+
+    thresholdsTitle: 'Thresholds and notifications',
+    thresholdsLede:
+      'The limit percentage comes from the provider or is computed from the logs — there is no plan to pick. Estimates are always marked with “≈”.',
+    warnSection: 'When to warn',
+    alsoSection: 'Also notify',
+
+    behaviorTitle: 'Behaviour and privacy',
+    behaviorLede:
+      'Agentmeter lives in the tray and reads local log files only. It makes three kinds of network calls, and each can be turned off below; limit requests are off to begin with.',
+    networkSection: 'Network',
+    askAnthropic: 'Ask Anthropic for the limit percentage',
+    askOpenai: 'Ask OpenAI for the limit percentage',
+    askNote: '— a request with your token, every 15 minutes',
+
+    nextTitle: 'What happens next',
+    nextLogs: '{{size}} of logs · {{files}}',
+    nextNoLogs: 'nothing to read yet',
+    nextReading: 'reading logs: {{percent}}% · {{eta}}',
+    estimating: 'estimating…',
+    nextDone: 'logs are read — history is ready',
+    nextFoot: 'All of this can be changed later in Settings. Nothing here is final.',
   },
 
   /** Failures of the second source (6.3). Our wording, never the server's body. */

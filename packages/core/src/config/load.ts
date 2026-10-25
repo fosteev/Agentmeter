@@ -85,8 +85,13 @@ export function loadConfig(path = configPath()): LoadResult {
   try {
     raw = JSON.parse(readFileSync(path, 'utf8'))
   } catch (e) {
+    // Файл есть — значит, человек уже пользовался приложением, и битый файл
+    // не повод показывать мастер (7.3): «Пропустить» записало бы поверх него
+    // дефолты, и всё, что ещё можно было починить руками, пропало бы.
+    const config = structuredClone(DEFAULT_CONFIG)
+    config.setup.completed = true
     return {
-      config: structuredClone(DEFAULT_CONFIG),
+      config,
       problems: [t('config.badJson', { path, message: (e as Error).message })],
     }
   }
@@ -128,6 +133,7 @@ function merge(raw: unknown): LoadResult {
   crossChecks(config, DEFAULT_CONFIG, problems)
   dropPlanCaps(config, raw, problems)
   carryNotifyOnIdle(config, raw)
+  carrySetupCompleted(config, raw)
   return { config, problems }
 }
 
@@ -147,6 +153,24 @@ function carryNotifyOnIdle(config: Config, raw: unknown): void {
   const old = alerts['notifyOnIdle']
   if (typeof old !== 'boolean' || alerts['notifyOnWaiting'] !== undefined) return
   config.alerts.notifyOnWaiting = old
+}
+
+/**
+ * Разовый перенос: мастер первичной настройки не показывается тем, кто уже
+ * пользуется приложением (7.3).
+ *
+ * Работает только на пути чтения с диска: файла нет — `loadConfig` отдаёт
+ * дефолт, не доходя сюда, и мастер показывается. Файл есть, а ключа
+ * `setup.completed` нет — значит, конфиг записан версией до мастера. Дефолт
+ * `false` показал бы окно каждому после обновления. Мастер остаётся должен
+ * только при **явном** `false` (его пишет первый запуск, пока мастер открыт);
+ * значение не того типа — замечание обхода, но не «первый запуск»: иначе
+ * «Пропустить» затёрло бы файл, в котором человек что-то правил руками.
+ */
+function carrySetupCompleted(config: Config, raw: unknown): void {
+  const setup = isPlainObject(raw) ? raw['setup'] : undefined
+  if (isPlainObject(setup) && setup['completed'] === false) return
+  config.setup.completed = true
 }
 
 /**
