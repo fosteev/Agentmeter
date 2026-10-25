@@ -83,6 +83,10 @@ function toModelLine(cell: MatrixCell, whole: number): MatrixModelLine {
     requests: cell.totals.requests,
     average: average(cell.totals.total, cell.totals.requests),
     share: share(cell.totals.total, whole),
+    // Скорость (8.4) — как её посчитало ядро, без пересчёта: медиана — число,
+    // которое видно текстом, и второй её экземпляр однажды разошёлся бы с
+    // CLI. Есть только у маргинали — у клетки проекта ядро её не кладёт.
+    ...(cell.speed === undefined ? {} : { speed: { ...cell.speed } }),
   }
 }
 

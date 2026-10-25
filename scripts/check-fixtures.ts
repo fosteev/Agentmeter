@@ -18,6 +18,7 @@ const LIMITS = join(ROOT, 'fixtures/limits')
 const USAGE = join(ROOT, 'fixtures/usage')
 const OAUTH = join(ROOT, 'fixtures/oauth')
 const MATRIX = join(ROOT, 'fixtures/matrix')
+const SPEED = join(ROOT, 'fixtures/speed')
 
 /** Следы живых данных, которых в репозитории быть не должно. */
 const LEAKS = [/fost/i, /Users\//, /pilot/i, /garmhub/i, /flutter/i, /[A-Z]{3,}-\d{2,}/]
@@ -676,6 +677,158 @@ function codexOauth(): void {
       'matrix / есть случай, где фильтр отсёк всё',
       expected.cases.some((entry: any) => entry.matrix.emptyScope && !entry.matrix.emptyIndex),
       'пустота от фильтра отличается от пустого индекса словами, а не пустым списком',
+    )
+  }
+}
+
+// ─── speed: эталон скорости модели (8.4) ─────────────────────────────────────
+// Каждая ловушка брифа обязана лежать в файле: запись между строками одного
+// запроса, записи, написанные вместе с ответом, обратный порядок меток, повтор
+// `token_count` и `token_count`, отставший от ответа на работу инструмента.
+// Пропади любая — эталон останется зелёным и перестанет ловить свою мутацию.
+//
+// Арифметика самого `expected.json` сверяется отдельно: медианы и p90 случая
+// «весь период» пересчитываются здесь из его же списка запросов.
+{
+  for (const name of ['claude-alpha.jsonl', 'codex-alpha.jsonl']) {
+    const path = join(SPEED, name)
+    if (!existsSync(path)) {
+      failures.push(`  ✗ speed / ${name} — нет файла`)
+      continue
+    }
+    const rows = readJsonl(path)
+    check(`speed / ${name}`, rows.length > 0, `${rows.length} записей`)
+    const leak = LEAKS.find((re) => re.test(readFileSync(path, 'utf8')))
+    if (leak) failures.push(`  ✗ speed / ${name} — обезличивание не прошло, найдено ${leak}`)
+  }
+
+  const claude = readJsonl(join(SPEED, 'claude-alpha.jsonl'))
+  const ts = (r: Record<string, any>): number | undefined =>
+    typeof r['timestamp'] === 'string' ? Date.parse(r['timestamp']) : undefined
+  const firstLine = new Map<string, number>()
+  const lastLine = new Map<string, number>()
+  claude.forEach((r, i) => {
+    if (r['type'] !== 'assistant') return
+    const rid = r['requestId'] as string
+    if (!firstLine.has(rid)) firstLine.set(rid, i)
+    lastLine.set(rid, i)
+  })
+  const interleaved = [...firstLine].filter(([rid, from]) =>
+    claude.slice(from + 1, lastLine.get(rid)).some((r) => r['type'] !== 'assistant'),
+  )
+  check(
+    'speed / запись между строками одного запроса',
+    interleaved.length > 0,
+    `${interleaved.length} — старт перед последней строкой мерил бы от неё`,
+  )
+  check(
+    'speed / записи, написанные вместе с ответом',
+    claude.some((r) => r['attachment']?.type === 'deferred_tools_record') &&
+      claude.some((r) => r['type'] === 'file-history-delta') &&
+      claude.some((r) => r['type'] === 'queue-operation'),
+    'deferred_tools_record, file-history-delta, queue-operation',
+  )
+  const backwards = claude.filter(
+    (r, i) => r['type'] === 'assistant' && i > 0 && (ts(r) ?? 0) < (ts(claude[i - 1]!) ?? 0),
+  )
+  check('speed / ответ помечен раньше промпта', backwards.length > 0, `${backwards.length}`)
+  check(
+    'speed / ответ — первая запись файла',
+    claude[0]?.['type'] === 'assistant',
+    'записи-старта нет',
+  )
+  const chain = requests(claude)
+  check(
+    'speed / разрыв цепочки кэша',
+    chain.some((r, i) => i > 0 && r.cr > chain[i - 1]!.cr + chain[i - 1]!.cw),
+    'восстановленный запрос — без времени',
+  )
+
+  const codex = readJsonl(join(SPEED, 'codex-alpha.jsonl'))
+  const totals = codex
+    .filter((r) => r['payload']?.type === 'token_count')
+    .map((r) => JSON.stringify(r['payload'].info.total_token_usage))
+  check(
+    'speed / повтор token_count',
+    totals.some((value, i) => i > 0 && value === totals[i - 1]),
+    'итог не сдвинулся — это не новый запрос',
+  )
+  let lastAnswer: number | undefined
+  let late = 0
+  let outputAfter = 0
+  let seenCount = false
+  for (const r of codex) {
+    const p = r['payload'] ?? {}
+    if (r['type'] === 'response_item' && !String(p.type).endsWith('_output') && p.role !== 'user')
+      lastAnswer = ts(r)
+    if (p.type === 'token_count') {
+      if (lastAnswer !== undefined && (ts(r) ?? 0) - lastAnswer >= 500) late += 1
+      seenCount = true
+    }
+    if (seenCount && r['type'] === 'response_item' && String(p.type).endsWith('_output'))
+      outputAfter += 1
+  }
+  check(
+    'speed / token_count отстал от ответа на работу инструмента',
+    late > 0,
+    `${late} запросов — конец по token_count приписал бы модели время инструмента`,
+  )
+  check(
+    'speed / компакт как граница',
+    codex.some((r) => r['payload']?.type === 'context_compacted'),
+    'без него старт взялся бы от результата прошлого хода',
+  )
+  check('speed / результат после token_count', outputAfter > 0, `${outputAfter}`)
+
+  const expectedPath = join(SPEED, 'expected.json')
+  if (!existsSync(expectedPath)) {
+    failures.push('  ✗ speed — нет ручного expected.json')
+  } else {
+    const expected = JSON.parse(readFileSync(expectedPath, 'utf8'))
+    const quantile = (sorted: number[], q: number): number => {
+      const position = (sorted.length - 1) * q
+      const low = Math.floor(position)
+      const high = Math.ceil(position)
+      return sorted[low]! + (sorted[high]! - sorted[low]!) * (position - low)
+    }
+    const groups = new Map<string, { d: number[]; p: number[] }>()
+    for (const r of expected.requests) {
+      if (r.durationMs === null) continue
+      if (r.origin !== 'log') failures.push(`  ✗ speed — у восстановленного есть время: ${r.requestId}`)
+      const key = `${r.file.startsWith('codex') ? 'codex' : 'claude'} ${r.model}`
+      const g = groups.get(key) ?? { d: [], p: [] }
+      g.d.push(r.durationMs)
+      g.p.push((r.output * 1000) / r.durationMs)
+      groups.set(key, g)
+    }
+    const whole = expected.cases.find((c: any) => c.name === 'весь период')
+    const off: string[] = []
+    for (const [key, g] of groups) {
+      const d = [...g.d].sort((a, b) => a - b)
+      const p = [...g.p].sort((a, b) => a - b)
+      const want = whole?.speeds[key]
+      if (d.length < 5) {
+        if (want !== undefined) off.push(`${key}: ниже порога, а скорость есть`)
+        continue
+      }
+      const got = {
+        requests: d.length,
+        p50Ms: Math.round(quantile(d, 0.5)),
+        p90Ms: Math.round(quantile(d, 0.9)),
+        tokensPerSecond: Math.round(quantile(p, 0.5) * 10) / 10,
+      }
+      if (JSON.stringify(got) !== JSON.stringify(want))
+        off.push(`${key}: ${JSON.stringify(got)} против ${JSON.stringify(want)}`)
+    }
+    check(
+      'speed / ручной расчёт сходится сам с собой',
+      whole !== undefined && off.length === 0,
+      off.length === 0 ? `моделей ${groups.size}, медианы и p90 сходятся` : off.join('; '),
+    )
+    check(
+      'speed / есть модель ниже порога',
+      [...groups.values()].some((g) => g.d.length < 5),
+      '«мало данных», а не медиана из двух',
     )
   }
 }

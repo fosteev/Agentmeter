@@ -996,6 +996,99 @@ describe('проекты × модели (8.2)', () => {
 })
 
 /** Матрица руками — когда нужен ровно этот состав клеток. */
+describe('скорость модели в повороте (8.4)', () => {
+  const speedDir = fileURLToPath(new URL('../../../fixtures/speed/', import.meta.url))
+  const DAY = {
+    scope: 'day' as const,
+    from: Date.parse('2026-09-01T00:00:00.000Z'),
+    to: Date.parse('2026-09-02T00:00:00.000Z'),
+  }
+
+  function speedScreen(): SpendScreen['matrix'] {
+    ingest({ path: join(speedDir, 'claude-alpha.jsonl'), provider: 'claude', kind: 'session' })
+    ingest({ path: join(speedDir, 'codex-alpha.jsonl'), provider: 'codex', kind: 'session' })
+    return buildSpendScreen(db, DAY).matrix
+  }
+
+  /**
+   * Ловит пересчёт в main: медиана — число, которое видно текстом, и у неё
+   * есть второй потребитель (CLI, бриф 7.7). Округли её main по-своему — и
+   * окно с CLI разойдутся на десятую, оба «правы». Числа — ручной эталон
+   * `fixtures/speed/README.md`.
+   */
+  it('скорость доезжает до маргинали как её посчитало ядро', () => {
+    const matrix = speedScreen()
+    const speeds = Object.fromEntries(matrix.models.map((line) => [line.model, line.speed]))
+
+    expect(speeds).toEqual({
+      'claude-opus-5': { requests: 6, p50Ms: 5500, p90Ms: 9000, tokensPerSecond: 40 },
+      'gpt-5.6-sol': { requests: 6, p50Ms: 4500, p90Ms: 6500, tokensPerSecond: 75 },
+      'claude-sonnet-5': undefined,
+    })
+    // У клетки проекта скорости нет: выборка в разы меньше, порог отсёк бы
+    // половину таблицы.
+    for (const row of matrix.rows) for (const cell of row.cells) expect(cell.speed).toBeUndefined()
+  })
+
+  /**
+   * Ловит пустую ячейку вместо слов: модель ниже порога обязана сказать «мало
+   * данных», а не показать прочерк, который читается как «не посчиталось», и
+   * не медиану из двух запросов.
+   */
+  it('поворот показывает ответ, p90 и темп, а ниже порога — слова', () => {
+    const html = renderToStaticMarkup(<BreakdownMatrix matrix={speedScreen()} pivot="models" />)
+
+    expect(html).toContain('data-matrix-pivot-head')
+    expect(html).toContain('Ответ')
+    expect(html).toContain('тк/с')
+    // claude-opus-5: p50 5.5 с, p90 9.0 с, 40.0 тк/с — локаль ru, запятая.
+    expect(html).toContain('5,5 с')
+    expect(html).toContain('p90 9,0 с')
+    expect(html).toContain('40,0')
+    // gpt-5.6-sol: 4.5 с, p90 6.5 с, 75.0 тк/с.
+    expect(html).toContain('4,5 с')
+    expect(html).toContain('p90 6,5 с')
+    expect(html).toContain('75,0')
+    expect(html.match(/data-matrix-speed="true"/g)).toHaveLength(2)
+    // claude-sonnet-5 — два измерения из трёх запросов.
+    const sonnet = html.slice(html.indexOf('data-matrix-pivot-model="claude-sonnet-5"'))
+    expect(sonnet).toContain('data-matrix-speed-few')
+    expect(sonnet.slice(0, sonnet.indexOf('</span>', sonnet.indexOf('data-matrix-speed-few')))).toContain(
+      'мало данных',
+    )
+    expect(html).toContain('data-matrix-speed-note')
+    expect(html).toContain('это не скорость генерации')
+  })
+
+  /**
+   * Ловит скорость у хвоста легенды: у хвоста нет одной модели, и медиана по
+   * смеси моделей не была бы скоростью ни одной из них.
+   */
+  it('хвост моделей скорости не несёт и не рисует', () => {
+    const base = handMatrix([
+      { project: 'a', model: 'big', total: 995_000, requests: 10, inherited: 0 },
+      { project: 'a', model: 'tiny', total: 5_000, requests: 10, inherited: 0 },
+    ])
+    const speed = { requests: 10, p50Ms: 2000, p90Ms: 4000, tokensPerSecond: 50 }
+    const matrix = toMatrixScreen({
+      ...base,
+      models: base.models.map((cell) => ({ ...cell, speed })),
+    })
+
+    expect(matrix.modelTail).toBeDefined()
+    expect(matrix.modelTail).not.toHaveProperty('speed')
+    expect(matrix.models[0]!.speed).toEqual(speed)
+
+    const html = renderToStaticMarkup(<BreakdownMatrix matrix={matrix} pivot="models" />)
+    const tail = html.slice(
+      html.indexOf('data-matrix-pivot-tail'),
+      html.indexOf('data-matrix-speed-note'),
+    )
+    expect(tail).not.toMatch(/data-matrix-(speed|pace)/)
+    expect(html.match(/data-matrix-speed="true"/g)).toHaveLength(1)
+  })
+})
+
 function handMatrix(
   cells: Array<{
     project: string

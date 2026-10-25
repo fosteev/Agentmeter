@@ -35,6 +35,10 @@ interface RequestDraft {
   tools: ToolCall[]
   toolIds: Set<string>
   interjectedBytes: number
+  /** Метка записи-старта: последней перед **первой** строкой запроса (8.4). */
+  startTs?: number
+  /** Наибольшая метка строк запроса — последняя записанная часть ответа. */
+  endTs?: number
 }
 
 interface ToolResult {
@@ -75,6 +79,11 @@ interface ParseState {
    * она встречается один раз на 590 транскриптов).
    */
   compactPending: boolean
+  /**
+   * Метка последней записи, которая может быть стартом запроса (8.4): всё с
+   * меткой, кроме записей из `RESPONSE_TIME_RECORDS`.
+   */
+  lastStartTs?: number
 }
 
 const KNOWN_RECORD_TYPES = new Set([
@@ -91,6 +100,39 @@ const KNOWN_RECORD_TYPES = new Set([
   'summary',
   'system',
   'user',
+])
+
+/**
+ * Записи, которые CLI кладёт в файл **перед** строкой ответа, но пишет в
+ * момент ответа или позже, — стартом запроса они быть не могут (8.4).
+ *
+ * Замер 25 октября по всем живым логам (46 214 запросов): `attachment` типа
+ * `deferred_tools_record` стоит перед первой строкой у 16 804 запросов и
+ * отстоит от неё на 0–20 мс у всех 16 804 — без отсева каждый третий запрос
+ * «отвечал» за ноль миллисекунд, а 4 724 выходили неизмеримыми.
+ * `file-history-delta` помечен временем позже ответа у 101 из 101,
+ * `queue-operation` — сообщение, поставленное в очередь, пока модель работала,
+ * — у 45 из 143. С отсевом неизмеримых 5 из 46 214.
+ *
+ * `system` с `subtype: 'api_error'` — другой случай: пишется **до** ответа, но
+ * посреди ожидания, на каждой попытке повтора (74 запроса, от записи до ответа
+ * медиана 96 с). Стартом он выкинул бы из «сколько ждали» как раз повторы
+ * после 529, которые время ответа обязано включать (приёмка 8.4). По той же
+ * причине `api-request` (CLI 2.1.308): он пишется на **каждую** попытку, и у 56
+ * запросов стартом становилась повторная — в одном случае из 1 100 с ожидания
+ * оставалось 3. Первая такая запись отстоит от предыдущей на 7 мс по медиане,
+ * так что отсев ничего не съедает. `frame-link` и `pr-link` — метаданные,
+ * которые CLI дописывает асинхронно: у 3 запросов стартом выходила запись
+ * позже первой строки ответа, у 5 старт съезжал на 5–10 с.
+ */
+const RESPONSE_TIME_RECORDS = new Set([
+  'attachment:deferred_tools_record',
+  'file-history-delta',
+  'queue-operation',
+  'system:api_error',
+  'api-request',
+  'frame-link',
+  'pr-link',
 ])
 
 const ENTRYPOINTS = new Set<Entrypoint>([
@@ -194,7 +236,30 @@ function consumeRecord(state: ParseState, record: JsonObject): void {
   if (!KNOWN_RECORD_TYPES.has(type)) countUnknown(state.diagnostics, type)
 
   consumeCommonSessionFields(state, record)
+  consumeTyped(state, record, type)
+  noteStart(state, record, type)
+}
 
+/**
+ * Запомнить запись как возможный старт следующего запроса (8.4).
+ *
+ * Зовётся **после** разбора записи: строка ответа, открывшая запрос, берёт
+ * старт у предыдущей записи, а не у себя.
+ */
+function noteStart(state: ParseState, record: JsonObject, type: string): void {
+  const ts = parseTimestamp(record)
+  if (ts === undefined) return
+  const attachment = type === 'attachment' ? objectField(record, 'attachment') : undefined
+  const kind = attachment
+    ? `attachment:${stringField(attachment, 'type') ?? ''}`
+    : type === 'system'
+      ? `system:${stringField(record, 'subtype') ?? ''}`
+      : type
+  if (RESPONSE_TIME_RECORDS.has(kind)) return
+  state.lastStartTs = ts
+}
+
+function consumeTyped(state: ParseState, record: JsonObject, type: string): void {
   switch (type) {
     case 'assistant':
       consumeAssistant(state, record)
@@ -274,10 +339,14 @@ function consumeAssistant(state: ParseState, record: JsonObject): void {
   const model = stringField(message, 'model') ?? state.model ?? 'unknown'
   if (!state.model && model !== 'unknown') state.model = model
 
-  const ts = parseTimestamp(record) ?? 0
+  const stamp = parseTimestamp(record)
+  const ts = stamp ?? 0
   state.firstAssistantTs = minDefined(state.firstAssistantTs, ts)
   state.lastAssistantTs = maxDefined(state.lastAssistantTs, ts)
   const draft = getDraft(state, requestId, ts, model, booleanField(record, 'isSidechain') ?? false)
+  // Конец — наибольшая метка строк запроса, а не метка последней строки в
+  // файле: порядок записей не хронологический (правило 10).
+  if (stamp !== undefined) draft.endTs = maxDefined(draft.endTs, stamp)
   state.lastRequestId = requestId
   const skill = stringField(record, 'attributionSkill')
   if (skill) draft.skill = skill
@@ -501,6 +570,10 @@ function getDraft(
     tools: [],
     toolIds: new Set(),
     interjectedBytes: 0,
+    // Старт — перед **первой** строкой: между строками одного запроса ложатся
+    // результаты инструментов (2 457 запросов из 46 214), и старт перед
+    // последней строкой мерил бы от них.
+    ...(state.lastStartTs === undefined ? {} : { startTs: state.lastStartTs }),
   }
   state.compactPending = false
   state.drafts.set(requestId, draft)
@@ -597,6 +670,10 @@ function requestFromDraft(state: ParseState, draft: RequestDraft): Request {
     interjectedBytes: draft.interjectedBytes,
     tools,
   }
+  // Только положительная разница: ноль или минус — это порядок записей, а не
+  // мгновенный ответ, и модуль здесь был бы выдумкой.
+  if (draft.startTs !== undefined && draft.endTs !== undefined && draft.endTs > draft.startTs)
+    request.durationMs = draft.endTs - draft.startTs
   if (draft.cacheWrite5m !== undefined) request.cacheWrite5m = draft.cacheWrite5m
   if (draft.cacheWrite1h !== undefined) request.cacheWrite1h = draft.cacheWrite1h
   if (draft.skill !== undefined) request.skill = draft.skill

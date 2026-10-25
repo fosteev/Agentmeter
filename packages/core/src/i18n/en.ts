@@ -327,6 +327,13 @@ export const en = {
     honestyInherited:
       'The sign marks a model row when the project includes requests reconstructed from a cache-chain gap: their tokens are measured, but the model is inherited from a neighbour. Over this period that is {{range}} of a row.',
     inheritedCaveat: 'reconstructed requests borrow the neighbouring model — the log has none, stage 1.3',
+    columnResponse: 'Response',
+    columnPace: 'tok/s',
+    speedSeconds: '{{value}} s',
+    speedP90: 'p90 {{value}} s',
+    speedFew: 'not enough data',
+    speedNote:
+      'Response — from sending the request to the last recorded part of the answer: network, queueing, retries and thinking together; this is not generation speed. Below it, the 90th percentile. Pace is the median of output / time per request, not a sum over a sum: the tail of long waits drags that towards a number no single request ever had. Requests reconstructed from a cache-chain gap have no time and are left out of the sample.',
   },
 
   history: {

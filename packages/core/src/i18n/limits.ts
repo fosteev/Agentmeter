@@ -96,6 +96,15 @@ export const LIMITS = {
   'matrix.columnTotal': 13,
   'matrix.columnShare': 7,
   'matrix.legendLine': 32,
+  // Скорость в повороте (8.4): столбцы 72 и 48 px. Подписи — mono 10 с
+  // разрядкой (≈6.8 px на знак): 10 и 7 знаков. Медиана — mono 12 (7.2 px), 10
+  // знаков; p90 под ней — mono 10 (6 px), 12. «Мало данных» занимает оба
+  // столбца с зазором, 132 px под mono 11 (6.6 px) — 20 знаков, взято 18.
+  'matrix.columnResponse': 10,
+  'matrix.columnPace': 7,
+  'matrix.speedSeconds': 10,
+  'matrix.speedP90': 12,
+  'matrix.speedFew': 18,
 } as const
 
 export type LimitedKey = keyof typeof LIMITS

@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -154,6 +154,34 @@ describe('окна лимита в индексе', () => {
     // Второй проход по тем же данным не считает пропажу заново: иначе счётчик
     // в doctor рос бы на каждое событие вотчера, ничего не измеряя.
     expect(ingestAll(db, { claudeHome, codexHome }).vanished).toBe(0)
+  })
+
+  // Вернувшийся неизменным файл проход пропускает по совпавшей четвёрке — и
+  // до 8.4 пропускал вместе с пометкой: на копии живого индекса 197 из 809
+  // «пропавших» источников лежали на диске, и doctor считал их удалёнными.
+  it('вернувшийся неизменным файл перестаёт числиться пропавшим', () => {
+    const claudeHome = join(dir, '.claude')
+    const codexHome = join(dir, '.codex')
+    const day = join(codexHome, 'sessions', '2026', '05', '01')
+    mkdirSync(join(claudeHome, 'projects'), { recursive: true })
+    mkdirSync(day, { recursive: true })
+    const path = join(day, 'rollout-limits.jsonl')
+    const aside = join(dir, 'rollout-limits.jsonl')
+    copyFileSync(join(fixturesDir, 'codex-limits.jsonl'), path)
+    ingestAll(db, { claudeHome, codexHome })
+
+    renameSync(path, aside)
+    expect(ingestAll(db, { claudeHome, codexHome }).vanished).toBe(1)
+    // `rename` сохраняет inode, размер и mtime — четвёрка совпадёт.
+    renameSync(aside, path)
+    const stats = ingestAll(db, { claudeHome, codexHome })
+
+    expect(stats.parsed).toBe(0)
+    expect(
+      db.get<{ count: number }>(
+        'SELECT count(*) AS count FROM sources WHERE vanished_at IS NOT NULL',
+      )?.count,
+    ).toBe(0)
   })
 })
 
