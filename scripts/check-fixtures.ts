@@ -903,6 +903,231 @@ function codexOauth(): void {
   }
 }
 
+// ─── workflow: эталон workflowReport (9.3) ───────────────────────────────────
+//
+// Два слоя. Первый — сценарии: каждая ловушка брифа обязана лежать в логах, иначе
+// эталон останется зелёным и перестанет ловить свою мутацию (граница `>=` без
+// записи ровно на старте исполнителя, `unknown` без единой записи, отказ в теле
+// отчёта ревьюера и так далее). Читаются сырые строки, парсер не участвует.
+//
+// Второй — арифметика самого `expected.json`: ответ каждого случая пересчитывается
+// ниже из таблицы `sessions` из того же файла маленьким независимым счётом. Это не
+// вторая реализация для проверки реализации — это проверка, что ручной расчёт
+// сходится сам с собой; реализацию с ним сверяет `workflow.test.ts`.
+{
+  const WORKFLOW = join(ROOT, 'fixtures/workflow')
+
+  interface Wf {
+    id: string
+    root: string
+    type: string | null
+    cwd: string
+    firstTs: number
+    texts: string[]
+    tools: Array<{ name: string; ts: number; status: 'true' | 'false' | 'none' | 'absent' }>
+    cachePairs: Array<{ cr: number; cw: number }>
+    codex: boolean
+  }
+  const wf: Wf[] = []
+  const names = readdirSync(WORKFLOW)
+  for (const name of names.filter((n) => n.endsWith('.jsonl')).sort()) {
+    const codex = name.startsWith('codex-')
+    const files: Array<{ path: string; id: string; root: string; type: string | null }> = [
+      { path: join(WORKFLOW, name), id: name.replace(/^codex-/, '').replace(/\.jsonl$/, ''), root: name.replace(/^codex-/, '').replace(/\.jsonl$/, ''), type: null },
+    ]
+    const subDir = join(WORKFLOW, name.replace(/\.jsonl$/, '.subagents'))
+    if (existsSync(subDir)) {
+      for (const sub of readdirSync(subDir).filter((n) => n.endsWith('.jsonl')).sort()) {
+        const id = sub.replace(/^agent-/, '').replace(/\.jsonl$/, '')
+        const meta = JSON.parse(readFileSync(join(subDir, sub.replace(/\.jsonl$/, '.meta.json')), 'utf8'))
+        files.push({ path: join(subDir, sub), id, root: name.replace(/\.jsonl$/, ''), type: meta.agentType })
+      }
+    }
+    for (const file of files) {
+      const text = readFileSync(file.path, 'utf8')
+      const leak = LEAKS.find((re) => re.test(text))
+      if (leak) failures.push(`  ✗ workflow / ${file.id} — обезличивание не прошло, найдено ${leak}`)
+      const rows = readJsonl(file.path)
+      const item: Wf = { id: file.id, root: file.root, type: file.type, cwd: '', firstTs: 0, texts: [], tools: [], cachePairs: [], codex }
+      if (codex) {
+        item.cwd = rows[0]?.['payload']?.cwd ?? ''
+        item.firstTs = Date.parse(rows[0]?.['payload']?.timestamp)
+        item.tools = rows
+          .filter((r) => r['payload']?.type === 'function_call')
+          .map((r) => ({ name: r['payload'].name, ts: Date.parse(r['timestamp']), status: 'absent' as const }))
+      } else {
+        const results = new Map<string, Wf['tools'][number]['status']>()
+        for (const r of rows) {
+          for (const block of r['message']?.content ?? []) {
+            if (r['type'] === 'user' && block?.type === 'tool_result')
+              results.set(block.tool_use_id, 'is_error' in block ? (block.is_error ? 'true' : 'false') : 'none')
+          }
+        }
+        const seen = new Set<string>()
+        for (const r of assistants(rows)) {
+          item.cwd ||= r['cwd']
+          const rid = r['requestId'] as string
+          const ts = Date.parse(r['timestamp'])
+          if (!seen.has(rid)) {
+            seen.add(rid)
+            item.firstTs ||= ts
+            item.cachePairs.push({ cr: r['message']?.usage?.cache_read_input_tokens ?? 0, cw: r['message']?.usage?.cache_creation_input_tokens ?? 0 })
+          }
+          // метка запроса — метка его первой строки (так её читает разбор)
+          const firstOfRequest = assistants(rows).find((x) => x['requestId'] === rid)
+          const requestTs = Date.parse(firstOfRequest?.['timestamp'] ?? r['timestamp'])
+          for (const block of r['message']?.content ?? []) {
+            if (block?.type === 'text') item.texts.push(block.text)
+            if (block?.type === 'tool_use')
+              item.tools.push({ name: block.name, ts: requestTs, status: results.get(block.id) ?? 'absent' })
+          }
+        }
+      }
+      wf.push(item)
+    }
+  }
+
+  const exec = (item: Wf): boolean => item.type?.startsWith('exec-') === true
+  const roots = wf.filter((item) => item.id === item.root)
+  const subsOf = (id: string): Wf[] => wf.filter((item) => item.root === id && item.id !== id)
+  const writes = (item: Wf): number[] => item.tools.filter((t) => t.name === 'Edit' || t.name === 'Write').map((t) => t.ts)
+  const project = (cwd: string): string => cwd.split('/').at(-1) ?? ''
+
+  const cycleRoots = roots.filter((r) => subsOf(r.id).some(exec))
+  check('workflow / корней Claude, сабагентов и Codex', roots.filter((r) => !r.codex).length === 13 && wf.filter((i) => i.id !== i.root).length === 30 && wf.filter((i) => i.codex).length === 1, `${roots.filter((r) => !r.codex).length} корней, ${wf.filter((i) => i.id !== i.root).length} сабагентов`)
+  check('workflow / двенадцать циклов и два корня без исполнителя', cycleRoots.length === 12 && roots.length - cycleRoots.length === 2, `циклов ${cycleRoots.length}, без исполнителя ${roots.length - cycleRoots.length} (один из них Codex)`)
+  check('workflow / цикл с двумя исполнителями', cycleRoots.some((r) => subsOf(r.id).filter(exec).length === 2), 'граница «после» — старт первого, не последнего')
+  const gpWriters = cycleRoots.filter((r) => subsOf(r.id).some((s) => s.type === 'general-purpose' && writes(s).length > 0))
+  check('workflow / unknown правит файлы внутри цикла', gpWriters.length >= 2, `циклов с general-purpose, пишущим файлы: ${gpWriters.length}`)
+  check('workflow / корень без исполнителя с general-purpose, пишущим файлы', roots.some((r) => !cycleRoots.includes(r) && subsOf(r.id).some((s) => s.type === 'general-purpose' && writes(s).length > 0)), 'unknown исполнителем не становится — цикла нет')
+  const first = (r: Wf): number => Math.min(...subsOf(r.id).filter(exec).map((s) => s.firstTs))
+  check('workflow / запись корня ровно на старте исполнителя', cycleRoots.some((r) => writes(r).includes(first(r))), 'граница включительная: `>=`')
+  check('workflow / корень пишет и до, и после старта исполнителя', cycleRoots.filter((r) => writes(r).some((t) => t < first(r)) && writes(r).some((t) => t >= first(r))).length >= 2, `циклов ${cycleRoots.filter((r) => writes(r).some((t) => t < first(r)) && writes(r).some((t) => t >= first(r))).length}`)
+  const between = cycleRoots.filter((r) => {
+    const starts = subsOf(r.id).filter(exec).map((s) => s.firstTs).sort((a, b) => a - b)
+    return starts.length === 2 && [r, ...subsOf(r.id)].filter((s) => !exec(s)).some((s) => writes(s).some((t) => t >= starts[0]! && t < starts[1]!))
+  })
+  check('workflow / запись между стартами двух исполнителей', between.length === 1, 'после первого, до второго')
+  check('workflow / планировщик правит после старта исполнителя', cycleRoots.some((r) => subsOf(r.id).some((s) => s.type?.startsWith('plan-') && writes(s).some((t) => t >= first(r)))), 'перепланирование — `after` роли planner')
+  const reviewers = wf.filter((i) => i.type?.startsWith('review-'))
+  const head = (i: Wf): string => i.texts.at(-1) ?? ''
+  check('workflow / ревьюеры: с оговорками, не принят, принят', reviewers.some((i) => /^\*\*Принят с оговорками/.test(head(i))) && reviewers.some((i) => /^\*\*Не принят/.test(head(i))) && reviewers.some((i) => /^\*\*Принят\./.test(head(i))), `ревьюеров ${reviewers.length}`)
+  check('workflow / отказ в теле отчёта, вердикт в первой строке — принят', reviewers.some((i) => /^\*\*Принят\./.test(head(i)) && /не принят/i.test(head(i).split('\n').slice(1).join('\n'))), 'ревьюер, у которого «не принят» ниже первой строки')
+  check('workflow / ревьюер без текста', reviewers.some((i) => i.texts.length === 0), 'вердикта нет: `NULL` голова')
+  check('workflow / ревьюер с текстом без вердикта', reviewers.some((i) => head(i) !== '' && !/принят|оговорк/i.test(head(i))), 'тоже `none`')
+  check('workflow / «с оговорками» в отчёте исполнителя', wf.some((i) => exec(i) && /с оговорками/i.test(head(i))), 'исполнитель не ревьюер: его слова не вердикт')
+  check('workflow / «Принят» в отчёте general-purpose', wf.some((i) => i.type === 'general-purpose' && /Принят/.test(head(i))), 'роль не определена: это не вердикт цикла')
+  const rootProject = new Map(roots.map((r) => [r.id, project(r.cwd)]))
+  const foreign = wf.filter((i) => i.id !== i.root && project(i.cwd) !== rootProject.get(i.root))
+  check('workflow / сабагенты чужого каталога в обе стороны', foreign.length === 2 && new Set(foreign.map((i) => project(i.cwd))).size === 2, `${foreign.map((i) => `${i.id}→${project(i.cwd)}`).join(', ')}`)
+  check('workflow / разрыв цепочки кэша', wf.some((i) => i.cachePairs.some((p, k) => k > 0 && p.cr > i.cachePairs[k - 1]!.cr + i.cachePairs[k - 1]!.cw)), 'восстановленный запрос: цикл `inherited`')
+  const statuses = new Set(wf.flatMap((i) => i.tools.map((t) => t.status)))
+  check('workflow / статусы вызовов: ошибка, явный false, без ключа, без результата', ['true', 'false', 'none', 'absent'].every((k) => statuses.has(k as never)), [...statuses].join(', '))
+  check('workflow / Codex: вызовы без статуса', wf.some((i) => i.codex && i.tools.length >= 5), 'знаменатель «известные» отсекает их')
+  const a1exec = wf.find((i) => i.id === 'a1-exec')
+  const a1paths = readFileSync(join(WORKFLOW, 'a1.subagents', 'agent-a1-exec.jsonl'), 'utf8').match(/"file_path":"src\/a\.ts"/g) ?? []
+  check('workflow / повторная правка одного файла', a1exec !== undefined && writes(a1exec).length === 4 && a1paths.length === 2, 'строк `tool_files` четыре, разных файлов три')
+  check('workflow / циклы в порядке времени, не имён', cycleRoots.map((r) => r.id).sort().join() !== [...cycleRoots].sort((a, b) => a.firstTs - b.firstTs).map((r) => r.id).join(), 'порядок по `started_at` отличается от алфавитного')
+
+  // ── арифметика expected.json ───────────────────────────────────────────
+  const expectedPath = join(WORKFLOW, 'expected.json')
+  if (!existsSync(expectedPath)) {
+    failures.push('  ✗ workflow — нет ручного expected.json')
+  } else {
+    const expected = JSON.parse(readFileSync(expectedPath, 'utf8'))
+    const ROLES = ['main', 'executor', 'reviewer', 'planner', 'explore', 'unknown']
+    const zero = (): Record<string, number> => Object.fromEntries(ROLES.map((r) => [r, 0]))
+    const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0)
+    const sessionsAll = expected.sessions.map((row: any) => {
+      const day = row.startedAt.slice(0, 10)
+      const role = row.id === row.root ? 'main' : row.agentType === null ? 'unknown' : row.agentType.startsWith('exec-') ? 'executor' : row.agentType.startsWith('review-') ? 'reviewer' : row.agentType.startsWith('plan-') ? 'planner' : row.agentType === 'Explore' ? 'explore' : 'unknown'
+      return { ...row, role, start: Date.parse(row.startedAt), writeTs: Object.entries(row.writes).flatMap(([hms, n]) => Array.from({ length: n as number }, () => Date.parse(`${day}T${hms}.000Z`))) }
+    })
+    const cmp = (a: any, b: any): number => a.start - b.start || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    const byId = new Map(sessionsAll.map((s: any) => [s.id, s]))
+    for (let k = 1; k < sessionsAll.length; k++)
+      if (cmp(sessionsAll[k - 1], sessionsAll[k]) >= 0) failures.push(`  ✗ workflow — sessions не по порядку (started_at, id): ${sessionsAll[k].id}`)
+
+    // `≈` — только у накладных (токены); `unseen` — у переделки: циклы без видимых записей исполнителя исключены (приёмка 9.3).
+    const series = (items: any[], size: number, parts: (x: any) => { num: number; den: number }, more?: (w: any[]) => object, tokens = false) => {
+      const points: any[] = []
+      for (let i = size - 1; i < items.length; i++) {
+        const w = items.slice(i - size + 1, i + 1)
+        const num = sum(w.map((x) => parts(x).num))
+        const den = sum(w.map((x) => parts(x).den))
+        if (den === 0) continue
+        const last = items[i]
+        points.push({ n: i + 1, sessionId: last.sessionId, startedAt: last.startedAt, value: num / den, numerator: num, denominator: den, approximate: tokens && w.some((x) => x.inherited), ...(more ? more(w) : {}) })
+      }
+      const count = items.length
+      const latest = points.find((p) => p.n === count) ?? null
+      const prev = points.find((p) => p.n === count - size) ?? null
+      return { size, count, points, latest, prev, delta: latest && prev ? latest.value - prev.value : null }
+    }
+
+    const oracle = (entry: any): any => {
+      const { cycles: cyc, sessions: ses } = entry.config.window
+      const until = entry.until === undefined ? undefined : Date.parse(entry.until)
+      const scope = entry.scope
+      const cycleOf = (root: any): any => {
+        const nodes = sessionsAll.filter((s: any) => s.root === root.id)
+        const execs = nodes.filter((n: any) => n.role === 'executor')
+        if (execs.length === 0) return null
+        const E = Math.min(...execs.map((n: any) => n.start))
+        const c: any = { sessionId: root.id, project: root.project, startedAt: root.startedAt, executorStartedAt: new Date(E).toISOString(), executorUnseen: false, spend: zero(), writes: zero(), writesAfter: zero(), toolCalls: 0, toolErrors: 0, toolErrorsKnown: 0, verdicts: [], inherited: false }
+        for (const n of nodes) {
+          c.spend[n.role] += n.spend
+          c.writes[n.role] += n.writeTs.length
+          if (n.role !== 'executor') c.writesAfter[n.role] += n.writeTs.filter((t: number) => t >= E).length
+          c.toolCalls += n.calls
+          c.toolErrors += n.errors
+          c.toolErrorsKnown += n.known
+          if (n.role === 'reviewer') c.verdicts.push(n.verdict)
+          if (n.inherited) c.inherited = true
+        }
+        c.executorUnseen = c.writes.executor === 0
+        return c
+      }
+      const roots = sessionsAll.filter((s: any) => s.id === s.root && (until === undefined || s.start < until)).sort(cmp)
+      const inScope = (s: any): boolean => (scope.project === undefined || s.project === scope.project) && (scope.provider === undefined || s.provider === scope.provider)
+      const allCycles = roots.map(cycleOf).filter(Boolean)
+      const cycles = roots.filter(inScope).map(cycleOf).filter(Boolean)
+      const rework = series(cycles, cyc, (c) => (c.executorUnseen ? { num: 0, den: 0 } : { num: sum(Object.values(c.writesAfter) as number[]), den: c.writes.executor + sum(Object.values(c.writesAfter) as number[]) }), (w) => ({ unseen: w.filter((c) => c.executorUnseen).length }))
+      const overhead = series(cycles, cyc, (c) => ({ num: c.spend.main + c.spend.reviewer, den: c.spend.executor }), undefined, true)
+      const count = (c: any, v: string): number => c.verdicts.filter((x: string) => x === v).length
+      const verdicts = series(cycles, cyc, (c) => ({ num: count(c, 'notes') + count(c, 'rejected'), den: count(c, 'accepted') + count(c, 'notes') + count(c, 'rejected') }), (w) => ({ counts: Object.fromEntries(['accepted', 'notes', 'rejected', 'none'].map((v) => [v, sum(w.map((c) => count(c, v)))])) }))
+      const list = sessionsAll
+        .filter((s: any) => until === undefined || (byId.get(s.root) ?? s).start < until)
+        .filter((s: any) => inScope(byId.get(s.root) ?? s))
+        .sort(cmp)
+        .map((s: any) => ({ sessionId: s.id, startedAt: s.startedAt, num: s.errors, den: s.known, inherited: s.inherited }))
+      const errorRate = series(list, ses, (s) => ({ num: s.num, den: s.den }))
+      const take = cycles.slice(-Math.min(cyc, cycles.length))
+      const roles: any = { cycles: take.length, unseen: take.filter((c) => c.executorUnseen).length, spend: zero(), writes: zero(), afterByRole: zero() }
+      for (const c of take) for (const r of ROLES) { roles.spend[r] += c.spend[r]; if (c.executorUnseen) continue; roles.writes[r] += c.writes[r]; roles.afterByRole[r] += c.writesAfter[r] }
+      return { emptyIndex: false, emptyScope: cycles.length === 0 && allCycles.length > 0, cycles, rework, overhead, errorRate, verdicts, roles }
+    }
+
+    /** Каждый ключ ответа из `expected.json` обязан совпасть с пересчётом; лишние ключи пересчёта — не повод. */
+    const differences = (want: any, got: any, path: string): string[] => {
+      if (want === null || typeof want !== 'object') return Object.is(want, got) || want === got ? [] : [`${path}: ${JSON.stringify(want)} против ${JSON.stringify(got)}`]
+      if (Array.isArray(want)) {
+        if (!Array.isArray(got) || got.length !== want.length) return [`${path}: длина ${want.length} против ${Array.isArray(got) ? got.length : 'не массив'}`]
+        return want.flatMap((x, i) => differences(x, got[i], `${path}[${i}]`))
+      }
+      if (got === null || typeof got !== 'object') return [`${path}: ожидался объект`]
+      return Object.keys(want).flatMap((key) => differences(want[key], got[key], `${path}.${key}`))
+    }
+    const off: string[] = []
+    for (const entry of expected.cases) off.push(...differences(entry.report, oracle(entry), entry.name))
+    check('workflow / ручной расчёт сходится сам с собой', off.length === 0, off.length === 0 ? `${expected.cases.length} случаев пересчитаны из таблицы sessions` : off.slice(0, 6).join('; '))
+    const all = expected.cases.find((entry: any) => entry.name === 'all')?.report
+    check('workflow / восемь точек переделки при двенадцати циклах и окне пять', all?.rework?.points?.length === 8 && all?.cycles?.length === 12, `${all?.rework?.points?.length} точек`)
+    check('workflow / есть случай, где знаменатель переделки нулевой', expected.cases.some((entry: any) => entry.report.rework?.count > 0 && entry.report.rework.points.length === 0 && entry.report.rework.count >= entry.config.window.cycles), 'точки нет, а не нуль')
+    check('workflow / есть случай, где фильтр отсёк все циклы', expected.cases.some((entry: any) => entry.report.emptyScope === true), 'пустота от фильтра, а не от индекса')
+  }
+}
+
 // ─── итог ────────────────────────────────────────────────────────────────────
 
 for (const n of notes) console.log(n)

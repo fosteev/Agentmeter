@@ -38,7 +38,7 @@ interface CellRow {
 }
 
 /** Расход, как он считается везде в продукте (правило 16). Второго нет. */
-const SPEND = 'requests.input + requests.output + requests.cache_write + requests.cache_read'
+export const SPEND = 'requests.input + requests.output + requests.cache_write + requests.cache_read'
 
 export function spendMatrix(db: Db, range: DayRange, scope: RequestScope = {}): SpendMatrix {
   // Сужение — только отсюда. Свой `WHERE` по периоду и провайдеру, разъехавшись

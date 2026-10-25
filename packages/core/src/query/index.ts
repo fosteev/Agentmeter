@@ -31,6 +31,8 @@ export { taskDetail, taskSessions } from './task.ts'
 export type { TaskCall, TaskDetail, TaskRequest } from './task.ts'
 export { taskRows } from './tasks.ts'
 export { hasRequests, sourceCount, todayReport } from './today.ts'
+export { WORKFLOW_ROLES, workflowReport } from './workflow.ts'
+export type { WorkflowOptions } from './workflow.ts'
 export type {
   BreakdownReport,
   DayRange,
@@ -49,4 +51,13 @@ export type {
   ToolBreakdownRow,
   Totals,
   TotalsRow,
+  RoleNumbers,
+  WorkflowCycle,
+  WorkflowNodeRole,
+  WorkflowPoint,
+  WorkflowReport,
+  WorkflowReworkPoint,
+  WorkflowRoles,
+  WorkflowSeries,
+  WorkflowVerdictPoint,
 } from './types.ts'
