@@ -200,7 +200,12 @@ export interface WorkflowRule {
  * экран (9.5), как и везде в продукте, где число показывается долей.
  */
 export interface WorkflowConfig {
-  /** Вкладка и уведомления — только при `true`. Выключено по умолчанию: это функция для тех, кто так работает. */
+  /**
+   * Вкладка и уведомления — только при `true`. Включено по умолчанию с 0.6.1:
+   * выключенную вкладку не находили вовсе, а у того, кто сабагентов не гоняет,
+   * она показывает пустое состояние словами. Уведомления при этом молчат, пока
+   * не задан порог (`alerts` — `null`).
+   */
   enabled: boolean
   /**
    * Кем считать `agentType`. Правила проверяются по порядку, побеждает первое
@@ -348,7 +353,7 @@ export const DEFAULT_CONFIG: Config = {
     notifyOnDone: false,
   },
   workflow: {
-    enabled: false,
+    enabled: true,
     roles: [
       { match: 'exec-*', role: 'executor' },
       { match: 'review-*', role: 'reviewer' },

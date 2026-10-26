@@ -292,11 +292,11 @@ describe('конфиг', () => {
 describe('конфиг: workflow', () => {
   const write = (workflow: unknown) => writeFileSync(path(), JSON.stringify({ workflow }))
 
-  it('по умолчанию выключен, роли и регулярки — из брифа, цели и пороги не заданы', () => {
+  it('по умолчанию включён (0.6.1), роли и регулярки — из брифа, цели и пороги не заданы', () => {
     const { config, problems } = loadConfig(path())
     expect(problems).toEqual([])
     const w = config.workflow
-    expect(w.enabled).toBe(false)
+    expect(w.enabled).toBe(true)
     expect(w.roles).toEqual([
       { match: 'exec-*', role: 'executor' },
       { match: 'review-*', role: 'reviewer' },
@@ -316,11 +316,13 @@ describe('конфиг: workflow', () => {
   })
 
   it('битая регулярка отклоняется с путём ключа, остальные принимаются, main не падает', () => {
-    write({ verdicts: { rejected: '(не закрыта', accepted: 'ОК' }, enabled: true })
+    // `false`, а не `true`: с 0.6.1 включено по умолчанию, и `true` здесь
+    // прошло бы, даже если бы выбор человека потерялся вместе с регуляркой.
+    write({ verdicts: { rejected: '(не закрыта', accepted: 'ОК' }, enabled: false })
     const { config, problems } = loadConfig(path())
     expect(config.workflow.verdicts.rejected).toBe(DEFAULT_CONFIG.workflow.verdicts.rejected)
     expect(config.workflow.verdicts.accepted).toBe('ОК')
-    expect(config.workflow.enabled).toBe(true)
+    expect(config.workflow.enabled).toBe(false)
     expect(problems).toHaveLength(1)
     expect(problems[0]).toContain('workflow.verdicts.rejected')
     expect(problems[0]).toContain('"(не закрыта"')

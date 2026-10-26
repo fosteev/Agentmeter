@@ -17,13 +17,14 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
   five measured requests it says “not enough data”. It is response time — from
   sending the prompt to the last written part of the answer, network and queue
   included — not generation speed, and the footnote says so.
-- **A Workflow tab, off by default.** For those who run “plan → executor →
-  review” with subagents: what share of a cycle's edits the reviewer had to
-  make, plus overhead, tool errors and review verdicts over rolling windows of
-  cycles, and a notification “time for a retro” when a threshold you set is
-  crossed — once per cycle. Most agent edits go through the shell and are
-  invisible in the logs; the screen counts the cycles it could not see instead
-  of guessing.
+- **A Workflow tab.** For those who run “plan → executor → review” with
+  subagents: what share of a cycle's edits the reviewer had to make, plus
+  overhead, tool errors and review verdicts over rolling windows of cycles, and
+  a notification “time for a retro” when a threshold you set is crossed — once
+  per cycle; with no threshold set it stays silent. Most agent edits go through
+  the shell and are invisible in the logs; the screen counts the cycles it could
+  not see instead of guessing. The tab is on for everyone; Settings → Workflow
+  turns it off.
 - **The same slice in the CLI and the AI brief.** `agentmeter breakdown --by
   project-model`, `--by model` with response times, and `--days N` for any
   axis; the brief gains a models-and-projects section with two reading rules —
@@ -139,7 +140,7 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
   never called across 34 sessions; turning it off returns 194.7k” — and a
   projects × models slice of the same period, with each model's response time.
 - **History** — a week, 30 days or all time, with a day × hour heatmap.
-- **Workflow** (opt-in) — whether the plan → executor → review cycle pays off.
+- **Workflow** — whether the plan → executor → review cycle pays off.
 - **Export** — the day's tasks as CSV/JSON, or an AI brief: a markdown file to
   feed an LLM for savings advice grounded in the measured rules.
 
