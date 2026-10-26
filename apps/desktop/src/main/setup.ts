@@ -339,6 +339,11 @@ export function createSetupWindow(
       sandbox: true,
     },
   })
+  // На Windows и Linux Electron вешает на окно с рамкой меню приложения по
+  // умолчанию (File, Edit, View…): мастеру оно не нужно, а на Windows ещё и
+  // раздувало внутреннюю высоту — смоук на раннере мерил 640×646 вместо
+  // 640×620. На macOS меню общее на приложение, и вызов ничего не меняет.
+  window.removeMenu()
   void window.loadFile(`${paths.web}/setup.html`)
   return window
 }
