@@ -13,7 +13,7 @@
  * Одиннадцать проверок, каждая названа по поломке, которую обязана поймать.
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -144,8 +144,17 @@ report(
 //    снаружи asar. Запускается **из чужого каталога**: собранное приложение не
 //    имеет права зависеть от того, что рядом лежит репозиторий.
 const away = mkdtempSync(join(tmpdir(), 'agentmeter-package-'))
-const env = { ...process.env }
+// Индекс и настройки — в том же чужом каталоге, если их не задали явно: под
+// `--smoke` приложение открывает индекс и дочитывает его по живым логам, и без
+// подмены каждый прогон пробы мигрировал и дописывал индекс человека, который
+// её запустил (так 25 октября смоук перевёл живой индекс с 11 на 13).
+const env: NodeJS.ProcessEnv = {
+  AGENTMETER_HOME: join(away, 'home'),
+  AGENTMETER_INDEX: join(away, 'index.sqlite'),
+  ...process.env,
+}
 delete env['ELECTRON_RUN_AS_NODE']
+mkdirSync(env['AGENTMETER_HOME']!, { recursive: true })
 const run =
   app === null
     ? { status: 1, stdout: '' }
@@ -209,7 +218,7 @@ const asNode =
     : spawnSync(app.binary, ['--smoke'], {
         encoding: 'utf8',
         cwd: away,
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
         timeout: 120_000,
       })
 rmSync(away, { recursive: true, force: true })

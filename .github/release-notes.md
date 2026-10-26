@@ -2,6 +2,39 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 
 ## In this release
 
+- **A first-run setup window.** Instead of silently reading logs from the tray,
+  a fresh install opens three steps: what was found on this machine (log
+  folders, file counts, the models met so far), when to warn and what to notify
+  about, and how the app behaves — start at login, hide prompt texts, theme and
+  the three network switches. Every control there is one you can change later
+  in Settings, and “Skip” gives exactly the defaults. Indexing runs while you
+  read; existing installs never see the window, and it can be reopened from
+  Settings → App.
+- **Model speed in the projects × models slice.** In the “by models” pivot each
+  model gets its median and 90th-percentile response time and its median pace
+  in tokens per second — medians per request, not sum over sum: a tail of
+  retries and overload drags the latter to a number no request ever had. Below
+  five measured requests it says “not enough data”. It is response time — from
+  sending the prompt to the last written part of the answer, network and queue
+  included — not generation speed, and the footnote says so.
+- **A Workflow tab, off by default.** For those who run “plan → executor →
+  review” with subagents: what share of a cycle's edits the reviewer had to
+  make, plus overhead, tool errors and review verdicts over rolling windows of
+  cycles, and a notification “time for a retro” when a threshold you set is
+  crossed — once per cycle. Most agent edits go through the shell and are
+  invisible in the logs; the screen counts the cycles it could not see instead
+  of guessing.
+- **The same slice in the CLI and the AI brief.** `agentmeter breakdown --by
+  project-model`, `--by model` with response times, and `--days N` for any
+  axis; the brief gains a models-and-projects section with two reading rules —
+  these numbers say nothing about price, and response time is not generation
+  speed.
+- **The first launch after updating re-reads all logs once** (about a minute on
+  a big machine): the index gained response times and tool errors. Sessions
+  whose logs Claude Code has already deleted stay in the index.
+
+## In 0.5.1
+
 - **The window you hit first was missing: Claude's per-model weekly limit.**
   Next to the 5-hour and weekly windows an account can carry a weekly limit
   scoped to a single model. The app dropped it: when that code was written the
@@ -104,8 +137,9 @@ A token meter for coding agents — Claude Code and Codex — living in the tray
 - **Where the spend went** — what sits in the prompt before your first word
   versus what the agent actually called, with advice like “this server was
   never called across 34 sessions; turning it off returns 194.7k” — and a
-  projects × models slice of the same period.
+  projects × models slice of the same period, with each model's response time.
 - **History** — a week, 30 days or all time, with a day × hour heatmap.
+- **Workflow** (opt-in) — whether the plan → executor → review cycle pays off.
 - **Export** — the day's tasks as CSV/JSON, or an AI brief: a markdown file to
   feed an LLM for savings advice grounded in the measured rules.
 

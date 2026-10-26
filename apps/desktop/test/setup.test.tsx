@@ -88,6 +88,10 @@ beforeEach(() => {
   // `configPath()` смотрит на эту переменную — иначе тест писал бы в настройки
   // человека, который его запустил.
   process.env['AGENTMETER_HOME'] = dir
+  // На Linux автозапуск — файл в `$XDG_CONFIG_HOME/autostart`, а не настройка
+  // подделки `app`: без подмены тест писал бы в автозапуск того, кто его
+  // запустил, и проверял бы поле подделки, которое на Linux не меняется.
+  process.env['XDG_CONFIG_HOME'] = join(dir, 'xdg')
   db = openDb(join(dir, 'index.sqlite')).db
   setCoreLocale('ru')
   setLocale('ru')
@@ -97,6 +101,7 @@ afterEach(() => {
   db.close()
   rmSync(dir, { recursive: true, force: true })
   delete process.env['AGENTMETER_HOME']
+  delete process.env['XDG_CONFIG_HOME']
   hosts.length = 0
 })
 
@@ -203,6 +208,7 @@ describe('мастер: конец записывается теми же вхо
     expect(configText()).toBe(skipped)
     // И не трогает систему: нетронутый автозапуск не пишется в «Объекты входа».
     expect(hosts.at(-1)!.writes).toBe(0)
+    expect(readStartup(hosts.at(-1)!).enabled).toBe(false)
   })
 
   /** Ловит потерянное значение: выбранное в мастере обязано оказаться в файле. */
@@ -230,7 +236,8 @@ describe('мастер: конец записывается теми же вхо
     expect(saved.limits.codex.api.enabled).toBe(false)
     expect(saved.updates.auto).toBe(false)
     expect(saved.setup.completed).toBe(true)
-    expect(hosts.at(-1)!.openAtLogin).toBe(true)
+    // Через `readStartup`, а не поле подделки: на Linux автозапуск — файл XDG.
+    expect(readStartup(target.startup).enabled).toBe(true)
   })
 
   /**
